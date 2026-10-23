@@ -575,8 +575,15 @@ function WhereField({
   const [fly, setFly] = useState<{ lng: number; lat: number; key: number } | null>(null);
 
   useEffect(() => {
-    api.venues().then(setVenues).catch(() => setVenues([]));
-  }, []);
+    api
+      .venues()
+      .then((list) => {
+        setVenues(list);
+        // No listed venues in this city yet: start on Address instead of an empty list.
+        if (!list.length) setS((c) => (c.where === "venue" && !c.venueId ? { ...c, where: "address" } : c));
+      })
+      .catch(() => setVenues([]));
+  }, [setS]);
 
   useEffect(() => {
     if (q.trim().length < 3) {
