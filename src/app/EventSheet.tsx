@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button, Frame, Label, LinkButton, Sheet, Tag } from "../components/ui";
-import { api, ApiError, videoPlayerUrl } from "../lib/api";
+import { api, ApiError } from "../lib/api";
+import { PromoVideo } from "../components/PromoVideo";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
@@ -257,14 +258,8 @@ export function EventSheet({
         {e.videoId && (
           <section aria-label="Promo video" data-reveal>
             <Label glyph="▷">Promo</Label>
-            <div className="video-frame event-video">
-              <iframe
-                src={videoPlayerUrl(e.videoId, config.streamCustomerCode)}
-                title={`Promo video for ${e.title}`}
-                allow="accelerometer; gyroscope; encrypted-media; picture-in-picture"
-                allowFullScreen
-                loading="lazy"
-              />
+            <div className="event-video">
+              <PromoVideo uid={e.videoId} customerCode={config.streamCustomerCode} title={e.title} />
             </div>
           </section>
         )}

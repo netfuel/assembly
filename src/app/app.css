@@ -287,3 +287,9 @@
 .story-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); width: 100%; }
 .story-sheet { z-index: 41; }
 .scrim:has(+ .story-sheet) { z-index: 40; }
+
+/* Promo video: poster until the player mounts */
+.promo-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.promo-video iframe { z-index: 1; }
+.promo-play { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; width: 100%; border: 0; background: rgb(0 0 0 / 0.25); color: #fff; cursor: pointer; }
+.promo-play svg { width: 56px; height: 56px; padding: 16px; border-radius: 50%; background: var(--color-accent); color: var(--color-accent-ink); }

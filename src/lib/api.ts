@@ -129,9 +129,23 @@ export function devSignInUrl(name: string, returnTo: string) {
   return `/api/auth/dev?name=${enc(name)}&return_to=${enc(returnTo)}`;
 }
 
+function streamBase(uid: string, customerCode: string | null) {
+  return customerCode ? `https://customer-${customerCode}.cloudflarestream.com/${uid}` : `https://videodelivery.net/${uid}`;
+}
+
 /** Stream player URL. Uses the account's customer subdomain when known. */
-export function videoPlayerUrl(uid: string, customerCode: string | null) {
+export function videoPlayerUrl(uid: string, customerCode: string | null, opts: { autoplay?: boolean } = {}) {
+  const params = new URLSearchParams({ preload: "metadata", poster: videoThumbnailUrl(uid, customerCode) });
+  if (opts.autoplay) {
+    params.set("autoplay", "true");
+    params.set("muted", "true");
+    params.set("loop", "true");
+  }
   return customerCode
-    ? `https://customer-${customerCode}.cloudflarestream.com/${uid}/iframe?preload=metadata`
-    : `https://iframe.videodelivery.net/${uid}?preload=metadata`;
+    ? `https://customer-${customerCode}.cloudflarestream.com/${uid}/iframe?${params}`
+    : `https://iframe.videodelivery.net/${uid}?${params}`;
+}
+
+export function videoThumbnailUrl(uid: string, customerCode: string | null) {
+  return `${streamBase(uid, customerCode)}/thumbnails/thumbnail.jpg?time=2s&height=720`;
 }
