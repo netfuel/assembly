@@ -141,6 +141,8 @@
   padding-right: max(var(--space-5), env(safe-area-inset-right));
   padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
   display: grid;
+  /* One column that never grows past the sheet, whatever its children ask for. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
 }
 .sheet-close {

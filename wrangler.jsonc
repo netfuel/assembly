@@ -17,6 +17,9 @@
   "observability": { "enabled": true },
   // Starting-soon push reminders (worker/notify.ts).
   "triggers": { "crons": ["*/15 * * * *"] },
+  // Sign-in codes (worker/emailAuth.ts). Needs Email Sending on the account and assembly.rsvp onboarded
+  // under Compute > Email Service > Email Sending. Locally, test mode shows the code on screen instead.
+  "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "DEFAULT_CITY": "memphis"
   },

@@ -92,6 +92,9 @@ export const api = {
     request<{ ok: true; eventsDeleted: number }>("/api/me", { method: "DELETE", body: JSON.stringify({ confirm }) }),
   providers: () => request<AuthProviders>("/api/auth/providers"),
   config: () => request<ServerConfig>("/api/config"),
+  emailStart: (email: string) => request<{ ok: true; devCode?: string }>("/api/auth/email/start", { method: "POST", body: JSON.stringify({ email }) }),
+  emailVerify: (email: string, code: string) =>
+    request<{ ok: true; newUser: boolean }>("/api/auth/email/verify", { method: "POST", body: JSON.stringify({ email, code }) }),
   logout: () => request<{ ok: true }>("/api/auth/logout", { method: "POST" }),
   rsvp: (id: string, status: RsvpStatus | null) =>
     status

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
-import { Button, Chip, Frame, Label, LinkButton, Segmented, Sheet, Tag, Toast } from "../components/ui";
-import { api, ApiError, devSignInUrl, signInUrl } from "../lib/api";
+import { Button, Chip, Frame, Segmented, Sheet, Tag, Toast } from "../components/ui";
+import { api, ApiError } from "../lib/api";
 import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
 import { useTheme } from "../lib/theme";
@@ -9,6 +9,7 @@ import { clearUserCaches, saveForOffline, saveProfileForOffline, useOnline } fro
 import { EventSheet } from "./EventSheet";
 import { AnnounceForm } from "./AnnounceForm";
 import { ProfileSheet } from "./ProfileSheet";
+import { SignInSheet } from "./SignInSheet";
 import { ModerationSheet } from "./ModerationSheet";
 import { SCENES, type AuthProviders, type City, type EventDetail, type EventSummary, type MeProfile, type SceneId, type ServerConfig } from "../../shared/types";
 import "./app.css";
@@ -50,7 +51,6 @@ export function App() {
   // An open event that isn't in the loaded list: your own hidden event, or a link to one weeks out.
   const [extra, setExtra] = useState<EventSummary | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
-  const [devName, setDevName] = useState("Test Organizer");
   const [theme, setTheme] = useTheme();
   const online = useOnline();
 
@@ -65,7 +65,6 @@ export function App() {
       .catch(() => undefined);
   }, [meId]);
   const railRef = useRef<HTMLDivElement>(null);
-  const smallSheetRef = useRef<HTMLDivElement>(null);
 
   const toast = useCallback((msg: string) => setToastMsg(msg), []);
   useEffect(() => {
@@ -408,42 +407,16 @@ export function App() {
       )}
 
       <Sheet open={sheet === "signin"} onClose={() => setSheet(null)} label="Sign in" modal center>
-        <div ref={smallSheetRef} className="small-sheet">
-          <div className="stack" data-reveal>
-            <Label glyph="◇">Sign in</Label>
-            <h1 className="sheet-title">RSVP and save your nights.</h1>
-            <p className="note serif-text">Your RSVPs stay private unless you choose to show them.</p>
-          </div>
-          <div className="sso" data-reveal>
-            <LinkButton size="lg" variant="solid" href={providers.google ? signInUrl("google", returnTo) : undefined} aria-disabled={!providers.google}>
-              Continue with Google
-            </LinkButton>
-            <LinkButton size="lg" href={providers.apple ? signInUrl("apple", returnTo) : undefined} aria-disabled={!providers.apple}>
-              Continue with Apple
-            </LinkButton>
-          </div>
-          {providers.dev && (
-            <form
-              className="dev-signin"
-              data-reveal
-              onSubmit={(ev) => {
-                ev.preventDefault();
-                location.href = devSignInUrl(devName || "Test Organizer", returnTo);
-              }}
-            >
-              <Tag>Local only</Tag>
-              <input value={devName} onChange={(ev) => setDevName(ev.target.value)} aria-label="Test name" />
-              <Button type="submit" size="sm">
-                Test sign-in
-              </Button>
-            </form>
-          )}
-          {!providers.google && !providers.apple && !providers.dev && (
-            <p className="note" data-reveal>
-              <Tag>Setup</Tag> Sign-in isn't configured on this server yet. See README, "Set up sign-in".
-            </p>
-          )}
-        </div>
+        <SignInSheet
+          providers={providers}
+          returnTo={returnTo}
+          onSignedIn={(user, isNew) => {
+            setMe(user);
+            toast(isNew ? `Welcome, ${user.displayName}.` : "You're signed in.");
+            // Came from the Post button: go straight to the form.
+            setSheet(signInIntent === "post" ? "announce" : null);
+          }}
+        />
       </Sheet>
 
       <Sheet

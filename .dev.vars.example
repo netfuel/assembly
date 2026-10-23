@@ -21,3 +21,6 @@ MODERATORS=
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:hello@assembly.rsvp
+# Email sign-in sender (must be on a domain onboarded in Cloudflare Email Sending). Leave empty locally:
+# with DEV_LOGIN=1 the code shows on screen instead.
+EMAIL_FROM=

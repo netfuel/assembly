@@ -41,34 +41,61 @@ function withResult(path: string, result: "ok" | "failed"): string {
   return `${path}${path.includes("?") ? "&" : "?"}signin=${result}`;
 }
 
-/** Finds the user linked to this identity, or creates one. Returns the user id. */
-async function upsertUser(
+/**
+ * Finds the user linked to this identity, or creates one. Returns the user id and whether it's new.
+ * A verified email links sign-ins: someone who used Google and later signs in by email code with the
+ * same address (or the reverse) lands in the same account. Unverified emails never link.
+ */
+export async function upsertUser(
   db: D1Database,
-  provider: "google" | "apple",
+  provider: "google" | "apple" | "email",
   subject: string,
   email: string | null,
   name: string | null,
   avatarUrl: string | null,
-): Promise<string> {
+  emailVerified = false,
+): Promise<{ userId: string; isNew: boolean }> {
+  const normalized = email?.trim().toLowerCase() || null;
   const existing = await db
     .prepare("SELECT user_id FROM identities WHERE provider = ? AND provider_subject = ?")
     .bind(provider, subject)
     .first<{ user_id: string }>();
   if (existing) {
     // Keep the email current (Google can change it; Apple only sends it the first time).
-    if (email) await db.prepare("UPDATE identities SET email = ? WHERE provider = ? AND provider_subject = ?").bind(email, provider, subject).run();
-    return existing.user_id;
+    if (normalized) {
+      await db
+        .prepare("UPDATE identities SET email = ?, email_verified = ? WHERE provider = ? AND provider_subject = ?")
+        .bind(normalized, emailVerified ? 1 : 0, provider, subject)
+        .run();
+    }
+    return { userId: existing.user_id, isNew: false };
+  }
+
+  // Same verified address on another sign-in method: add this method to that account.
+  if (normalized && emailVerified) {
+    const match = await db
+      .prepare("SELECT user_id FROM identities WHERE lower(email) = ? AND email_verified = 1 LIMIT 1")
+      .bind(normalized)
+      .first<{ user_id: string }>();
+    if (match) {
+      await db
+        .prepare("INSERT INTO identities (user_id, provider, provider_subject, email, email_verified) VALUES (?, ?, ?, ?, 1)")
+        .bind(match.user_id, provider, subject, normalized)
+        .run();
+      if (avatarUrl) await db.prepare("UPDATE users SET avatar_url = COALESCE(avatar_url, ?) WHERE id = ?").bind(avatarUrl, match.user_id).run();
+      return { userId: match.user_id, isNew: false };
+    }
   }
 
   const userId = crypto.randomUUID();
-  const displayName = name?.trim() || email?.split("@")[0] || "New member";
+  const displayName = name?.trim() || normalized?.split("@")[0] || "New member";
   await db.batch([
     db.prepare("INSERT INTO users (id, display_name, avatar_url) VALUES (?, ?, ?)").bind(userId, displayName, avatarUrl),
     db
-      .prepare("INSERT INTO identities (user_id, provider, provider_subject, email) VALUES (?, ?, ?, ?)")
-      .bind(userId, provider, subject, email),
+      .prepare("INSERT INTO identities (user_id, provider, provider_subject, email, email_verified) VALUES (?, ?, ?, ?, ?)")
+      .bind(userId, provider, subject, normalized, emailVerified ? 1 : 0),
   ]);
-  return userId;
+  return { userId, isNew: true };
 }
 
 export const auth = new Hono<AppContext>();
@@ -79,6 +106,8 @@ auth.get("/providers", (c) => {
     google: !!google(c.env, siteOrigin(c)),
     apple: !!apple(c.env, siteOrigin(c)),
     dev: c.env.DEV_LOGIN === "1" && ["localhost", "127.0.0.1"].includes(host),
+    // Email codes work wherever mail can be sent, and locally in test mode (the code shows on screen).
+    email: !!(c.env.EMAIL && c.env.EMAIL_FROM) || (c.env.DEV_LOGIN === "1" && ["localhost", "127.0.0.1"].includes(host)),
   };
   return c.json(providers);
 });
@@ -110,8 +139,8 @@ auth.get("/google/callback", async (c) => {
   }
   try {
     const tokens = await client.validateAuthorizationCode(code, verifier);
-    const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string; name?: string; picture?: string };
-    const userId = await upsertUser(c.env.DB, "google", claims.sub, claims.email ?? null, claims.name ?? null, claims.picture ?? null);
+    const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string; email_verified?: boolean; name?: string; picture?: string };
+    const { userId } = await upsertUser(c.env.DB, "google", claims.sub, claims.email ?? null, claims.name ?? null, claims.picture ?? null, claims.email_verified === true);
     await startSession(c, userId);
     return c.redirect(withResult(returnTo, "ok"));
   } catch (err) {
@@ -147,7 +176,7 @@ auth.post("/apple/callback", async (c) => {
   }
   try {
     const tokens = await client.validateAuthorizationCode(code);
-    const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string };
+    const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string; email_verified?: boolean | string };
     // Apple sends the user's name only on the very first sign-in.
     let name: string | null = null;
     if (typeof form.user === "string") {
@@ -158,7 +187,9 @@ auth.post("/apple/callback", async (c) => {
         name = null;
       }
     }
-    const userId = await upsertUser(c.env.DB, "apple", claims.sub, claims.email ?? null, name, null);
+    // Apple sends email_verified as a boolean or the string "true".
+    const verified = claims.email_verified === true || claims.email_verified === "true";
+    const { userId } = await upsertUser(c.env.DB, "apple", claims.sub, claims.email ?? null, name, null, verified);
     await startSession(c, userId);
     return c.redirect(withResult(returnTo, "ok"), 303);
   } catch (err) {
@@ -177,7 +208,7 @@ auth.get("/dev", async (c) => {
   const name = (c.req.query("name") ?? "Test Organizer").slice(0, 40);
   // Test accounts get a fake address, so MODERATORS in .dev.vars can name one (e.g. test-moderator@dev.localhost).
   const slug = slugifyName(name);
-  const userId = await upsertUser(c.env.DB, "google", `dev-${slug}`, `${slug}@dev.localhost`, name, null);
+  const { userId } = await upsertUser(c.env.DB, "google", `dev-${slug}`, `${slug}@dev.localhost`, name, null);
   await startSession(c, userId);
   return c.redirect(withResult(safeReturnTo(c.req.query("return_to")), "ok"));
 });

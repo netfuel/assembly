@@ -174,4 +174,6 @@ export interface AuthProviders {
   apple: boolean;
   /** Local testing sign-in (DEV_LOGIN=1 on localhost only). */
   dev?: boolean;
+  /** Sign in with a code sent by email. */
+  email?: boolean;
 }

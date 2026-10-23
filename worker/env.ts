@@ -19,6 +19,10 @@ export interface Env {
   DEV_LOGIN?: string;
   /** Comma-separated sign-in emails of people who can review reports and verify organizers. */
   MODERATORS?: string;
+  /** Cloudflare Email Service binding (wrangler.jsonc send_email). */
+  EMAIL?: SendEmailBinding;
+  /** Sender for sign-in codes. Must be on an onboarded sending domain. */
+  EMAIL_FROM?: string;
   /** Web push (VAPID). Generate with npm run push:keys. */
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
@@ -27,3 +31,15 @@ export interface Env {
 }
 
 export type AppContext = { Bindings: Env; Variables: { userId: string | null } };
+
+/** The parts of Cloudflare's send_email binding Assembly uses (Email Service, Workers API). */
+export interface SendEmailBinding {
+  send(message: {
+    from: string | { email: string; name?: string };
+    to: string | { email: string; name?: string };
+    subject: string;
+    html?: string;
+    text?: string;
+    headers?: Record<string, string>;
+  }): Promise<{ messageId: string }>;
+}

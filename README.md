@@ -41,7 +41,18 @@ Other scripts:
 
 ## Set up sign-in
 
-Sign-in buttons stay disabled until the provider is configured. For local work copy `.dev.vars.example` to `.dev.vars` and fill it in; for production use `wrangler secret put <NAME>`.
+Each sign-in option appears once it's configured. For local work copy `.dev.vars.example` to `.dev.vars` and fill it in; for production use `wrangler secret put <NAME>`.
+
+**Email code** (for anyone without Google or Apple)
+
+People enter their email, get a 6-digit code, and they're in; the first time creates the account and asks for a name. Codes expire after 10 minutes, work once, and lock after 5 wrong tries. A verified email links to an existing Google or Apple account with the same address, so nobody ends up with two accounts.
+
+1. Apply the database change once: `npx wrangler d1 migrations apply assembly --remote` (migration `0003_email_sign_in.sql`).
+2. Upgrade to the Workers Paid plan if you haven't (Email Sending requires it).
+3. In the Cloudflare dashboard go to Compute > Email Service > Email Sending > Onboard Domain and pick `assembly.rsvp`. Cloudflare adds the SPF, DKIM, and DMARC records.
+4. Turn it on: `npx wrangler secret put EMAIL_FROM` and enter `hello@assembly.rsvp` (or another address on that domain). The email option appears on the sign-in sheet once this is set.
+
+Locally, with `DEV_LOGIN=1`, the email option works without any of this: the code shows on screen and in the terminal.
 
 **Google**
 1. In Google Cloud Console, create an OAuth client of type "Web application".

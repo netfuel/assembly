@@ -6,6 +6,7 @@ import { moderation } from "./moderation";
 import { push, pushConfigured } from "./push";
 import { startingSoon } from "./notify";
 import { auth } from "./auth";
+import { emailAuth } from "./emailAuth";
 import { events } from "./events";
 import { fonts } from "./fonts";
 import { posting } from "./posting";
@@ -70,6 +71,7 @@ app.get("/media/:key{.+}", async (c) => {
   return new Response(obj.body, { headers });
 });
 
+app.route("/auth/email", emailAuth);
 app.route("/auth", auth);
 app.route("/me", profile);
 app.route("/uploads", uploads);
