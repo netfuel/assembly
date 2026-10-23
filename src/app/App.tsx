@@ -4,6 +4,7 @@ import { Button, Chip, Frame, Label, LinkButton, Segmented, Sheet, Tag, Toast } 
 import { api, ApiError, signInUrl } from "../lib/api";
 import { clock, dayLabel, isLive, overlaps, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
+import { useTheme } from "../lib/theme";
 import { EventSheet } from "./EventSheet";
 import { SCENES, type AuthProviders, type City, type EventSummary, type Me, type SceneId } from "../../shared/types";
 import "./app.css";
@@ -37,6 +38,7 @@ export function App() {
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
   const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile">(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [theme, setTheme] = useTheme();
   const railRef = useRef<HTMLDivElement>(null);
   const smallSheetRef = useRef<HTMLDivElement>(null);
 
@@ -127,7 +129,7 @@ export function App() {
 
   return (
     <div className="app">
-      <MapView events={mapEvents} center={city.center} zoom={city.zoom} selectedId={selectedId} onSelect={select} focus={focus} />
+      <MapView events={mapEvents} center={city.center} zoom={city.zoom} selectedId={selectedId} onSelect={select} focus={focus} theme={theme} />
       <div className="map-dots" aria-hidden="true" />
 
       <header className="topbar">
@@ -138,6 +140,15 @@ export function App() {
           </a>
           <span className="nav-city">{city.name}</span>
           <span className="spacer" />
+          <button
+            className="theme-toggle"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            title={theme === "light" ? "Dark mode" : "Light mode"}
+          >
+            <span className="theme-toggle-dot" aria-hidden="true" />
+            <span className="hide-narrow">{theme === "light" ? "Light" : "Dark"}</span>
+          </button>
           <Button size="sm" onClick={() => setSheet(me ? "announce" : "signin")}>
             + <span className="hide-narrow">Make an announcement</span>
             <span className="show-narrow">Post</span>
@@ -204,7 +215,7 @@ export function App() {
                   <Frame featured={live} className="card-frame">
                     <span className="card-top num">
                       <span>
-                        {pad(i + 1)} / {pad(shown.length)}
+                        N.{pad(i + 1)} <span className="dim">/ {pad(shown.length)}</span>
                       </span>
                       {live ? <Tag tone="accent">Live</Tag> : <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} />}
                     </span>
@@ -241,7 +252,7 @@ export function App() {
           <div className="stack" data-reveal>
             <Label glyph="◇">Sign in</Label>
             <h1 className="sheet-title">RSVP and save your nights.</h1>
-            <p className="note sans">Your RSVPs stay private unless you choose to show them.</p>
+            <p className="note serif-text">Your RSVPs stay private unless you choose to show them.</p>
           </div>
           <div className="sso" data-reveal>
             <LinkButton size="lg" variant="solid" href={providers.google ? signInUrl("google", returnTo) : undefined} aria-disabled={!providers.google}>
@@ -263,7 +274,7 @@ export function App() {
         <div className="stack" data-reveal>
           <Label glyph="▶">Make an announcement</Label>
           <h1 className="sheet-title">Posting opens in the next build.</h1>
-          <p className="note sans">Flyer upload, lineup with artist links, and promo video up to 1:30 arrive in the Core build phase.</p>
+          <p className="note serif-text">Flyer upload, lineup with artist links, and promo video up to 1:30 arrive in the Core build phase.</p>
         </div>
       </Sheet>
 

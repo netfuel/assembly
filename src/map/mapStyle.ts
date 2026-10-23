@@ -1,14 +1,40 @@
 import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
 
 /**
- * Assembly's night basemap. Vector tiles in the OpenMapTiles schema from OpenFreeMap
+ * Assembly's basemaps, light (default) and dark. Vector tiles in the OpenMapTiles schema from OpenFreeMap
  * (free, no API key). To self-host later, point TILE_URL at a PMTiles archive on R2.
  * Colors mirror the tokens in src/styles/tokens.css; MapLibre can't read CSS variables.
  */
 const TILE_URL = import.meta.env.VITE_TILE_URL ?? "https://tiles.openfreemap.org/planet";
 const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
-export const MAP_COLORS = {
+export type MapTheme = "light" | "dark";
+export type MapPalette = Record<
+  "land" | "water" | "park" | "building" | "roadMinor" | "roadMajor" | "roadHighway" | "label" | "labelStrong" | "halo" | "sodium" | "uv" | "live" | "accent" | "fg",
+  string
+>;
+
+/** Light basemap: cool paper gray, like the Timeless specimen. Default theme. */
+const LIGHT: MapPalette = {
+  land: "#e4e5e8",
+  water: "#cdd3dc",
+  park: "#d8ddd4",
+  building: "#d9dbdf",
+  roadMinor: "#f4f4f5",
+  roadMajor: "#fbfbfc",
+  roadHighway: "#ffffff",
+  label: "#8a8d94",
+  labelStrong: "#5b5e65",
+  halo: "#e9eaec",
+  sodium: "#f07f12",
+  uv: "#7b5cf0",
+  live: "#ff3df2",
+  accent: "#ff3df2",
+  fg: "#121315",
+};
+
+/** Dark basemap: neutral night greys. */
+const DARK: MapPalette = {
   land: "#0c0c0e",
   water: "#08090c",
   park: "#0f1210",
@@ -26,11 +52,15 @@ export const MAP_COLORS = {
   fg: "#ededee",
 };
 
-const c = MAP_COLORS;
+export function mapPalette(theme: MapTheme): MapPalette {
+  return theme === "dark" ? DARK : LIGHT;
+}
 
-export const nightStyle: StyleSpecification = {
+export function mapStyle(theme: MapTheme): StyleSpecification {
+  const c = mapPalette(theme);
+  return {
   version: 8,
-  name: "Assembly night",
+  name: `Assembly ${theme}`,
   glyphs: GLYPHS,
   sources: {
     omt: {
@@ -151,4 +181,5 @@ export const nightStyle: StyleSpecification = {
       paint: { "text-color": c.labelStrong, "text-halo-color": c.halo, "text-halo-width": 2 },
     },
   ],
-};
+  };
+}

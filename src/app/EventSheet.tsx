@@ -182,7 +182,7 @@ export function EventSheet({
             {e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
           </p>
           <p className="where-address">{e.address}</p>
-          {detail?.gettingThere && <p className="where-note sans">{detail.gettingThere}</p>}
+          {detail?.gettingThere && <p className="where-note serif-text">{detail.gettingThere}</p>}
           <div className="where-links">
             <LinkButton size="sm" href={directions.apple} target="_blank" rel="noopener noreferrer">
               ▷ Apple Maps
@@ -205,7 +205,7 @@ export function EventSheet({
             <ol className="lineup">
               {detail.lineup.map((slot, i) => (
                 <li key={slot.artistId}>
-                  <span className="lineup-index num">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="lineup-index num">N.{String(i + 1).padStart(2, "0")}</span>
                   <span className="lineup-artist">
                     <span className="lineup-name">{slot.name}</span>
                     {(slot.note || slot.room) && <span className="lineup-note">{[slot.room, slot.note].filter(Boolean).join(" / ")}</span>}

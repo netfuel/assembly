@@ -6,3 +6,6 @@ dev-dist
 .env
 *.local
 .DS_Store
+
+# Timeless fonts: their license forbids public repositories. Copy them in locally (see README).
+public/fonts/timeless/

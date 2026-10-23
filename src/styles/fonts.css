@@ -1,0 +1,39 @@
+/*
+  Timeless type family (timeless.co/type), Timeless Free Font License 1.2.
+  The license allows embedding in websites but not publishing the files in a public repository,
+  so the WOFF2 files live in public/fonts/timeless/, which is gitignored. See README "Fonts".
+  If the files are missing, every face falls back to a system font and the app still works.
+
+  Axes
+  - Timeless Sans: wght 300–800, ital 0–100, STYL 0 (Grotesk) to 100 (Sans)
+  - Timeless Serif: wght 200–700, STYL 0 (display Serif) to 100 (Text, for reading sizes)
+  - Timeless Serif Italic: wght 300–700
+*/
+@font-face {
+  font-family: "Timeless Sans";
+  src: url("/fonts/timeless/TimelessSansVF.woff2") format("woff2-variations"), url("/fonts/timeless/TimelessSansVF.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Timeless Sans";
+  src: url("/fonts/timeless/TimelessSansVF.woff2") format("woff2-variations"), url("/fonts/timeless/TimelessSansVF.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Timeless Serif";
+  src: url("/fonts/timeless/TimelessSerifVF.woff2") format("woff2-variations"), url("/fonts/timeless/TimelessSerifVF.woff2") format("woff2");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Timeless Serif";
+  src: url("/fonts/timeless/TimelessSerifItalicVF.woff2") format("woff2-variations"), url("/fonts/timeless/TimelessSerifItalicVF.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: italic;
+  font-display: swap;
+}

@@ -10,7 +10,7 @@
   border: 1px solid var(--color-line-strong);
   background: var(--color-surface-raised);
   color: var(--color-fg);
-  font-family: var(--font-mono);
+  font-family: var(--font-grotesk);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   white-space: nowrap;
@@ -23,7 +23,7 @@
 .btn-lg { min-height: 40px; padding: 0 var(--space-4); }
 .btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-ink); }
 .btn-solid { background: var(--color-fg); border-color: var(--color-fg); color: var(--color-ground); }
-.btn-confirmed { background: transparent; border-color: var(--color-accent); color: var(--color-accent); }
+.btn-confirmed { background: var(--color-accent-wash); border-color: var(--color-accent); color: var(--color-accent-text); }
 .btn-primary:hover, .btn-solid:hover { filter: brightness(1.08); }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--color-muted); }
 .btn-ghost:hover { color: var(--color-fg); border-color: transparent; }
@@ -119,8 +119,8 @@
 .label-glyph { color: var(--color-faint); font-size: var(--text-xs); }
 
 /* Sheets */
-.scrim { position: fixed; inset: 0; z-index: 30; background: rgb(0 0 0 / 0.6); }
-.scrim-soft { background: rgb(0 0 0 / 0.35); }
+.scrim { position: fixed; inset: 0; z-index: 30; background: var(--color-scrim); }
+.scrim-soft { background: color-mix(in srgb, var(--color-scrim) 60%, transparent); }
 .sheet {
   position: fixed;
   z-index: 31;
@@ -184,4 +184,4 @@
   font-size: var(--text-xs);
   box-shadow: var(--shadow-float);
 }
-.toast::before { content: "✓ "; color: var(--color-accent); }
+.toast::before { content: "✓ "; color: var(--color-accent-text); }

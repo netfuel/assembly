@@ -14,10 +14,11 @@ body {
   margin: 0;
   background: var(--color-ground);
   color: var(--color-fg);
-  font-family: var(--font-mono);
+  font-family: var(--font-grotesk);
+  font-variation-settings: var(--vary-grotesk);
+  font-weight: 420;
   font-size: var(--text-sm);
   line-height: 1.5;
-  font-feature-settings: "ss01";
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   overscroll-behavior: none;
@@ -51,14 +52,32 @@ h3 {
   margin: 0;
 }
 
-.mono,
+/* Figures that line up: times, counts, prices */
 .num {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-.sans {
-  font-family: var(--font-sans);
+/* Display serif: titles and headings */
+.serif {
+  font-family: var(--font-serif);
+  font-variation-settings: var(--vary-display);
+  font-weight: 300;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-display);
+}
+
+/* Serif Text: longer reading copy */
+.serif-text {
+  font-family: var(--font-serif);
+  font-variation-settings: var(--vary-text);
+  font-weight: 400;
+}
+
+/* Serif Italic deck under a headline */
+.deck {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 350;
 }
 
 .visually-hidden {

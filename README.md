@@ -6,7 +6,7 @@ A map-first PWA for underground music: DIY shows, warehouse raves, queer dance n
 
 | Layer | Choice |
 | --- | --- |
-| App | React 19 + Vite 8, TypeScript, `vite-plugin-pwa` (Workbox), GSAP, three.js |
+| App | React 19 + Vite 8, TypeScript, `vite-plugin-pwa` (Workbox), GSAP, three.js, Timeless fonts |
 | Map | MapLibre GL 6, custom night style (`src/map/nightStyle.ts`), OpenFreeMap vector tiles |
 | API | Hono on a Cloudflare Worker (`worker/`), served from the same deploy as the app |
 | Data | D1 (SQLite) for events, venues, users, RSVPs; KV for sessions; R2 for flyers |
@@ -78,9 +78,25 @@ src/styles/    Design tokens and base styles
 worker/        Hono API: events, RSVPs, auth, sessions, media
 ```
 
+## Fonts
+
+Assembly is set in the [Timeless type family](https://timeless.co/type): Timeless Sans (Grotesk cut) for the interface and data, Timeless Serif for display and reading, and Timeless Serif Italic for decks. They're free for commercial use under the Timeless Free Font License, which allows embedding them in a website but **forbids putting the font files in a public repository**. So the files are gitignored and you add them locally:
+
+1. Download the family from [timeless.co/type](https://timeless.co/type).
+2. Copy these three variable fonts into `public/fonts/timeless/`:
+   - `Sans-Grotesk/TimelessSansVF.woff2`
+   - `Serif-Text/TimelessSerifVF.woff2`
+   - `Serif-Text/TimelessSerifItalicVF.woff2`
+
+Without them the app still runs on system fallbacks. `npm run deploy` checks for them first (`npm run check:fonts`) so production never ships without the real type. If you deploy from CI later, keep the files in private storage (for example a private R2 bucket) and copy them in during the build; never commit them.
+
+Map labels use the tile host's Noto Sans glyphs. Using Timeless there would mean converting the fonts into map glyph files and hosting them, which the license doesn't allow.
+
 ## Design system
 
-Heavily inspired by [save.design](https://save.design/): a quiet, near-black monochrome interface set in Geist Mono, hairline frames with diamond nodes at the corners (`Frame`), a segmented time filter, small bordered tags, and one hot magenta accent (`--color-accent`) for the primary action, selection, and live states. Color comes from content: flyers, video, and map pins (UV violet for queer-centered events, sodium orange for everything else). Rubik Mono One is kept only for the logo-adjacent flyer type.
+Structure heavily inspired by [save.design](https://save.design/), typography after the [Timeless specimen](https://timeless.co/type): a quiet monochrome interface in light (default) and dark themes, hairline frames with diamond nodes at the corners (`Frame`), a segmented time filter, small bordered tags, and one hot magenta accent (`--color-accent`) for the primary action, selection, and live states. Color comes from content: flyers, video, and map pins (UV violet for queer-centered events, sodium orange for everything else). Type is set editorially: serif display titles with a full stop, a serif-italic deck under each headline, Grotesk caps for time codes (`FRI 10 PM`), and issue-style counters (`N.01`). Generated flyers use Grotesk Black Italic.
+
+**Themes.** Light is the default; dark is an explicit choice, remembered per device, toggled in the nav. Tokens for both live in `src/styles/tokens.css` under `[data-theme]`, and the basemap switches with them (`src/map/mapStyle.ts`).
 
 Tokens live in `src/styles/tokens.css`; components in `src/components/ui.tsx`.
 

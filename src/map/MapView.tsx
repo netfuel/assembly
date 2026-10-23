@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Map as MapLibre, setWorkerUrl, type MapLayerMouseEvent } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { MAP_COLORS, nightStyle } from "./nightStyle";
+import { mapPalette, mapStyle, type MapTheme } from "./mapStyle";
 import { isLive } from "../lib/time";
 import type { EventSummary } from "../../shared/types";
 import "./map.css";
@@ -39,6 +39,7 @@ export function MapView({
   selectedId,
   onSelect,
   focus,
+  theme,
 }: {
   events: EventSummary[];
   center: [number, number];
@@ -47,19 +48,20 @@ export function MapView({
   onSelect: (id: string | null) => void;
   /** When this changes, the map flies to the coordinate. */
   focus: { lng: number; lat: number; key: number } | null;
+  theme: MapTheme;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibre | null>(null);
   const ready = useRef(false);
-  const latest = useRef({ events, selectedId, onSelect });
-  latest.current = { events, selectedId, onSelect };
+  const latest = useRef({ events, selectedId, onSelect, theme });
+  latest.current = { events, selectedId, onSelect, theme };
 
   // Create the map once.
   useEffect(() => {
     if (!container.current) return;
     const map = new MapLibre({
       container: container.current,
-      style: nightStyle,
+      style: mapStyle(theme),
       center,
       zoom,
       minZoom: 9,
@@ -71,7 +73,9 @@ export function MapView({
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
 
-    map.on("load", () => {
+    // Event layers are added on every style load, so they come back after a theme switch.
+    map.on("style.load", () => {
+      const MAP_COLORS = mapPalette(latest.current.theme);
       map.addSource(SOURCE, { type: "geojson", data: toGeoJSON(latest.current.events, new Date()), promoteId: "id" });
 
       const color: unknown = ["case", ["get", "queer"], MAP_COLORS.uv, MAP_COLORS.sodium];
@@ -123,19 +127,21 @@ export function MapView({
         paint: { "text-color": MAP_COLORS.fg, "text-halo-color": MAP_COLORS.halo, "text-halo-width": 2 },
       });
 
-      const pick = (e: MapLayerMouseEvent) => {
-        const id = e.features?.[0]?.properties?.id as string | undefined;
-        if (id) latest.current.onSelect(id);
-      };
-      map.on("click", "event-halo", pick);
-      map.on("click", "event-core", pick);
-      for (const layer of ["event-halo", "event-core"]) {
-        map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
-        map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
-      }
       ready.current = true;
       applySelection(map, latest.current.selectedId);
     });
+
+    // Layer-scoped listeners live on the map, so they survive style changes. Register once.
+    const pick = (e: MapLayerMouseEvent) => {
+      const id = e.features?.[0]?.properties?.id as string | undefined;
+      if (id) latest.current.onSelect(id);
+    };
+    map.on("click", "event-halo", pick);
+    map.on("click", "event-core", pick);
+    for (const layer of ["event-halo", "event-core"]) {
+      map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+      map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+    }
 
     // Live pins breathe. Skipped when the viewer prefers reduced motion.
     let raf = 0;
@@ -160,6 +166,16 @@ export function MapView({
     // The map is created once; center and zoom only seed it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Swap the basemap when the theme changes; style.load re-adds the event layers.
+  const firstTheme = useRef(theme);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || theme === firstTheme.current) return;
+    firstTheme.current = theme;
+    ready.current = false;
+    map.setStyle(mapStyle(theme), { diff: false });
+  }, [theme]);
 
   // Keep pins in sync with filters and data.
   useEffect(() => {
