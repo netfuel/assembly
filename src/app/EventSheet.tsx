@@ -132,9 +132,61 @@ export function EventSheet({
     }
   }
 
+  const [story, setStory] = useState<null | "working" | { url: string; file: File }>(null);
+  async function makeStory() {
+    setStory("working");
+    try {
+      const { renderStoryCard } = await import("../lib/storyCard");
+      const blob = await renderStoryCard(e, `${eventUrl(e.id)}?ref=story`, tz);
+      const file = new File([blob], `assembly-${e.id}.png`, { type: "image/png" });
+      setStory({ url: URL.createObjectURL(blob), file });
+    } catch {
+      setStory(null);
+      toast("Couldn't make the story card. Try again.");
+    }
+  }
+  function closeStory() {
+    if (story && story !== "working") URL.revokeObjectURL(story.url);
+    setStory(null);
+  }
+  async function shareStory(file: File) {
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: e.title });
+        return;
+      }
+    } catch (err) {
+      if ((err as DOMException)?.name === "AbortError") return;
+    }
+    // No file sharing here (most desktops): save it instead.
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
   const sceneLabels = e.scenes.map((s) => SCENES.find((x) => x.id === s)?.label).filter(Boolean) as string[];
 
   return (
+    <>
+    <Sheet open={!!story && story !== "working"} onClose={closeStory} label="Story card" modal center className="story-sheet">
+      {story && story !== "working" && (
+        <div className="story-preview">
+          <Label glyph="▣">Story card</Label>
+          <img src={story.url} alt={`Story card for ${e.title}`} />
+          <div className="story-actions">
+            <Button variant="primary" size="lg" onClick={() => shareStory(story.file)}>
+              Share to stories
+            </Button>
+            <LinkButton size="lg" href={story.url} download={story.file.name}>
+              Save image
+            </LinkButton>
+          </div>
+          <p className="note">The QR code opens this event. In Instagram, add the image to your story and place a link sticker for the same URL.</p>
+        </div>
+      )}
+    </Sheet>
     <Sheet open onClose={onClose} label={e.title}>
       <div ref={root} className={`event ${queer ? "is-queer" : ""}`}>
         <div data-reveal>
@@ -193,6 +245,9 @@ export function EventSheet({
           )}
           <Button size="lg" onClick={share}>
             Share
+          </Button>
+          <Button size="lg" onClick={makeStory} disabled={story === "working"}>
+            {story === "working" ? "Making card…" : "Story card"}
           </Button>
           <p className="going num">
             <span ref={goingEl}>{going}</span> going
@@ -291,6 +346,7 @@ export function EventSheet({
         {!detail?.viewerIsHost && <ReportBox eventId={e.id} me={me} onNeedSignIn={onNeedSignIn} toast={toast} />}
       </div>
     </Sheet>
+    </>
   );
 }
 

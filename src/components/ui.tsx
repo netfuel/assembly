@@ -102,6 +102,8 @@ export function Label({ glyph, children }: { glyph?: string; children: ReactNode
   );
 }
 
+const openSheets: object[] = [];
+
 /**
  * A panel that slides up from the bottom on phones and docks to the right on wide screens.
  * `modal` dims the map behind it; non-modal sheets leave the map usable.
@@ -132,10 +134,14 @@ export function Sheet({
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
+    // Only the most recently opened sheet answers Escape, so a preview over an event closes alone.
+    const token = {};
+    openSheets.push(token);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && openSheets[openSheets.length - 1] === token && closeRef.current();
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      openSheets.splice(openSheets.indexOf(token), 1);
       prev?.focus?.();
     };
   }, [open]);
