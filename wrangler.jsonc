@@ -18,12 +18,12 @@
     {
       "binding": "DB",
       "database_name": "assembly",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "f34d292b-b79e-4dbe-a86d-5b36ebe9f36d",
       "migrations_dir": "db/migrations"
     }
   ],
   "kv_namespaces": [
-    { "binding": "SESSIONS", "id": "00000000000000000000000000000000" }
+    { "binding": "SESSIONS", "id": "2cf39862b0304d58a13ff7b80beb9ba2" }
   ],
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "assembly-media" }
