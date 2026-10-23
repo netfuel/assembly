@@ -94,17 +94,17 @@ export function MapView({
         type: "circle",
         source: SOURCE,
         filter: ["==", ["get", "id"], ""],
-        paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": MAP_COLORS.fg, "circle-stroke-width": 2.5 },
+        paint: { "circle-radius": 14, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": MAP_COLORS.accent, "circle-stroke-width": 1.5 },
       });
       map.addLayer({
         id: "event-core",
         type: "circle",
         source: SOURCE,
         paint: {
-          "circle-radius": 7,
+          "circle-radius": 6,
           "circle-color": color as never,
           "circle-stroke-color": MAP_COLORS.halo,
-          "circle-stroke-width": 2.5,
+          "circle-stroke-width": 2,
         },
       });
       map.addLayer({
@@ -114,8 +114,8 @@ export function MapView({
         minzoom: 14,
         layout: {
           "text-field": ["get", "title"],
-          "text-font": ["Noto Sans Bold"],
-          "text-size": 13,
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 12,
           "text-offset": [0, -1.6],
           "text-anchor": "bottom",
           "text-allow-overlap": false,

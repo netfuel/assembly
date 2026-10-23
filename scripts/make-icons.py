@@ -6,10 +6,10 @@ Keep this in step with public/icons/favicon.svg.
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-GROUND = (11, 13, 22, 255)
-FG = (239, 234, 246, 255)
-SODIUM = (255, 154, 60, 255)
-UV = (185, 140, 255, 255)
+GROUND = (10, 10, 11, 255)
+FG = (237, 237, 238, 255)
+SODIUM = (255, 61, 242, 255)  # offset print in the accent magenta
+UV = (169, 139, 255, 255)
 
 OUTER = [(214, 96), (298, 96), (412, 420), (332, 420), (310, 352), (202, 352), (180, 420), (100, 420)]
 COUNTER = [(226, 286), (286, 286), (256, 192)]

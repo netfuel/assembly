@@ -9,20 +9,21 @@ const TILE_URL = import.meta.env.VITE_TILE_URL ?? "https://tiles.openfreemap.org
 const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
 export const MAP_COLORS = {
-  land: "#10131f",
-  water: "#0a1828",
-  park: "#10211b",
-  building: "#141829",
-  roadMinor: "#1b2033",
-  roadMajor: "#2a3050",
-  roadHighway: "#343b60",
-  label: "#5d6489",
-  labelStrong: "#8a8fb3",
-  halo: "#0b0d16",
+  land: "#0c0c0e",
+  water: "#08090c",
+  park: "#0f1210",
+  building: "#121215",
+  roadMinor: "#19191d",
+  roadMajor: "#26262b",
+  roadHighway: "#303036",
+  label: "#4e4e57",
+  labelStrong: "#7a7a84",
+  halo: "#0a0a0b",
   sodium: "#ff9a3c",
-  uv: "#b98cff",
-  live: "#ff4f7b",
-  fg: "#efeaf6",
+  uv: "#a98bff",
+  live: "#ff3df2",
+  accent: "#ff3df2",
+  fg: "#ededee",
 };
 
 const c = MAP_COLORS;

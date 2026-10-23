@@ -6,7 +6,7 @@ A map-first PWA for underground music: DIY shows, warehouse raves, queer dance n
 
 | Layer | Choice |
 | --- | --- |
-| App | React 19 + Vite 8, TypeScript, `vite-plugin-pwa` (Workbox) |
+| App | React 19 + Vite 8, TypeScript, `vite-plugin-pwa` (Workbox), GSAP, three.js |
 | Map | MapLibre GL 6, custom night style (`src/map/nightStyle.ts`), OpenFreeMap vector tiles |
 | API | Hono on a Cloudflare Worker (`worker/`), served from the same deploy as the app |
 | Data | D1 (SQLite) for events, venues, users, RSVPs; KV for sessions; R2 for flyers |
@@ -78,9 +78,13 @@ src/styles/    Design tokens and base styles
 worker/        Hono API: events, RSVPs, auth, sessions, media
 ```
 
-## Design tokens
+## Design system
 
-Colors, type, spacing, and motion live in `src/styles/tokens.css`. Sodium orange marks most events and the primary action; UV violet marks queer-centered events. Display type is Rubik Mono One, body is Figtree, and times and addresses use Space Mono. Fonts are self-hosted so the installed app works offline.
+Heavily inspired by [save.design](https://save.design/): a quiet, near-black monochrome interface set in Geist Mono, hairline frames with diamond nodes at the corners (`Frame`), a segmented time filter, small bordered tags, and one hot magenta accent (`--color-accent`) for the primary action, selection, and live states. Color comes from content: flyers, video, and map pins (UV violet for queer-centered events, sodium orange for everything else). Rubik Mono One is kept only for the logo-adjacent flyer type.
+
+Tokens live in `src/styles/tokens.css`; components in `src/components/ui.tsx`.
+
+**Motion.** GSAP (`src/lib/motion.ts`) handles staggered reveals when sheets open and filters change, the rubber-stamp hit on RSVP, and count-ups. three.js renders the generated flyer for events without uploaded art (`src/components/FlyerShader.tsx`): domain-warped noise printed through a 4x4 ordered dither, seeded per event. It's lazy-loaded, pauses offscreen, and renders a single still frame when the viewer prefers reduced motion. Without WebGL it falls back to a CSS halftone.
 
 ## Status
 

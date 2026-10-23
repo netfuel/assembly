@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
-import { Button, LinkButton, Sheet } from "../components/ui";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Button, Frame, Label, LinkButton, Sheet, Tag } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
+import { countTo, revealChildren, stamp } from "../lib/motion";
 import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type Me, type RsvpStatus } from "../../shared/types";
+
+// three.js loads only when someone opens an event without uploaded art.
+const FlyerShader = lazy(() => import("../components/FlyerShader"));
 
 const LINK_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -19,12 +23,17 @@ export function eventUrl(id: string) {
   return `${location.origin}/e/${encodeURIComponent(id)}`;
 }
 
-export function FlyerPlaceholder({ event }: { event: EventSummary }) {
+function GeneratedFlyer({ event }: { event: EventSummary }) {
   const queer = event.scenes.includes("queer");
   return (
-    <div className={`flyer-placeholder ${queer ? "is-queer" : ""}`} aria-hidden="true">
-      <span className="flyer-placeholder-title">{event.title}</span>
-      <span className="flyer-placeholder-sub mono">{event.venueName ?? event.neighborhood}</span>
+    <div className={`flyer-generated ${queer ? "is-queer" : ""}`}>
+      <Suspense fallback={<div className="flyer-shader" data-fallback="true" />}>
+        <FlyerShader id={event.id} queer={queer} />
+      </Suspense>
+      <div className="flyer-type">
+        <span className="flyer-type-title">{event.title}</span>
+        <span className="flyer-type-sub">{event.venueName ?? event.neighborhood}</span>
+      </div>
     </div>
   );
 }
@@ -48,12 +57,24 @@ export function EventSheet({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rsvp, setRsvp] = useState<RsvpStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const rsvpBtn = useRef<HTMLButtonElement>(null);
+  const goingEl = useRef<HTMLSpanElement>(null);
   const now = new Date();
   const e = detail ?? summary;
   const queer = e.scenes.includes("queer");
   const live = isLive(e.startsAt, e.endsAt, now);
   const directions = directionsLinks(e);
-  const going = e.goingCount + (rsvp === "going" && detail?.viewerRsvp !== "going" ? 1 : 0) - (rsvp !== "going" && detail?.viewerRsvp === "going" ? 1 : 0);
+  const baseGoing = e.goingCount - (detail?.viewerRsvp === "going" ? 1 : 0);
+  const going = baseGoing + (rsvp === "going" ? 1 : 0);
+
+  useEffect(() => {
+    revealChildren(root.current);
+  }, [summary.id]);
+
+  useEffect(() => {
+    countTo(goingEl.current, going);
+  }, [going]);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +98,7 @@ export function EventSheet({
     const next = rsvp === status ? null : status;
     const prev = rsvp;
     setRsvp(next);
+    if (next === "going") stamp(rsvpBtn.current);
     setBusy(true);
     try {
       await api.rsvp(e.id, next);
@@ -105,24 +127,36 @@ export function EventSheet({
     }
   }
 
+  const sceneLabels = e.scenes.map((s) => SCENES.find((x) => x.id === s)?.label).filter(Boolean) as string[];
+
   return (
     <Sheet open onClose={onClose} label={e.title}>
-      <div className={`event ${queer ? "is-queer" : ""}`}>
-        {e.flyerUrl ? <img className="flyer" src={e.flyerUrl} alt={`Flyer for ${e.title}`} /> : <FlyerPlaceholder event={e} />}
+      <div ref={root} className={`event ${queer ? "is-queer" : ""}`}>
+        <div data-reveal>
+          {e.flyerUrl ? <img className="flyer" src={e.flyerUrl} alt={`Flyer for ${e.title}`} /> : <GeneratedFlyer event={e} />}
+        </div>
 
-        <header className="event-head">
-          <p className="eyebrow">
-            {live ? <span className="live-tag">Happening now</span> : e.scenes.map((s) => SCENES.find((x) => x.id === s)?.label).filter(Boolean).join(" · ")}
-          </p>
+        <header className="event-head" data-reveal>
+          <div className="event-meta">
+            <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} aria-hidden="true" />
+            {live ? <span className="live-tag">Happening now</span> : <span>{sceneLabels.join(" / ")}</span>}
+          </div>
           <h1 className="event-title">{e.title}</h1>
           {e.pitch && <p className="event-pitch">{e.pitch}</p>}
-          <p className="event-when mono">
-            {dayLabel(e.startsAt, now, tz)} · {timeRange(e.startsAt, e.endsAt, tz)}
+          <p className="event-when num">
+            {dayLabel(e.startsAt, now, tz)} <span className="dim">/</span> {timeRange(e.startsAt, e.endsAt, tz)}
           </p>
         </header>
 
-        <div className="event-actions">
-          <Button size="lg" variant={rsvp === "going" ? "confirmed" : "primary"} onClick={() => choose("going")} disabled={busy} aria-pressed={rsvp === "going"}>
+        <div className="event-actions" data-reveal>
+          <Button
+            ref={rsvpBtn}
+            size="lg"
+            variant={rsvp === "going" ? "confirmed" : "primary"}
+            onClick={() => choose("going")}
+            disabled={busy}
+            aria-pressed={rsvp === "going"}
+          >
             {rsvp === "going" ? "Going ✓" : "RSVP"}
           </Button>
           <Button size="lg" variant={rsvp === "interested" ? "confirmed" : "default"} onClick={() => choose("interested")} disabled={busy} aria-pressed={rsvp === "interested"}>
@@ -136,70 +170,83 @@ export function EventSheet({
           <Button size="lg" onClick={share}>
             Share
           </Button>
-        </div>
-        <p className="going mono">{going} going</p>
-
-        <section className="where" aria-label="Location">
-          <p className="where-venue">
-            <strong>{e.venueName ?? "Location"}</strong>
-            {e.neighborhood && <span> · {e.neighborhood}</span>}
+          <p className="going num">
+            <span ref={goingEl}>{going}</span> going
           </p>
-          <p className="where-address mono">{e.address}</p>
-          {detail?.gettingThere && <p className="where-note">{detail.gettingThere}</p>}
-          <div className="where-links">
-            <LinkButton href={directions.apple} target="_blank" rel="noopener noreferrer">
-              Apple Maps
-            </LinkButton>
-            <LinkButton href={directions.google} target="_blank" rel="noopener noreferrer">
-              Google Maps
-            </LinkButton>
-            <Button onClick={() => downloadIcs(e, eventUrl(e.id))}>Add to calendar</Button>
-          </div>
-        </section>
+        </div>
 
-        <section aria-label="Lineup">
-          <h2 className="section-label">Lineup</h2>
+        <Frame as="section" className="where" aria-label="Location" data-reveal>
+          <Label glyph="⌖">Where</Label>
+          <p className="where-venue">
+            {e.venueName ?? "Location"}
+            {e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
+          </p>
+          <p className="where-address">{e.address}</p>
+          {detail?.gettingThere && <p className="where-note sans">{detail.gettingThere}</p>}
+          <div className="where-links">
+            <LinkButton size="sm" href={directions.apple} target="_blank" rel="noopener noreferrer">
+              ▷ Apple Maps
+            </LinkButton>
+            <LinkButton size="sm" href={directions.google} target="_blank" rel="noopener noreferrer">
+              ▷ Google Maps
+            </LinkButton>
+            <Button size="sm" onClick={() => downloadIcs(e, eventUrl(e.id))}>
+              + Calendar
+            </Button>
+          </div>
+        </Frame>
+
+        <section aria-label="Lineup" data-reveal>
+          <Label glyph="♫">Lineup</Label>
           {loadError && <p className="note">{loadError}</p>}
           {!detail && !loadError && <p className="note">Loading the lineup…</p>}
           {detail && detail.lineup.length === 0 && <p className="note">Lineup to be announced.</p>}
           {detail && detail.lineup.length > 0 && (
-            <ul className="lineup">
-              {detail.lineup.map((slot) => (
+            <ol className="lineup">
+              {detail.lineup.map((slot, i) => (
                 <li key={slot.artistId}>
-                  <span className="lineup-time mono">{slot.setStart ?? ""}</span>
+                  <span className="lineup-index num">{String(i + 1).padStart(2, "0")}</span>
                   <span className="lineup-artist">
-                    <strong>{slot.name}</strong>
-                    {(slot.note || slot.room) && <small>{[slot.room, slot.note].filter(Boolean).join(" · ")}</small>}
+                    <span className="lineup-name">{slot.name}</span>
+                    {(slot.note || slot.room) && <span className="lineup-note">{[slot.room, slot.note].filter(Boolean).join(" / ")}</span>}
                     <span className="artist-links">
                       {Object.entries(slot.links).map(([k, href]) =>
                         href ? (
                           <a key={k} href={href} target="_blank" rel="noopener noreferrer">
-                            {LINK_LABELS[k] ?? k}
+                            {LINK_LABELS[k] ?? k} ↗
                           </a>
                         ) : null,
                       )}
                     </span>
                   </span>
+                  <span className="lineup-time num">{slot.setStart ?? ""}</span>
                 </li>
               ))}
-            </ul>
+            </ol>
           )}
         </section>
 
-        <section aria-label="Door">
-          <h2 className="section-label">Door</h2>
-          <div className="tags">
-            {e.doorPrice && <span className="tag tag-strong">{e.doorPrice}</span>}
+        <section aria-label="Door" data-reveal>
+          <Label glyph="▣">Door</Label>
+          <ul className="door">
+            {e.doorPrice && (
+              <li>
+                <strong>{e.doorPrice}</strong>
+              </li>
+            )}
             {e.policyTags.map((t) => (
-              <span key={t} className="tag">
-                {POLICY_TAGS[t] ?? t}
-              </span>
+              <li key={t}>{POLICY_TAGS[t] ?? t}</li>
             ))}
-          </div>
+          </ul>
         </section>
 
-        <p className="note">
-          {e.isSample ? "Sample event for development. " : ""}Tickets are sold by the organizer on their own site; Assembly links out and never handles payment.
+        <p className="note" data-reveal>
+          {e.isSample && (
+            <>
+              <Tag>Sample</Tag>{" "}
+            </>
+          )}
+          Tickets are sold by the organizer on their own site. Assembly links out and never handles payment.
         </p>
       </div>
     </Sheet>

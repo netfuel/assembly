@@ -14,9 +14,10 @@ body {
   margin: 0;
   background: var(--color-ground);
   color: var(--color-fg);
-  font-family: var(--font-body);
-  font-size: var(--text-md);
-  line-height: 1.45;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  font-feature-settings: "ss01";
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   overscroll-behavior: none;
@@ -39,7 +40,7 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-sodium);
+  outline: 1px solid var(--color-accent);
   outline-offset: 2px;
 }
 
@@ -50,9 +51,14 @@ h3 {
   margin: 0;
 }
 
-.mono {
+.mono,
+.num {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+.sans {
+  font-family: var(--font-sans);
 }
 
 .visually-hidden {

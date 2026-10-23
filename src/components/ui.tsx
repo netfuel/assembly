@@ -1,14 +1,18 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, type ButtonHTMLAttributes, type ComponentProps, type HTMLAttributes, type ReactNode } from "react";
 import "./ui.css";
 
-type Variant = "default" | "primary" | "uv" | "ghost" | "confirmed";
+type Variant = "default" | "primary" | "solid" | "ghost" | "confirmed";
 
+/**
+ * Buttons. `primary` is the single magenta accent (one per view: RSVP, Post).
+ * `solid` is the off-white button used for sign-in, `default` is the hairline dark button.
+ */
 export function Button({
   variant = "default",
   size = "md",
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "md" | "lg" }) {
+}: ComponentProps<"button"> & { variant?: Variant; size?: "sm" | "md" | "lg" }) {
   return <button className={`btn btn-${variant} btn-${size} ${className}`} {...props} />;
 }
 
@@ -17,27 +21,90 @@ export function LinkButton({
   size = "md",
   className = "",
   ...props
-}: React.AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: Variant; size?: "md" | "lg" }) {
+}: ComponentProps<"a"> & { variant?: Variant; size?: "sm" | "md" | "lg" }) {
   return <a className={`btn btn-${variant} btn-${size} ${className}`} {...props} />;
 }
 
+/** A toggleable filter tag. `marker` draws a small scene square in front of the label. */
 export function Chip({
   pressed,
-  dot,
+  marker,
   children,
+  className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { pressed: boolean; dot?: string }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { pressed: boolean; marker?: string }) {
   return (
-    <button type="button" className="chip" aria-pressed={pressed} {...props}>
-      {dot && <span className="chip-dot" style={{ background: dot }} aria-hidden="true" />}
+    <button type="button" className={`chip ${className}`} aria-pressed={pressed} {...props}>
+      {marker && <span className="marker" style={{ background: marker }} aria-hidden="true" />}
       {children}
     </button>
   );
 }
 
+/** Small bordered label, like save.design's "▷ Preview" tags. */
+export function Tag({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "accent" | "strong" }) {
+  return <span className={`tag tag-${tone}`}>{children}</span>;
+}
+
+/** Segmented toggle: one option active at a time. */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+  label: string;
+}) {
+  return (
+    <div className="segmented" role="radiogroup" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A hairline frame with diamond nodes at its four corners. `featured` switches it to the accent. */
+export function Frame({
+  featured = false,
+  className = "",
+  children,
+  as: Tag = "div",
+  ...props
+}: HTMLAttributes<HTMLElement> & { featured?: boolean; as?: "div" | "section" | "article" }) {
+  return (
+    <Tag className={`frame ${featured ? "frame-featured" : ""} ${className}`} {...props}>
+      <i className="node node-tl" aria-hidden="true" />
+      <i className="node node-tr" aria-hidden="true" />
+      <i className="node node-bl" aria-hidden="true" />
+      <i className="node node-br" aria-hidden="true" />
+      {children}
+    </Tag>
+  );
+}
+
+/** Section label: a small glyph plus an uppercase mono label. */
+export function Label({ glyph, children }: { glyph?: string; children: ReactNode }) {
+  return (
+    <h2 className="label">
+      {glyph && (
+        <span className="label-glyph" aria-hidden="true">
+          {glyph}
+        </span>
+      )}
+      {children}
+    </h2>
+  );
+}
+
 /**
  * A panel that slides up from the bottom on phones and docks to the right on wide screens.
- * `modal` dims the map behind it and traps attention; non-modal sheets let the map stay usable.
+ * `modal` dims the map behind it; non-modal sheets leave the map usable.
  */
 export function Sheet({
   open,
@@ -72,17 +139,10 @@ export function Sheet({
   return (
     <>
       <div className={`scrim ${modal ? "" : "scrim-soft"}`} onClick={onClose} />
-      <div
-        ref={ref}
-        className={`sheet ${center ? "sheet-center" : ""}`}
-        role="dialog"
-        aria-modal={modal}
-        aria-label={label}
-        tabIndex={-1}
-      >
+      <div ref={ref} className={`sheet ${center ? "sheet-center" : ""}`} role="dialog" aria-modal={modal} aria-label={label} tabIndex={-1}>
         <button className="sheet-close" onClick={onClose} aria-label="Close">
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
           </svg>
         </button>
         <div className="sheet-body">{children}</div>
