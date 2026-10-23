@@ -19,10 +19,11 @@ if [ ! -d node_modules/vite ] || [ package-lock.json -nt node_modules/.package-l
   npm install || exit 1
 fi
 
-# First run: create the local database and load the Memphis sample events
-if [ ! -d .wrangler/state/v3/d1 ]; then
-  echo "Setting up the local database…"
-  npm run setup:local || exit 1
+# Local database: apply any new migrations (safe to repeat), and load sample events if it's empty
+npm run --silent db:migrate:local >/dev/null 2>&1 || { echo "Couldn't update the local database."; exit 1; }
+if ! npx wrangler d1 execute assembly --local --command "SELECT 1 FROM events LIMIT 1" 2>/dev/null | grep -q '"1"'; then
+  echo "Loading sample events…"
+  npm run --silent db:seed:local >/dev/null || exit 1
 fi
 
 # Fonts are gitignored (license); the app still runs on fallbacks without them

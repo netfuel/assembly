@@ -37,11 +37,17 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,mjs,css,html,svg,png,woff2}"],
+        // Fonts are served from R2 by the Worker and cached at runtime below, not precached.
+        globPatterns: ["**/*.{js,mjs,css,html,svg,png}"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith("/fonts/"),
+            handler: "CacheFirst",
+            options: { cacheName: "fonts", expiration: { maxEntries: 10, maxAgeSeconds: 365 * 24 * 3600 } },
+          },
           {
             // Event data: fresh when online, last copy when the signal drops at the door.
             urlPattern: ({ url }) => url.pathname.startsWith("/api/events"),

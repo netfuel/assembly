@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import type { AppContext } from "./env";
+import type { AppContext, Env } from "./env";
 import { readSession } from "./session";
 import { auth } from "./auth";
 import { events } from "./events";
+import { fonts } from "./fonts";
 import type { City, Me } from "../shared/types";
 
 const app = new Hono<AppContext>().basePath("/api");
@@ -70,4 +71,9 @@ app.onError((err, c) => {
   return c.json({ error: "Something went wrong on our side. Try again in a moment." }, 500);
 });
 
-export default app;
+// Fonts live outside /api; everything else the Worker handles is under /api.
+const root = new Hono<{ Bindings: Env }>();
+root.route("/fonts", fonts);
+root.route("/", app);
+
+export default root;

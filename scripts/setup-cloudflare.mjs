@@ -5,7 +5,8 @@
 // 4. Applies the database migrations to the remote database
 // Safe to run again: existing resources are found and reused.
 import { execSync, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const D1_NAME = "assembly";
 const KV_TITLE = "assembly-sessions";
@@ -88,6 +89,15 @@ console.log("Done.");
 // 4. Migrations
 step("Applying database migrations to the remote database");
 interactive(`d1 migrations apply ${D1_NAME} --remote`);
+
+// 5. Fonts (optional: only when they're present locally)
+const fontFiles = ["TimelessSansVF.woff2", "TimelessSerifVF.woff2", "TimelessSerifItalicVF.woff2"];
+if (fontFiles.every((f) => existsSync(new URL(`../public/fonts/timeless/${f}`, import.meta.url)))) {
+  step("Uploading the Timeless fonts to R2");
+  spawnSync("node", [fileURLToPath(new URL("./upload-fonts.mjs", import.meta.url))], { stdio: "inherit" });
+} else {
+  console.log("\nSkipping font upload: the Timeless files aren't in public/fonts/timeless/. Run npm run fonts:upload later.");
+}
 
 console.log(`
 ✓ Cloudflare is set up.

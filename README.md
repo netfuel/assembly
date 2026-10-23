@@ -58,7 +58,7 @@ The production site is **https://assembly.rsvp**. The app and API ship as one Wo
 
 **One-time setup.** On a Mac, double-click `setup-cloudflare.command` (or run `npm run setup:cloudflare`). It signs you in to Cloudflare, creates or reuses the D1 database (`assembly`), KV namespace (`assembly-sessions`), and R2 bucket (`assembly-media`), writes their IDs into `wrangler.jsonc`, and applies the database migrations. Commit `wrangler.jsonc` afterward; the IDs aren't secret. Then add the sign-in secrets (`npx wrangler secret put GOOGLE_CLIENT_ID`, and the others under "Set up sign-in").
 
-**Fonts in production.** Workers Builds clones the public repo, so it won't have the Timeless fonts and production would fall back to system fonts. Until fonts come from private storage during the build, deploy from your Mac with `npm run deploy` (it checks for the fonts first).
+**Workers Builds settings.** In the Cloudflare dashboard (Workers & Pages > assembly > Settings > Build), the build command must be `npm run build` and the deploy command `npx wrangler deploy` (non-production branches: `npx wrangler versions upload`). The Cloudflare Vite plugin writes the deploy config during the build, so deploying without building fails with "The `assets` property … is missing the required `directory` property".
 
 The site's own address is read from each request, so there's no URL to configure: sign-in redirects and the cross-site check work on localhost, preview URLs, and assembly.rsvp alike. Don't load `db/seed.sql` in production; it's sample data.
 
@@ -79,15 +79,12 @@ worker/        Hono API: events, RSVPs, auth, sessions, media
 
 ## Fonts
 
-Assembly is set in the [Timeless type family](https://timeless.co/type): Timeless Sans (Grotesk cut) for the interface and data, Timeless Serif for display and reading, and Timeless Serif Italic for decks. They're free for commercial use under the Timeless Free Font License, which allows embedding them in a website but **forbids putting the font files in a public repository**. So the files are gitignored and you add them locally:
+Assembly is set in the [Timeless type family](https://timeless.co/type): Timeless Sans (Grotesk cut) for the interface and data, Timeless Serif for display and reading, and Timeless Serif Italic for decks. They're free for commercial use under the Timeless Free Font License, which allows embedding them in a website but **forbids putting the font files in a public repository**. So they never go into git:
 
-1. Download the family from [timeless.co/type](https://timeless.co/type).
-2. Copy these three variable fonts into `public/fonts/timeless/`:
-   - `Sans-Grotesk/TimelessSansVF.woff2`
-   - `Serif-Text/TimelessSerifVF.woff2`
-   - `Serif-Text/TimelessSerifItalicVF.woff2`
+- **Production:** the fonts live in the private R2 bucket (`assembly-media`, under `fonts/timeless/`). The Worker serves them at `/fonts/timeless/...` only to requests from Assembly's own pages (`worker/fonts.ts`), so automatic Cloudflare builds get the real type with nothing in the repo. Upload or refresh them with `npm run fonts:upload` (also run by `setup-cloudflare.command`).
+- **Local dev:** copy the three variable fonts from the [download](https://timeless.co/type) into `public/fonts/timeless/` (gitignored): `Sans-Grotesk/TimelessSansVF.woff2`, `Serif-Text/TimelessSerifVF.woff2`, `Serif-Text/TimelessSerifItalicVF.woff2`. The Worker falls back to these when R2 doesn't have them.
 
-Without them the app still runs on system fallbacks. `npm run deploy` checks for them first (`npm run check:fonts`) so production never ships without the real type. If you deploy from CI later, keep the files in private storage (for example a private R2 bucket) and copy them in during the build; never commit them.
+Without the files anywhere, the app runs on system fallbacks. The installed PWA caches the fonts after first load, so they work offline.
 
 Map labels use the tile host's Noto Sans glyphs. Using Timeless there would mean converting the fonts into map glyph files and hosting them, which the license doesn't allow.
 
