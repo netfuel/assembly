@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
 import { Button, Chip, Frame, Label, LinkButton, Segmented, Sheet, Tag, Toast } from "../components/ui";
-import { api, ApiError, signInUrl } from "../lib/api";
+import { api, ApiError, devSignInUrl, signInUrl } from "../lib/api";
 import { clock, dayLabel, isLive, overlaps, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 import { EventSheet } from "./EventSheet";
-import { SCENES, type AuthProviders, type City, type EventSummary, type Me, type SceneId } from "../../shared/types";
+import { AnnounceForm } from "./AnnounceForm";
+import { SCENES, type AuthProviders, type City, type EventDetail, type EventSummary, type Me, type MyEvent, type SceneId, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
 const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
@@ -38,6 +39,13 @@ export function App() {
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
   const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile">(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [config, setConfig] = useState<ServerConfig>({ video: false, streamCustomerCode: null });
+  const [editing, setEditing] = useState<EventDetail | null>(null);
+  // An open event that isn't in the loaded list: your own hidden event, or a link to one weeks out.
+  const [extra, setExtra] = useState<EventSummary | null>(null);
+  const [detailVersion, setDetailVersion] = useState(0);
+  const [mine, setMine] = useState<{ hosting: MyEvent[]; going: MyEvent[] } | null>(null);
+  const [devName, setDevName] = useState("Test Organizer");
   const [theme, setTheme] = useTheme();
   const railRef = useRef<HTMLDivElement>(null);
   const smallSheetRef = useRef<HTMLDivElement>(null);
@@ -50,29 +58,47 @@ export function App() {
   }, [toastMsg]);
 
   // Initial load: city, events, session.
+  const loadEvents = useCallback(
+    () =>
+      api
+        .events("memphis")
+        .then((list) => {
+          setEvents(list);
+          setLoadState("ready");
+          return list;
+        })
+        .catch((err: unknown) => {
+          setLoadError(err instanceof ApiError ? err.message : "Couldn't load events.");
+          setLoadState("error");
+          return [] as EventSummary[];
+        }),
+    [],
+  );
+
   useEffect(() => {
     api.city("memphis").then(setCity).catch(() => undefined);
-    api
-      .events("memphis")
-      .then((list) => {
-        setEvents(list);
-        setLoadState("ready");
-      })
-      .catch((err: unknown) => {
-        setLoadError(err instanceof ApiError ? err.message : "Couldn't load events.");
-        setLoadState("error");
-      });
-    api.me().then(setMe).catch(() => undefined);
+    loadEvents();
     api.providers().then(setProviders).catch(() => undefined);
+    api.config().then(setConfig).catch(() => undefined);
 
     const params = new URLSearchParams(location.search);
     const signin = params.get("signin");
-    if (signin) {
-      setToastMsg(signin === "ok" ? "You're signed in." : "Sign-in didn't go through. Try again.");
+    const compose = params.get("compose") === "1";
+    api
+      .me()
+      .then((user) => {
+        setMe(user);
+        // Signed in from the Post button: go straight to the form.
+        if (user && compose) setSheet("announce");
+      })
+      .catch(() => undefined);
+    if (signin || compose) {
+      if (signin) setToastMsg(signin === "ok" ? "You're signed in." : "Sign-in didn't go through. Try again.");
       params.delete("signin");
+      params.delete("compose");
       history.replaceState(null, "", location.pathname + (params.size ? `?${params}` : ""));
     }
-  }, []);
+  }, [loadEvents]);
 
   // Keep the address bar in step with the open event so links can be shared.
   useEffect(() => {
@@ -93,7 +119,54 @@ export function App() {
       .filter((e) => scenes.length === 0 || scenes.some((s) => e.scenes.includes(s)));
   }, [events, windowId, scenes, now, city.timezone]);
 
-  const selected = events.find((e) => e.id === selectedId) ?? null;
+  const selected = events.find((e) => e.id === selectedId) ?? (extra && extra.id === selectedId ? extra : null);
+
+  // Fetch an open event that the list doesn't include.
+  useEffect(() => {
+    if (loadState !== "ready" || !selectedId || events.some((e) => e.id === selectedId) || extra?.id === selectedId) return;
+    let stale = false;
+    api
+      .event(selectedId)
+      .then((d) => {
+        if (stale) return;
+        setExtra(d);
+        setFocus({ lng: d.lng, lat: d.lat, key: Date.now() });
+      })
+      .catch((err: unknown) => {
+        if (stale) return;
+        toast(err instanceof ApiError ? err.message : "Couldn't open that event.");
+        setSelectedId(null);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [loadState, selectedId, events, extra, toast, me]);
+
+  // The profile sheet lists what you're hosting and going to.
+  useEffect(() => {
+    if (sheet !== "profile" || !me) return;
+    api.myEvents().then(setMine).catch(() => setMine({ hosting: [], going: [] }));
+  }, [sheet, me]);
+
+  const openEvent = (id: string) => {
+    setSheet(null);
+    setExtra(null);
+    setSelectedId(id);
+    const ev = events.find((e) => e.id === id);
+    if (ev) setFocus({ lng: ev.lng, lat: ev.lat, key: Date.now() });
+  };
+
+  async function afterSave(id: string, message: string) {
+    setSheet(null);
+    setEditing(null);
+    setExtra(null);
+    const list = await loadEvents();
+    setDetailVersion((v) => v + 1);
+    setSelectedId(id);
+    const ev = list.find((e) => e.id === id);
+    if (ev) setFocus({ lng: ev.lng, lat: ev.lat, key: Date.now() });
+    toast(message);
+  }
   // The open event always keeps its pin, even when the filters would hide it (for example a shared link).
   const mapEvents = useMemo(() => (selected && !shown.includes(selected) ? [...shown, selected] : shown), [shown, selected]);
 
@@ -125,7 +198,12 @@ export function App() {
   }, [loadState]);
 
   const heading = WINDOWS.find((w) => w.id === windowId)!.heading;
-  const returnTo = selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
+  const [signInIntent, setSignInIntent] = useState<"post" | null>(null);
+  const returnTo = signInIntent === "post" ? "/?compose=1" : selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
+  const openSignIn = (intent: "post" | null = null) => {
+    setSignInIntent(intent);
+    setSheet("signin");
+  };
 
   return (
     <div className="app">
@@ -149,7 +227,14 @@ export function App() {
             <span className="theme-toggle-dot" aria-hidden="true" />
             <span className="hide-narrow">{theme === "light" ? "Light" : "Dark"}</span>
           </button>
-          <Button size="sm" onClick={() => setSheet(me ? "announce" : "signin")}>
+          <Button
+            size="sm"
+            onClick={() => {
+              if (!me) return openSignIn("post");
+              setEditing(null);
+              setSheet("announce");
+            }}
+          >
             + <span className="hide-narrow">Make an announcement</span>
             <span className="show-narrow">Post</span>
           </Button>
@@ -158,7 +243,7 @@ export function App() {
               {me.avatarUrl ? <img src={me.avatarUrl} alt="" referrerPolicy="no-referrer" /> : me.displayName.slice(0, 1).toUpperCase()}
             </button>
           ) : (
-            <Button size="sm" variant="solid" onClick={() => setSheet("signin")}>
+            <Button size="sm" variant="solid" onClick={() => openSignIn()}>
               Sign in
             </Button>
           )}
@@ -209,15 +294,16 @@ export function App() {
             )}
             {shown.map((e, i) => {
               const queer = e.scenes.includes("queer");
-              const live = isLive(e.startsAt, e.endsAt, now);
+              const cancelled = e.status === "cancelled";
+              const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
               return (
-                <button key={e.id} className="card" onClick={() => select(e.id)}>
+                <button key={e.id} className={`card ${cancelled ? "is-cancelled" : ""}`} onClick={() => select(e.id)}>
                   <Frame featured={live} className="card-frame">
                     <span className="card-top num">
                       <span>
                         N.{pad(i + 1)} <span className="dim">/ {pad(shown.length)}</span>
                       </span>
-                      {live ? <Tag tone="accent">Live</Tag> : <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} />}
+                      {cancelled ? <Tag>Cancelled</Tag> : live ? <Tag tone="accent">Live</Tag> : <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} />}
                     </span>
                     <span className="card-title">{e.title}</span>
                     <span className="card-when num">
@@ -237,12 +323,17 @@ export function App() {
 
       {selected && (
         <EventSheet
-          key={selected.id}
+          key={`${selected.id}:${detailVersion}`}
           summary={selected}
           tz={city.timezone}
           me={me}
+          config={config}
           onClose={() => select(null)}
-          onNeedSignIn={() => setSheet("signin")}
+          onNeedSignIn={() => openSignIn()}
+          onEdit={(d) => {
+            setEditing(d);
+            setSheet("announce");
+          }}
           toast={toast}
         />
       )}
@@ -262,7 +353,23 @@ export function App() {
               Continue with Apple
             </LinkButton>
           </div>
-          {!providers.google && !providers.apple && (
+          {providers.dev && (
+            <form
+              className="dev-signin"
+              data-reveal
+              onSubmit={(ev) => {
+                ev.preventDefault();
+                location.href = devSignInUrl(devName || "Test Organizer", returnTo);
+              }}
+            >
+              <Tag>Local only</Tag>
+              <input value={devName} onChange={(ev) => setDevName(ev.target.value)} aria-label="Test name" />
+              <Button type="submit" size="sm">
+                Test sign-in
+              </Button>
+            </form>
+          )}
+          {!providers.google && !providers.apple && !providers.dev && (
             <p className="note" data-reveal>
               <Tag>Setup</Tag> Sign-in isn't configured on this server yet. See README, "Set up sign-in".
             </p>
@@ -270,12 +377,27 @@ export function App() {
         </div>
       </Sheet>
 
-      <Sheet open={sheet === "announce"} onClose={() => setSheet(null)} label="Make an announcement" modal center>
-        <div className="stack" data-reveal>
-          <Label glyph="▶">Make an announcement</Label>
-          <h1 className="sheet-title">Posting opens in the next build.</h1>
-          <p className="note serif-text">Flyer upload, lineup with artist links, and promo video up to 1:30 arrive in the Core build phase.</p>
-        </div>
+      <Sheet
+        open={sheet === "announce" && !!me}
+        onClose={() => {
+          setSheet(null);
+          setEditing(null);
+        }}
+        label={editing ? "Edit announcement" : "Make an announcement"}
+        modal
+        center
+        className="sheet-compose"
+      >
+        <AnnounceForm
+          key={editing?.id ?? "new"}
+          city={city}
+          theme={theme}
+          config={config}
+          existing={editing}
+          toast={toast}
+          onPosted={(id, mode) => afterSave(id, mode === "created" ? "Posted. It's on the map." : "Changes saved.")}
+          onCancelled={(id) => afterSave(id, "Marked cancelled. It stays on the map so people know.")}
+        />
       </Sheet>
 
       <Sheet open={sheet === "profile" && !!me} onClose={() => setSheet(null)} label="Your profile" modal center>
@@ -283,6 +405,30 @@ export function App() {
           <Label glyph="◇">Profile</Label>
           <h1 className="sheet-title">{me?.displayName}</h1>
         </div>
+        <section className="stack" data-reveal aria-label="Going">
+          <Label glyph="✓">Going</Label>
+          {!mine && <p className="note">Loading…</p>}
+          {mine && mine.going.length === 0 && <p className="note">Nothing yet. RSVP to a night and it shows up here.</p>}
+          {mine && mine.going.length > 0 && <MyList items={mine.going} tz={city.timezone} onOpen={openEvent} />}
+        </section>
+        <section className="stack" data-reveal aria-label="Hosting">
+          <Label glyph="▶">Hosting</Label>
+          {mine && mine.hosting.length === 0 && (
+            <p className="note">
+              You haven't posted anything.{" "}
+              <button
+                className="link"
+                onClick={() => {
+                  setEditing(null);
+                  setSheet("announce");
+                }}
+              >
+                Make an announcement →
+              </button>
+            </p>
+          )}
+          {mine && mine.hosting.length > 0 && <MyList items={mine.hosting} tz={city.timezone} onOpen={openEvent} />}
+        </section>
         <Button
           data-reveal
           onClick={async () => {
@@ -298,5 +444,24 @@ export function App() {
 
       <Toast message={toastMsg} />
     </div>
+  );
+}
+
+function MyList({ items, tz, onOpen }: { items: MyEvent[]; tz: string; onOpen: (id: string) => void }) {
+  const now = new Date();
+  return (
+    <ul className="my-list">
+      {items.map((e) => (
+        <li key={e.id}>
+          <button onClick={() => onOpen(e.id)}>
+            <span className="my-title">{e.title}</span>
+            <span className="my-when num">
+              {dayLabel(e.starts_at, now, tz)} / {clock(e.starts_at, tz)}
+            </span>
+            {e.status === "cancelled" ? <Tag>Cancelled</Tag> : e.status === "hidden" ? <Tag>Hidden</Tag> : e.rsvp === "interested" ? <Tag>Interested</Tag> : null}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }

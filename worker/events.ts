@@ -21,6 +21,9 @@ interface EventRow {
   flyer_key: string | null;
   video_id: string | null;
   is_sample: number;
+  status: "live" | "cancelled" | "hidden";
+  venue_id: string | null;
+  created_at: string;
   updated_at: string;
   venue_name: string | null;
   venue_type: string | null;
@@ -30,7 +33,7 @@ interface EventRow {
 const EVENT_SELECT = `
   SELECT e.id, e.title, e.pitch, e.description, e.starts_at, e.ends_at, e.address, e.neighborhood,
          e.lat, e.lng, e.getting_there, e.door_price, e.ticket_url, e.policy_tags, e.scenes,
-         e.flyer_key, e.video_id, e.is_sample, e.updated_at,
+         e.flyer_key, e.video_id, e.is_sample, e.status, e.venue_id, e.created_at, e.updated_at,
          v.name AS venue_name, v.type AS venue_type,
          (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS going_count
   FROM events e LEFT JOIN venues v ON v.id = e.venue_id`;
@@ -65,6 +68,8 @@ function toSummary(row: EventRow): EventSummary {
     videoId: row.video_id,
     goingCount: row.going_count,
     isSample: row.is_sample === 1,
+    updated: Date.parse(row.updated_at) - Date.parse(row.created_at) > 10 * 60e3,
+    status: row.status,
   };
 }
 
@@ -74,7 +79,10 @@ function isIso(value: string | undefined): value is string {
 
 export const events = new Hono<AppContext>();
 
-/** Events in a city that overlap a time window. Defaults: six hours ago to two weeks out. */
+/**
+ * Events in a city that overlap a time window. Defaults: six hours ago to two weeks out.
+ * Cancelled events stay listed (marked) so people who planned around them find out.
+ */
 events.get("/", async (c) => {
   const city = c.req.query("city") ?? c.env.DEFAULT_CITY;
   const now = Date.now();
@@ -85,7 +93,7 @@ events.get("/", async (c) => {
 
   const { results } = await c.env.DB.prepare(
     `${EVENT_SELECT}
-     WHERE e.city_id = ? AND e.status = 'live' AND e.ends_at > ? AND e.starts_at < ?
+     WHERE e.city_id = ? AND e.status IN ('live', 'cancelled') AND e.ends_at > ? AND e.starts_at < ?
      ORDER BY e.starts_at ASC LIMIT 500`,
   )
     .bind(city, from, to)
@@ -97,10 +105,17 @@ events.get("/", async (c) => {
 
 events.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const row = await c.env.DB.prepare(`${EVENT_SELECT} WHERE e.id = ? AND e.status IN ('live', 'cancelled')`)
-    .bind(id)
-    .first<EventRow>();
-  if (!row) return c.json({ error: "We couldn't find that event. It may have been removed." }, 404);
+  const row = await c.env.DB.prepare(`${EVENT_SELECT} WHERE e.id = ?`).bind(id).first<EventRow>();
+  const userId = c.get("userId");
+  const viewerIsHost = !!(
+    row &&
+    userId &&
+    (await c.env.DB.prepare("SELECT 1 FROM event_hosts WHERE event_id = ? AND user_id = ?").bind(id, userId).first())
+  );
+  // Hidden events (reported, or drafts) are visible only to their hosts.
+  if (!row || ((row.status === "hidden" || row.status === ("draft" as string)) && !viewerIsHost)) {
+    return c.json({ error: "We couldn't find that event. It may have been removed." }, 404);
+  }
 
   const { results: slots } = await c.env.DB.prepare(
     `SELECT a.id, a.name, a.slug, a.links, s.set_start, s.room, s.note
@@ -111,7 +126,6 @@ events.get("/:id", async (c) => {
     .all<{ id: string; name: string; slug: string; links: string; set_start: string | null; room: string | null; note: string | null }>();
 
   let viewerRsvp: RsvpStatus | null = null;
-  const userId = c.get("userId");
   if (userId) {
     const r = await c.env.DB.prepare("SELECT status FROM rsvps WHERE event_id = ? AND user_id = ?")
       .bind(id, userId)
@@ -135,6 +149,10 @@ events.get("/:id", async (c) => {
     gettingThere: row.getting_there,
     lineup,
     viewerRsvp,
+    viewerIsHost,
+    venueId: row.venue_id,
+    flyerKey: row.flyer_key,
+    createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
   c.header("Cache-Control", userId ? "private, no-store" : "public, max-age=30");

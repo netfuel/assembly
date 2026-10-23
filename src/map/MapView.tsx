@@ -23,7 +23,8 @@ function toGeoJSON(events: EventSummary[], now: Date): GeoJSON.FeatureCollection
         id: e.id,
         title: e.title,
         queer: e.scenes.includes("queer"),
-        live: isLive(e.startsAt, e.endsAt, now),
+        cancelled: e.status === "cancelled",
+        live: e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now),
         going: e.goingCount,
       },
     })),
@@ -89,7 +90,7 @@ export function MapView({
         paint: {
           "circle-radius": haloRadius as never,
           "circle-color": ["case", ["get", "live"], MAP_COLORS.live, color] as never,
-          "circle-opacity": ["case", ["get", "live"], 0.35, 0.2],
+          "circle-opacity": ["case", ["get", "live"], 0.35, ["get", "cancelled"], 0, 0.2],
           "circle-blur": 0.4,
         },
       });
@@ -107,6 +108,8 @@ export function MapView({
         paint: {
           "circle-radius": 6,
           "circle-color": color as never,
+          "circle-opacity": ["case", ["get", "cancelled"], 0.35, 1],
+          "circle-stroke-opacity": ["case", ["get", "cancelled"], 0.35, 1],
           "circle-stroke-color": MAP_COLORS.halo,
           "circle-stroke-width": 2,
         },
@@ -150,7 +153,7 @@ export function MapView({
       const tick = (t: number) => {
         if (ready.current && map.getLayer("event-halo")) {
           const phase = (Math.sin(t / 450) + 1) / 2;
-          map.setPaintProperty("event-halo", "circle-opacity", ["case", ["get", "live"], 0.15 + phase * 0.4, 0.2]);
+          map.setPaintProperty("event-halo", "circle-opacity", ["case", ["get", "live"], 0.15 + phase * 0.4, ["get", "cancelled"], 0, 0.2]);
         }
         raf = requestAnimationFrame(tick);
       };

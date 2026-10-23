@@ -28,11 +28,13 @@ npm run dev           # http://localhost:5173 (app + API + local D1/KV/R2), plus
 
 Sample event times are relative to when you seed. Run `npm run db:seed:local` again to refresh them.
 
+**Test sign-in.** To try posting without setting up Google or Apple, put `DEV_LOGIN=1` in `.dev.vars` and restart. The sign-in sheet then shows a "Test sign-in" box that signs you in under any name. It only works on `localhost`; never set `DEV_LOGIN` in production.
+
 Other scripts:
 
 | Script | What it does |
 | --- | --- |
-| `npm test` | Unit tests (time windows, labels) |
+| `npm test` | Unit tests (time windows, form times, posting validation, redirects) |
 | `npm run typecheck` | Type-checks app, Worker, and config |
 | `npm run build` | Production build into `dist/` |
 | `npm run deploy` | Build and deploy to Cloudflare |
@@ -52,6 +54,16 @@ Sign-in buttons stay disabled until the provider is configured. For local work c
 3. Create a Sign in with Apple key; note its Key ID (`APPLE_KEY_ID`) and your Team ID (`APPLE_TEAM_ID`).
 4. Set `APPLE_PRIVATE_KEY` to the `.p8` contents (use `\n` for line breaks in `.dev.vars`).
 
+## Set up promo video (Cloudflare Stream)
+
+Organizers can attach a promo video up to 1:30. The browser uploads it straight to Cloudflare Stream through a one-time URL the Worker requests with a 90-second cap, so large files never pass through the Worker. Until it's configured, the form says video isn't set up yet and everything else works.
+
+1. In the Cloudflare dashboard, open Stream and enable it on the account (it's billed per minute stored and delivered).
+2. Create an API token with the **Stream: Edit** permission for the account.
+3. Set the secrets: `npx wrangler secret put CLOUDFLARE_ACCOUNT_ID` and `npx wrangler secret put STREAM_API_TOKEN`. Optionally set `STREAM_CUSTOMER_CODE` (the `customer-…` part of your Stream playback URLs) so players load from your own subdomain.
+
+Files up to 200 MB are accepted. Longer videos are refused in the browser before upload, and Stream rejects anything over 1:30 regardless.
+
 ## Deploy to Cloudflare
 
 The production site is **https://assembly.rsvp**. The app and API ship as one Worker named `assembly`, and Cloudflare Workers Builds deploys it from GitHub on every push to `main`.
@@ -69,12 +81,12 @@ db/            D1 migrations and local sample data
 docs/          PRD snapshot
 public/icons/  App icons (regenerate with python3 scripts/make-icons.py)
 shared/        Types shared by app and API
-src/app/       App shell, event sheet
+src/app/       App shell, event sheet, announcement form
 src/components Base UI: Button, Chip, Sheet, Toast
-src/lib/       API client, time windows (Memphis local time), calendar export
-src/map/       MapLibre view and night style
+src/lib/       API client, time windows (Memphis local time), calendar export, media prep
+src/map/       MapLibre view, pin picker, light and dark styles
 src/styles/    Design tokens and base styles
-worker/        Hono API: events, RSVPs, auth, sessions, media
+worker/        Hono API: events, posting, uploads, RSVPs, auth, sessions, fonts
 ```
 
 ## Fonts
@@ -100,4 +112,11 @@ Tokens live in `src/styles/tokens.css`; components in `src/components/ui.tsx`.
 
 ## Status
 
-Foundations phase: schema, auth, design tokens, map, read-only event pages, RSVP. Posting (flyer upload, lineup builder with artist links, promo video up to 1:30 on Cloudflare Stream) is the Core build phase.
+Core build: posting is live.
+
+- **Make an announcement**: flyer upload (resized in the browser, metadata such as GPS stripped, stored in R2), title and one-liner, date and times in Memphis time (an end before the start means the next morning), a listed venue or any address with a draggable pin, scenes and door policies, door price, ticket link, lineup builder with artist search and links per service, and promo video up to 1:30.
+- New posts keep a draft on the device until they're posted.
+- Hosts can edit or cancel. Cancelled events stay on the map, marked, so people who planned around them find out; edits more than 10 minutes after posting show an Updated tag.
+- Anyone signed in can report an event. Three different reporters hide it until it's reviewed (there's no review screen yet; reviewing is a database task for now).
+- Limits: 10 posts an hour, 30 flyer uploads an hour, 10 videos an hour per account.
+- Address search uses Photon (OpenStreetMap data). If it's down, the form falls back to placing the pin by hand.

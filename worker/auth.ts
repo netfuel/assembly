@@ -31,8 +31,14 @@ function apple(env: Env, origin: string) {
 
 /** Only same-site paths are allowed as a post-sign-in destination. */
 function safeReturnTo(value: string | undefined | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
+  // Browsers read "/\\host" as "//host", so backslashes and control characters are refused too.
+  if (!value || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f]/.test(value)) return "/";
   return value;
+}
+
+/** Adds ?signin=ok or ?signin=failed to a return path that may already have a query. */
+function withResult(path: string, result: "ok" | "failed"): string {
+  return `${path}${path.includes("?") ? "&" : "?"}signin=${result}`;
 }
 
 /** Finds the user linked to this identity, or creates one. Returns the user id. */
@@ -64,7 +70,12 @@ async function upsertUser(
 export const auth = new Hono<AppContext>();
 
 auth.get("/providers", (c) => {
-  const providers: AuthProviders = { google: !!google(c.env, siteOrigin(c)), apple: !!apple(c.env, siteOrigin(c)) };
+  const host = new URL(c.req.url).hostname;
+  const providers: AuthProviders = {
+    google: !!google(c.env, siteOrigin(c)),
+    apple: !!apple(c.env, siteOrigin(c)),
+    dev: c.env.DEV_LOGIN === "1" && ["localhost", "127.0.0.1"].includes(host),
+  };
   return c.json(providers);
 });
 
@@ -91,17 +102,17 @@ auth.get("/google/callback", async (c) => {
   const returnTo = safeReturnTo(getCookie(c, "asm_return_to"));
   for (const name of ["asm_oauth_state", "asm_oauth_verifier", "asm_return_to"]) deleteCookie(c, name, { path: "/" });
   if (!client || !code || !state || !verifier || state !== storedState) {
-    return c.redirect(`${returnTo}?signin=failed`);
+    return c.redirect(withResult(returnTo, "failed"));
   }
   try {
     const tokens = await client.validateAuthorizationCode(code, verifier);
     const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string; name?: string; picture?: string };
     const userId = await upsertUser(c.env.DB, "google", claims.sub, claims.email ?? null, claims.name ?? null, claims.picture ?? null);
     await startSession(c, userId);
-    return c.redirect(`${returnTo}?signin=ok`);
+    return c.redirect(withResult(returnTo, "ok"));
   } catch (err) {
     console.error("google callback failed", err);
-    return c.redirect(`${returnTo}?signin=failed`);
+    return c.redirect(withResult(returnTo, "failed"));
   }
 });
 
@@ -128,7 +139,7 @@ auth.post("/apple/callback", async (c) => {
   const returnTo = safeReturnTo(getCookie(c, "asm_return_to"));
   for (const name of ["asm_oauth_state", "asm_return_to"]) deleteCookie(c, name, { path: "/api/auth/apple" });
   if (!client || !code || !state || state !== storedState) {
-    return c.redirect(`${returnTo}?signin=failed`, 303);
+    return c.redirect(withResult(returnTo, "failed"), 303);
   }
   try {
     const tokens = await client.validateAuthorizationCode(code);
@@ -145,16 +156,33 @@ auth.post("/apple/callback", async (c) => {
     }
     const userId = await upsertUser(c.env.DB, "apple", claims.sub, claims.email ?? null, name, null);
     await startSession(c, userId);
-    return c.redirect(`${returnTo}?signin=ok`, 303);
+    return c.redirect(withResult(returnTo, "ok"), 303);
   } catch (err) {
     console.error("apple callback failed", err);
-    return c.redirect(`${returnTo}?signin=failed`, 303);
+    return c.redirect(withResult(returnTo, "failed"), 303);
   }
 });
+
+/**
+ * Local testing only: signs in as a named test user without Google or Apple.
+ * Requires DEV_LOGIN=1 in .dev.vars AND a localhost request, so it can't run in production.
+ */
+auth.get("/dev", async (c) => {
+  const host = new URL(c.req.url).hostname;
+  if (c.env.DEV_LOGIN !== "1" || !["localhost", "127.0.0.1"].includes(host)) return c.notFound();
+  const name = (c.req.query("name") ?? "Test Organizer").slice(0, 40);
+  const userId = await upsertUser(c.env.DB, "google", `dev-${slugifyName(name)}`, null, name, null);
+  await startSession(c, userId);
+  return c.redirect(withResult(safeReturnTo(c.req.query("return_to")), "ok"));
+});
+
+function slugifyName(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
+}
 
 auth.post("/logout", async (c) => {
   await endSession(c);
   return c.json({ ok: true });
 });
 
-export { safeReturnTo };
+export { safeReturnTo, withResult };

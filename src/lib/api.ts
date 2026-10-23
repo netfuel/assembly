@@ -1,9 +1,23 @@
-import type { AuthProviders, City, EventDetail, EventSummary, Me, RsvpStatus } from "../../shared/types";
+import type {
+  ArtistMatch,
+  AuthProviders,
+  City,
+  EventDetail,
+  EventSummary,
+  GeocodeResult,
+  Me,
+  MyEvent,
+  RsvpStatus,
+  ServerConfig,
+  Venue,
+} from "../../shared/types";
 
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** Field-level problems from the posting form, keyed by field name. */
+    readonly fields: Record<string, string> = {},
   ) {
     super(message);
   }
@@ -15,29 +29,99 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     res = await fetch(path, {
       credentials: "same-origin",
       ...init,
-      headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
+      headers: {
+        Accept: "application/json",
+        ...(typeof init?.body === "string" ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
     });
   } catch {
     throw new ApiError("You're offline. Showing what we saved last time.", 0);
   }
-  const body = (await res.json().catch(() => ({}))) as { error?: string } & T;
-  if (!res.ok) throw new ApiError(body.error ?? `Request failed (${res.status}).`, res.status);
+  const body = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string> } & T;
+  if (!res.ok) throw new ApiError(body.error ?? `Request failed (${res.status}).`, res.status, body.fields ?? {});
   return body;
 }
 
+const enc = encodeURIComponent;
+
+/** What the posting form sends. Matches EventInput on the server. */
+export interface EventDraft {
+  title: string;
+  pitch: string;
+  description: string;
+  startsAt: string;
+  endsAt: string;
+  venueId: string | null;
+  address: string;
+  neighborhood: string;
+  lat: number | null;
+  lng: number | null;
+  gettingThere: string;
+  doorPrice: string;
+  ticketUrl: string;
+  scenes: string[];
+  policyTags: string[];
+  flyerKey: string | null;
+  videoId: string | null;
+  lineup: {
+    artistId?: string;
+    name: string;
+    links: Record<string, string>;
+    setStart: string;
+    room: string;
+    note: string;
+  }[];
+}
+
 export const api = {
-  city: (slug: string) => request<City>(`/api/cities/${encodeURIComponent(slug)}`),
-  events: (city: string) => request<{ events: EventSummary[] }>(`/api/events?city=${encodeURIComponent(city)}`).then((r) => r.events),
-  event: (id: string) => request<EventDetail>(`/api/events/${encodeURIComponent(id)}`),
+  city: (slug: string) => request<City>(`/api/cities/${enc(slug)}`),
+  events: (city: string) => request<{ events: EventSummary[] }>(`/api/events?city=${enc(city)}`).then((r) => r.events),
+  event: (id: string) => request<EventDetail>(`/api/events/${enc(id)}`),
   me: () => request<{ user: Me | null }>("/api/me").then((r) => r.user),
   providers: () => request<AuthProviders>("/api/auth/providers"),
+  config: () => request<ServerConfig>("/api/config"),
   logout: () => request<{ ok: true }>("/api/auth/logout", { method: "POST" }),
   rsvp: (id: string, status: RsvpStatus | null) =>
     status
-      ? request<{ status: RsvpStatus }>(`/api/events/${encodeURIComponent(id)}/rsvp`, { method: "PUT", body: JSON.stringify({ status }) })
-      : request<{ status: null }>(`/api/events/${encodeURIComponent(id)}/rsvp`, { method: "DELETE" }),
+      ? request<{ status: RsvpStatus }>(`/api/events/${enc(id)}/rsvp`, { method: "PUT", body: JSON.stringify({ status }) })
+      : request<{ status: null }>(`/api/events/${enc(id)}/rsvp`, { method: "DELETE" }),
+
+  createEvent: (draft: EventDraft) => request<{ id: string }>("/api/events", { method: "POST", body: JSON.stringify(draft) }),
+  updateEvent: (id: string, draft: EventDraft) =>
+    request<{ id: string }>(`/api/events/${enc(id)}`, { method: "PATCH", body: JSON.stringify(draft) }),
+  cancelEvent: (id: string) => request<{ id: string; status: "cancelled" }>(`/api/events/${enc(id)}/cancel`, { method: "POST" }),
+  report: (id: string, reason: string, note: string) =>
+    request<{ ok: true }>(`/api/events/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  myEvents: () => request<{ hosting: MyEvent[]; going: MyEvent[] }>("/api/me/events"),
+
+  venues: () => request<{ venues: Venue[] }>("/api/venues").then((r) => r.venues),
+  artists: (q: string, signal?: AbortSignal) =>
+    request<{ artists: ArtistMatch[] }>(`/api/artists?q=${enc(q)}`, { signal }).then((r) => r.artists),
+  geocode: (q: string, signal?: AbortSignal) =>
+    request<{ results: GeocodeResult[]; error?: string }>(`/api/geocode?q=${enc(q)}`, { signal }),
+
+  uploadFlyer: (blob: Blob) =>
+    request<{ key: string; url: string }>("/api/uploads/flyer", { method: "POST", body: blob, headers: { "Content-Type": blob.type } }),
+  videoUploadUrl: (seconds: number, bytes: number) =>
+    request<{ uploadURL: string; uid: string }>("/api/uploads/video", { method: "POST", body: JSON.stringify({ seconds, bytes }) }),
+  videoStatus: (uid: string) =>
+    request<{ state: "ready" | "processing" | "error"; message: string | null; duration: number | null; thumbnail: string | null }>(
+      `/api/uploads/video/${enc(uid)}`,
+    ),
 };
 
 export function signInUrl(provider: "google" | "apple", returnTo: string) {
-  return `/api/auth/${provider}?return_to=${encodeURIComponent(returnTo)}`;
+  return `/api/auth/${provider}?return_to=${enc(returnTo)}`;
+}
+
+export function devSignInUrl(name: string, returnTo: string) {
+  return `/api/auth/dev?name=${enc(name)}&return_to=${enc(returnTo)}`;
+}
+
+/** Stream player URL. Uses the account's customer subdomain when known. */
+export function videoPlayerUrl(uid: string, customerCode: string | null) {
+  return customerCode
+    ? `https://customer-${customerCode}.cloudflarestream.com/${uid}/iframe?preload=metadata`
+    : `https://iframe.videodelivery.net/${uid}?preload=metadata`;
 }
