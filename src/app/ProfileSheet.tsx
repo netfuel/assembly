@@ -3,7 +3,8 @@ import { Button, Chip, Label, Tag } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { MediaError, prepareAvatar } from "../lib/media";
 import { clock, dayLabel } from "../lib/time";
-import { SCENES, type MeProfile, type MyEvent } from "../../shared/types";
+import { SCENES, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
+import { PushControl } from "../components/PushControl";
 import { VarsityMark } from "./EventSheet";
 import "./announce.css";
 
@@ -33,8 +34,10 @@ export function ProfileSheet({
   onOpenEvent,
   onAnnounce,
   onModerate,
+  config,
   toast,
 }: {
+  config: ServerConfig;
   me: MeProfile;
   onModerate: () => void;
   tz: string;
@@ -114,6 +117,13 @@ export function ProfileSheet({
         )}
         <span className="note">{me.showAttendance ? "You show up on who's going lists." : "Your RSVPs are private."}</span>
       </div>
+
+      {config.push && (
+        <section className="stack" data-reveal aria-label="Notifications">
+          <Label glyph="◉">Notifications</Label>
+          <PushControl config={config} toast={toast} />
+        </section>
+      )}
 
       <section className="stack" data-reveal aria-label="Going">
         <Label glyph="✓">Going</Label>

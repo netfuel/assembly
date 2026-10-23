@@ -6,6 +6,7 @@ import { rateLimit } from "./posting";
 import { sniffImage, validateProfile } from "./validate";
 import { streamConfigured } from "./uploads";
 import { isModerator } from "./moderation";
+import { forgetPush } from "./push";
 
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const CONTENT_TYPES = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" } as const;
@@ -175,6 +176,7 @@ profile.delete("/", async (c) => {
   };
   c.executionCtx.waitUntil(cleanup().catch((err) => console.error("account cleanup", err)));
 
+  await forgetPush(c.env, userId);
   await endAllSessions(c, userId);
   await endSession(c);
   return c.json({ ok: true, eventsDeleted: solo.length });

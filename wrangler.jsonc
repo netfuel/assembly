@@ -15,6 +15,8 @@
     "run_worker_first": ["/api/*", "/fonts/*"]
   },
   "observability": { "enabled": true },
+  // Starting-soon push reminders (worker/notify.ts).
+  "triggers": { "crons": ["*/15 * * * *"] },
   "vars": {
     "DEFAULT_CITY": "memphis"
   },

@@ -17,7 +17,8 @@
     "setup:local": "npm run db:migrate:local && npm run db:seed:local",
     "check:fonts": "node scripts/check-fonts.mjs",
     "setup:cloudflare": "node scripts/setup-cloudflare.mjs",
-    "fonts:upload": "node scripts/upload-fonts.mjs"
+    "fonts:upload": "node scripts/upload-fonts.mjs",
+    "push:keys": "node scripts/push-keys.mjs"
   },
   "dependencies": {
     "arctic": "^3.7.0",

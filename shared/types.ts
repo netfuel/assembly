@@ -106,6 +106,9 @@ export interface GeocodeResult {
 export interface ServerConfig {
   video: boolean;
   streamCustomerCode: string | null;
+  /** Web push is configured (VAPID keys set). */
+  push?: boolean;
+  vapidPublicKey?: string | null;
 }
 
 export interface MyEvent {

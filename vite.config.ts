@@ -40,6 +40,8 @@ export default defineConfig({
         // Fonts are served from R2 by the Worker and cached at runtime below, not precached.
         globPatterns: ["**/*.{js,mjs,css,html,svg,png}"],
         navigateFallback: "/index.html",
+        // Push notifications: public/push-sw.js adds the push and notificationclick handlers.
+        importScripts: ["/push-sw.js"],
         navigateFallbackDenylist: [/^\/api\//],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [

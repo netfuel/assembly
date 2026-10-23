@@ -1,4 +1,6 @@
 import { Hono, type Context } from "hono";
+import { notifyUsers, rsvpUserIds } from "./push";
+import { describeChange } from "./notify";
 import type { AppContext } from "./env";
 import { slugify, validateEvent, type EventInput } from "./validate";
 import type { ArtistLinks } from "../shared/types";
@@ -132,7 +134,9 @@ posting.patch("/events/:id", async (c) => {
   const id = c.req.param("id");
   if (!(await isHost(c.env.DB, id, userId))) return c.json({ error: "Only the event's hosts can edit it." }, 403);
   const city = c.env.DEFAULT_CITY;
-  const current = await c.env.DB.prepare("SELECT video_id, flyer_key FROM events WHERE id = ?").bind(id).first<{ video_id: string | null; flyer_key: string | null }>();
+  const current = await c.env.DB.prepare("SELECT video_id, flyer_key, title, starts_at, ends_at, address, venue_id, status FROM events WHERE id = ?")
+    .bind(id)
+    .first<{ video_id: string | null; flyer_key: string | null; title: string; starts_at: string; ends_at: string; address: string; venue_id: string | null; status: string }>();
   const raw = ((await c.req.json().catch(() => null)) ?? {}) as Record<string, unknown>;
   // The flyer already on this event stays attachable even if another host uploaded it.
   const keepFlyer = !!current?.flyer_key && raw.flyerKey === current.flyer_key;
@@ -164,6 +168,19 @@ posting.patch("/events/:id", async (c) => {
       ),
     ...(await lineupStatements(db, id, v.lineup)),
   ]);
+
+  // Tell people who RSVP'd when the plan changes: time or place. Small text edits don't notify.
+  if (current && current.status === "live") {
+    const tz = (await c.env.DB.prepare("SELECT timezone FROM cities WHERE id = ?").bind(city).first<{ timezone: string }>())?.timezone ?? "America/Chicago";
+    const change = describeChange(current, { startsAt: v.startsAt, endsAt: v.endsAt, address: loc.address, venueId: loc.venueId }, tz);
+    if (change) {
+      c.executionCtx.waitUntil(
+        rsvpUserIds(c.env, id)
+          .then((users) => notifyUsers(c.env, users, { title: `Updated: ${v.title}`, body: change, url: `/e/${id}`, tag: `update-${id}` }))
+          .catch((err) => console.error("update push", err)),
+      );
+    }
+  }
   return c.json({ id });
 });
 
@@ -179,6 +196,14 @@ posting.post("/events/:id/cancel", async (c) => {
     .bind(id)
     .run();
   if (!res.meta.changes) return c.json({ error: "This event can't be cancelled right now." }, 409);
+  const ev = await c.env.DB.prepare("SELECT title FROM events WHERE id = ?").bind(id).first<{ title: string }>();
+  c.executionCtx.waitUntil(
+    rsvpUserIds(c.env, id)
+      .then((users) =>
+        notifyUsers(c.env, users, { title: `Cancelled: ${ev?.title ?? "an event you saved"}`, body: "The organizer called it off. Tap for details.", url: `/e/${id}`, tag: `update-${id}` }),
+      )
+      .catch((err) => console.error("cancel push", err)),
+  );
   return c.json({ id, status: "cancelled" });
 });
 

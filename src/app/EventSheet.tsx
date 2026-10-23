@@ -4,6 +4,7 @@ import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
 import { saveForOffline } from "../lib/offline";
+import { PushPrompt } from "../components/PushControl";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
@@ -257,6 +258,11 @@ export function EventSheet({
             <span ref={goingEl}>{going}</span> going
             {rsvp && <span className="dim"> · Saved on this device for the door</span>}
           </p>
+          {rsvp && !cancelled && (
+            <div className="going-push">
+              <PushPrompt config={config} toast={toast} />
+            </div>
+          )}
         </div>
 
         {e.videoId && (

@@ -3,6 +3,8 @@ import type { AppContext, Env } from "./env";
 import { readSession } from "./session";
 import { profile } from "./profile";
 import { moderation } from "./moderation";
+import { push, pushConfigured } from "./push";
+import { startingSoon } from "./notify";
 import { auth } from "./auth";
 import { events } from "./events";
 import { fonts } from "./fonts";
@@ -47,7 +49,12 @@ app.get("/cities/:slug", async (c) => {
 // What this server supports, so the app can show or hide features.
 app.get("/config", (c) => {
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ video: streamConfigured(c.env), streamCustomerCode: c.env.STREAM_CUSTOMER_CODE ?? null });
+  return c.json({
+    video: streamConfigured(c.env),
+    streamCustomerCode: c.env.STREAM_CUSTOMER_CODE ?? null,
+    push: pushConfigured(c.env),
+    vapidPublicKey: pushConfigured(c.env) ? c.env.VAPID_PUBLIC_KEY : null,
+  });
 });
 
 // Flyers and profile photos stored in R2. Only those prefixes are public; fonts and anything else in the bucket are not.
@@ -68,6 +75,7 @@ app.route("/me", profile);
 app.route("/uploads", uploads);
 app.route("/", posting);
 app.route("/", moderation);
+app.route("/push", push);
 app.route("/events", events);
 
 app.notFound((c) => c.json({ error: "Not found." }, 404));
@@ -81,4 +89,10 @@ const root = new Hono<{ Bindings: Env }>();
 root.route("/fonts", fonts);
 root.route("/", app);
 
-export default root;
+export default {
+  fetch: root.fetch,
+  /** Cron (wrangler.jsonc triggers): starting-soon reminders every 15 minutes. */
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(startingSoon(env).catch((err) => console.error("starting soon", err)));
+  },
+} satisfies ExportedHandler<Env>;

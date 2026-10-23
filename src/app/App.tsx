@@ -481,6 +481,7 @@ export function App() {
               setSheet("announce");
             }}
             onModerate={() => setSheet("moderation")}
+            config={config}
             onSignedOut={(message) => {
               clearUserCaches();
               setMe(null);

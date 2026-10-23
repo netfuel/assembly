@@ -19,6 +19,11 @@ export interface Env {
   DEV_LOGIN?: string;
   /** Comma-separated sign-in emails of people who can review reports and verify organizers. */
   MODERATORS?: string;
+  /** Web push (VAPID). Generate with npm run push:keys. */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  /** Contact for push services, e.g. mailto:hello@assembly.rsvp */
+  VAPID_SUBJECT?: string;
 }
 
 export type AppContext = { Bindings: Env; Variables: { userId: string | null } };

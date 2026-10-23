@@ -17,3 +17,7 @@ STREAM_CUSTOMER_CODE=
 # Moderators: comma-separated sign-in emails. Locally, a test sign-in named "Test Moderator"
 # gets the address test-moderator@dev.localhost.
 MODERATORS=
+# Web push: generate with npm run push:keys
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:hello@assembly.rsvp

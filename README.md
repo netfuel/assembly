@@ -64,6 +64,16 @@ Organizers can attach a promo video up to 1:30. The browser uploads it straight 
 
 Files up to 200 MB are accepted. Longer videos are refused in the browser before upload, and Stream rejects anything over 1:30 regardless.
 
+## Set up notifications (web push)
+
+People who RSVP can turn on notifications. They hear about time and place changes and cancellations, plus a reminder an hour before doors (a cron trigger runs every 15 minutes; see `triggers` in `wrangler.jsonc`). The encryption and signing are implemented on Web Crypto in `worker/push.ts` and tested against the RFC 8291 example.
+
+1. Generate keys once: `npm run push:keys`.
+2. Locally, paste the three lines into `.dev.vars`. Chrome on `localhost` delivers real notifications.
+3. Production: `npx wrangler secret put VAPID_PUBLIC_KEY`, then `VAPID_PRIVATE_KEY`, and optionally `VAPID_SUBJECT` (defaults to `mailto:hello@assembly.rsvp`).
+
+Keep the keys: changing them means everyone has to turn notifications on again. On iPhone, web push only works after adding Assembly to the Home Screen (iOS 16.4+); the app says so where the toggle would be.
+
 ## Moderation
 
 Moderators review reports, restore or remove hidden events, and give organizers the verified badge. They're listed by sign-in email in the `MODERATORS` setting, comma-separated:
@@ -131,5 +141,7 @@ Core build: posting is live.
 - Sharing: copy link, native share, and a 1080x1920 story card with the flyer, date, and a QR code.
 - Map filters include any date, not just the next two weeks.
 - Promo video plays muted while it's on screen (waits for a tap with reduced motion).
+- Saved events (going or interested) stay on the device, so the address, times, and lineup open offline.
+- Notifications: changes, cancellations, and a reminder an hour before doors, once VAPID keys are set.
 - Limits: 10 posts an hour, 30 flyer uploads an hour, 10 videos an hour per account.
 - Address search uses Photon (OpenStreetMap data). If it's down, the form falls back to placing the pin by hand.
