@@ -4,9 +4,13 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Workers Builds runs only `npx wrangler deploy`, so wrangler builds the app first.
+  // (The Vite plugin ignores "build" and "assets.directory" for its own builds; that warning is expected.)
+  "build": { "command": "npm run build" },
   // The React app is served as static assets; /api/* and /fonts/* run the Worker.
   "assets": {
     "binding": "ASSETS",
+    "directory": "./dist/client",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/fonts/*"]
   },

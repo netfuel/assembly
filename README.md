@@ -58,7 +58,7 @@ The production site is **https://assembly.rsvp**. The app and API ship as one Wo
 
 **One-time setup.** On a Mac, double-click `setup-cloudflare.command` (or run `npm run setup:cloudflare`). It signs you in to Cloudflare, creates or reuses the D1 database (`assembly`), KV namespace (`assembly-sessions`), and R2 bucket (`assembly-media`), writes their IDs into `wrangler.jsonc`, and applies the database migrations. Commit `wrangler.jsonc` afterward; the IDs aren't secret. Then add the sign-in secrets (`npx wrangler secret put GOOGLE_CLIENT_ID`, and the others under "Set up sign-in").
 
-**Workers Builds settings.** In the Cloudflare dashboard (Workers & Pages > assembly > Settings > Build), the build command must be `npm run build` and the deploy command `npx wrangler deploy` (non-production branches: `npx wrangler versions upload`). The Cloudflare Vite plugin writes the deploy config during the build, so deploying without building fails with "The `assets` property … is missing the required `directory` property".
+**Workers Builds settings.** Cloudflare's default build runs `npm clean-install` and then `npx wrangler deploy` with no build step. `wrangler.jsonc` declares `"build": { "command": "npm run build" }` and `assets.directory`, so that one command builds and deploys the app with no dashboard changes. Local `npm run deploy` works the same way.
 
 The site's own address is read from each request, so there's no URL to configure: sign-in redirects and the cross-site check work on localhost, preview URLs, and assembly.rsvp alike. Don't load `db/seed.sql` in production; it's sample data.
 
