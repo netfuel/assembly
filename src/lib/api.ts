@@ -5,7 +5,7 @@ import type {
   EventDetail,
   EventSummary,
   GeocodeResult,
-  Me,
+  MeProfile,
   MyEvent,
   RsvpStatus,
   ServerConfig,
@@ -81,7 +81,14 @@ export const api = {
       `/api/events?city=${enc(city)}${range ? `&from=${enc(range.from.toISOString())}&to=${enc(range.to.toISOString())}` : ""}`,
     ).then((r) => r.events),
   event: (id: string) => request<EventDetail>(`/api/events/${enc(id)}`),
-  me: () => request<{ user: Me | null }>("/api/me").then((r) => r.user),
+  me: () => request<{ user: MeProfile | null }>("/api/me").then((r) => r.user),
+  updateProfile: (p: { displayName: string; pronouns: string; bio: string; scenes: string[]; links: Record<string, string>; showAttendance: boolean }) =>
+    request<{ user: MeProfile }>("/api/me", { method: "PATCH", body: JSON.stringify(p) }).then((r) => r.user),
+  uploadAvatar: (blob: Blob) =>
+    request<{ user: MeProfile }>("/api/me/avatar", { method: "POST", body: blob, headers: { "Content-Type": blob.type } }).then((r) => r.user),
+  removeAvatar: () => request<{ user: MeProfile }>("/api/me/avatar", { method: "DELETE" }).then((r) => r.user),
+  deleteAccount: (confirm: string) =>
+    request<{ ok: true; eventsDeleted: number }>("/api/me", { method: "DELETE", body: JSON.stringify({ confirm }) }),
   providers: () => request<AuthProviders>("/api/auth/providers"),
   config: () => request<ServerConfig>("/api/config"),
   logout: () => request<{ ok: true }>("/api/auth/logout", { method: "POST" }),

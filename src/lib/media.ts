@@ -86,3 +86,27 @@ export function formatDuration(seconds: number) {
   const s = Math.round(seconds);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+/** Center-crops a photo to a 512 px square and re-encodes it (dropping metadata) for a profile picture. */
+export async function prepareAvatar(file: File): Promise<Blob> {
+  if (file.size > 40 * 1024 * 1024) throw new MediaError("That image is over 40 MB.");
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    throw new MediaError("This browser can't read that image. Try a JPG or PNG.");
+  }
+  const side = Math.min(bitmap.width, bitmap.height);
+  const out = Math.min(512, side);
+  const canvas = document.createElement("canvas");
+  canvas.width = out;
+  canvas.height = out;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new MediaError("Couldn't prepare that image.");
+  ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, out, out);
+  bitmap.close();
+  let blob = await canvasToBlob(canvas, "image/webp", 0.88);
+  if (!blob || blob.type !== "image/webp") blob = await canvasToBlob(canvas, "image/jpeg", 0.88);
+  if (!blob) throw new MediaError("Couldn't prepare that image.");
+  return blob;
+}

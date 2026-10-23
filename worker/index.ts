@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import { readSession } from "./session";
+import { profile } from "./profile";
 import { auth } from "./auth";
 import { events } from "./events";
 import { fonts } from "./fonts";
 import { posting } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
-import type { City, Me } from "../shared/types";
+import type { City } from "../shared/types";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -42,27 +43,16 @@ app.get("/cities/:slug", async (c) => {
   return c.json(city);
 });
 
-app.get("/me", async (c) => {
-  const userId = c.get("userId");
-  if (!userId) return c.json({ user: null });
-  const row = await c.env.DB.prepare("SELECT id, display_name, avatar_url, pronouns FROM users WHERE id = ?")
-    .bind(userId)
-    .first<{ id: string; display_name: string; avatar_url: string | null; pronouns: string | null }>();
-  const user: Me | null = row ? { id: row.id, displayName: row.display_name, avatarUrl: row.avatar_url, pronouns: row.pronouns } : null;
-  c.header("Cache-Control", "private, no-store");
-  return c.json({ user });
-});
-
 // What this server supports, so the app can show or hide features.
 app.get("/config", (c) => {
   c.header("Cache-Control", "public, max-age=300");
   return c.json({ video: streamConfigured(c.env), streamCustomerCode: c.env.STREAM_CUSTOMER_CODE ?? null });
 });
 
-// Flyers stored in R2. Only the flyers/ prefix is public; fonts and anything else in the bucket are not.
+// Flyers and profile photos stored in R2. Only those prefixes are public; fonts and anything else in the bucket are not.
 app.get("/media/:key{.+}", async (c) => {
   const key = c.req.param("key");
-  if (!key.startsWith("flyers/") || key.includes("..")) return c.notFound();
+  if (!(key.startsWith("flyers/") || key.startsWith("avatars/")) || key.includes("..")) return c.notFound();
   const obj = await c.env.MEDIA.get(key);
   if (!obj) return c.notFound();
   const headers = new Headers();
@@ -73,6 +63,7 @@ app.get("/media/:key{.+}", async (c) => {
 });
 
 app.route("/auth", auth);
+app.route("/me", profile);
 app.route("/uploads", uploads);
 app.route("/", posting);
 app.route("/events", events);

@@ -7,7 +7,8 @@ import { revealCards, revealChildren } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 import { EventSheet } from "./EventSheet";
 import { AnnounceForm } from "./AnnounceForm";
-import { SCENES, type AuthProviders, type City, type EventDetail, type EventSummary, type Me, type MyEvent, type SceneId, type ServerConfig } from "../../shared/types";
+import { ProfileSheet } from "./ProfileSheet";
+import { SCENES, type AuthProviders, type City, type EventDetail, type EventSummary, type MeProfile, type SceneId, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
 const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
@@ -38,7 +39,7 @@ export function App() {
   const [scenes, setScenes] = useState<SceneId[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(eventIdFromPath());
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
-  const [me, setMe] = useState<Me | null>(null);
+  const [me, setMe] = useState<MeProfile | null>(null);
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
   const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile">(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -47,7 +48,6 @@ export function App() {
   // An open event that isn't in the loaded list: your own hidden event, or a link to one weeks out.
   const [extra, setExtra] = useState<EventSummary | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
-  const [mine, setMine] = useState<{ hosting: MyEvent[]; going: MyEvent[] } | null>(null);
   const [devName, setDevName] = useState("Test Organizer");
   const [theme, setTheme] = useTheme();
   const railRef = useRef<HTMLDivElement>(null);
@@ -168,11 +168,6 @@ export function App() {
     };
   }, [loadState, selectedId, events, extra, toast, me]);
 
-  // The profile sheet lists what you're hosting and going to.
-  useEffect(() => {
-    if (sheet !== "profile" || !me) return;
-    api.myEvents().then(setMine).catch(() => setMine({ hosting: [], going: [] }));
-  }, [sheet, me]);
 
   const openEvent = (id: string) => {
     setSheet(null);
@@ -456,67 +451,28 @@ export function App() {
       </Sheet>
 
       <Sheet open={sheet === "profile" && !!me} onClose={() => setSheet(null)} label="Your profile" modal center>
-        <div className="stack" data-reveal>
-          <Label glyph="◇">Profile</Label>
-          <h1 className="sheet-title">{me?.displayName}</h1>
-        </div>
-        <section className="stack" data-reveal aria-label="Going">
-          <Label glyph="✓">Going</Label>
-          {!mine && <p className="note">Loading…</p>}
-          {mine && mine.going.length === 0 && <p className="note">Nothing yet. RSVP to a night and it shows up here.</p>}
-          {mine && mine.going.length > 0 && <MyList items={mine.going} tz={city.timezone} onOpen={openEvent} />}
-        </section>
-        <section className="stack" data-reveal aria-label="Hosting">
-          <Label glyph="▶">Hosting</Label>
-          {mine && mine.hosting.length === 0 && (
-            <p className="note">
-              You haven't posted anything.{" "}
-              <button
-                className="link"
-                onClick={() => {
-                  setEditing(null);
-                  setSheet("announce");
-                }}
-              >
-                Make an announcement →
-              </button>
-            </p>
-          )}
-          {mine && mine.hosting.length > 0 && <MyList items={mine.hosting} tz={city.timezone} onOpen={openEvent} />}
-        </section>
-        <Button
-          data-reveal
-          onClick={async () => {
-            await api.logout().catch(() => undefined);
-            setMe(null);
-            setSheet(null);
-            toast("Signed out.");
-          }}
-        >
-          Sign out
-        </Button>
+        {me && (
+          <ProfileSheet
+            me={me}
+            tz={city.timezone}
+            onChange={setMe}
+            onOpenEvent={openEvent}
+            onAnnounce={() => {
+              setEditing(null);
+              setSheet("announce");
+            }}
+            onSignedOut={(message) => {
+              setMe(null);
+              setSheet(null);
+              setSelectedId(null);
+              toast(message);
+            }}
+            toast={toast}
+          />
+        )}
       </Sheet>
 
       <Toast message={toastMsg} />
     </div>
-  );
-}
-
-function MyList({ items, tz, onOpen }: { items: MyEvent[]; tz: string; onOpen: (id: string) => void }) {
-  const now = new Date();
-  return (
-    <ul className="my-list">
-      {items.map((e) => (
-        <li key={e.id}>
-          <button onClick={() => onOpen(e.id)}>
-            <span className="my-title">{e.title}</span>
-            <span className="my-when num">
-              {dayLabel(e.starts_at, now, tz)} / {clock(e.starts_at, tz)}
-            </span>
-            {e.status === "cancelled" ? <Tag>Cancelled</Tag> : e.status === "hidden" ? <Tag>Hidden</Tag> : e.rsvp === "interested" ? <Tag>Interested</Tag> : null}
-          </button>
-        </li>
-      ))}
-    </ul>
   );
 }

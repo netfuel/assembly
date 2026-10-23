@@ -227,3 +227,44 @@ export function sniffImage(bytes: Uint8Array): "jpg" | "png" | "webp" | null {
     return "webp";
   return null;
 }
+
+export const PROFILE_LIMITS = { displayName: 40, pronouns: 24, bio: 280 } as const;
+
+export interface ProfileInput {
+  displayName: string;
+  pronouns: string | null;
+  bio: string | null;
+  scenes: SceneId[];
+  links: ArtistLinks;
+  showAttendance: boolean;
+}
+
+/** Validates a profile edit. Same link rules as artist links. */
+export function validateProfile(raw: unknown): { ok: true; value: ProfileInput } | { ok: false; errors: FieldErrors } {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const errors: FieldErrors = {};
+  const displayName = text(r.displayName, PROFILE_LIMITS.displayName);
+  if (!displayName) errors.displayName = "Add a name people will recognize.";
+  const links: ArtistLinks = {};
+  const rawLinks = (r.links ?? {}) as Record<string, unknown>;
+  for (const key of ARTIST_LINK_KEYS) {
+    const v = rawLinks[key];
+    if (typeof v === "string" && v.trim()) {
+      const url = normalizeUrl(v);
+      if (url) links[key] = url;
+      else errors[`links.${key}`] = "Use a full web address.";
+    }
+  }
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return {
+    ok: true,
+    value: {
+      displayName: displayName!,
+      pronouns: text(r.pronouns, PROFILE_LIMITS.pronouns),
+      bio: longText(r.bio, PROFILE_LIMITS.bio),
+      scenes: (Array.isArray(r.scenes) ? r.scenes : []).filter((s): s is SceneId => typeof s === "string" && SCENE_IDS.has(s)).slice(0, SCENES.length),
+      links,
+      showAttendance: r.showAttendance === true,
+    },
+  };
+}

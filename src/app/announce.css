@@ -35,7 +35,7 @@
 .field-error { font-size: var(--text-2xs); color: var(--color-accent-text); line-height: 1.5; font-style: normal; }
 .field-error::before { content: "◆ "; font-size: 8px; vertical-align: 1px; }
 
-.compose input:not([type="file"]),
+.compose input:not([type="file"]):not([type="checkbox"]),
 .compose textarea {
   width: 100%;
   min-width: 0;

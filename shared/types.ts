@@ -131,6 +131,16 @@ export interface Me {
   pronouns: string | null;
 }
 
+/** The signed-in person's own profile, as returned by /api/me. */
+export interface MeProfile extends Me {
+  bio: string | null;
+  scenes: SceneId[];
+  links: ArtistLinks;
+  /** Opt-in: appear on "who's going" lists. Off by default. */
+  showAttendance: boolean;
+  verified: boolean;
+}
+
 export interface AuthProviders {
   google: boolean;
   apple: boolean;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeUrl, slugify, sniffImage, validateEvent } from "./validate";
+import { normalizeUrl, slugify, sniffImage, validateEvent, validateProfile } from "./validate";
 
 const opts = { now: new Date("2026-10-23T18:00:00Z"), bounds: { center: [-90.01, 35.14] as [number, number], radiusDeg: 0.6 }, userId: "u1" };
 const base = {
@@ -78,5 +78,38 @@ describe("helpers", () => {
     expect(sniffImage(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0]))).toBe("png");
     expect(sniffImage(new TextEncoder().encode("RIFF1234WEBPVP8 "))).toBe("webp");
     expect(sniffImage(new TextEncoder().encode("<svg>"))).toBeNull();
+  });
+});
+
+describe("validateProfile", () => {
+  it("cleans and keeps known fields", () => {
+    const r = validateProfile({
+      displayName: "  Matt  ",
+      pronouns: "he/him",
+      bio: "Runs a party.",
+      scenes: ["queer", "techno", "made-up"],
+      links: { soundcloud: "soundcloud.com/matt", myspace: "x" },
+      showAttendance: true,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value).toEqual({
+      displayName: "Matt",
+      pronouns: "he/him",
+      bio: "Runs a party.",
+      scenes: ["queer", "techno"],
+      links: { soundcloud: "https://soundcloud.com/matt" },
+      showAttendance: true,
+    });
+  });
+  it("needs a name and real links", () => {
+    const r = validateProfile({ displayName: " ", links: { site: "javascript:alert(1)" } });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(Object.keys(r.errors).sort()).toEqual(["displayName", "links.site"]);
+  });
+  it("defaults attendance to private", () => {
+    const r = validateProfile({ displayName: "A", showAttendance: "yes" });
+    expect(r.ok && r.value.showAttendance).toBe(false);
   });
 });

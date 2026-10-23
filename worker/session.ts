@@ -27,9 +27,14 @@ function isSecure(c: Context<AppContext>) {
 /** Creates a session for a user and sets the cookie. Only the token's hash is stored. */
 export async function startSession(c: Context<AppContext>, userId: string) {
   const token = randomToken();
-  await c.env.SESSIONS.put(`session:${await hashToken(token)}`, JSON.stringify({ userId }), {
+  const hash = await hashToken(token);
+  await c.env.SESSIONS.put(`session:${hash}`, JSON.stringify({ userId }), {
     expirationTtl: SESSION_TTL_SECONDS,
   });
+  // Index this user's sessions so deleting the account can sign out every device.
+  const indexKey = `user-sessions:${userId}`;
+  const prior = JSON.parse((await c.env.SESSIONS.get(indexKey)) ?? "[]") as string[];
+  await c.env.SESSIONS.put(indexKey, JSON.stringify([hash, ...prior].slice(0, 25)), { expirationTtl: SESSION_TTL_SECONDS });
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
     secure: isSecure(c),
@@ -54,6 +59,14 @@ export async function readSession(c: Context<AppContext>): Promise<string | null
 export async function endSession(c: Context<AppContext>) {
   const token = getCookie(c, SESSION_COOKIE);
   if (token) await c.env.SESSIONS.delete(`session:${await hashToken(token)}`);
+  deleteCookie(c, SESSION_COOKIE, { path: "/" });
+}
+
+/** Signs a user out everywhere (used when an account is deleted). */
+export async function endAllSessions(c: Context<AppContext>, userId: string) {
+  const indexKey = `user-sessions:${userId}`;
+  const hashes = JSON.parse((await c.env.SESSIONS.get(indexKey)) ?? "[]") as string[];
+  await Promise.all([...hashes.map((h) => c.env.SESSIONS.delete(`session:${h}`)), c.env.SESSIONS.delete(indexKey)]);
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
 }
 

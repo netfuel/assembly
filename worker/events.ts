@@ -170,10 +170,11 @@ events.put("/:id/rsvp", async (c) => {
   const exists = await c.env.DB.prepare("SELECT 1 FROM events WHERE id = ? AND status = 'live'").bind(id).first();
   if (!exists) return c.json({ error: "We couldn't find that event." }, 404);
   await c.env.DB.prepare(
-    `INSERT INTO rsvps (event_id, user_id, status) VALUES (?, ?, ?)
+    `INSERT INTO rsvps (event_id, user_id, status, visible)
+     VALUES (?, ?, ?, (SELECT show_attendance FROM users WHERE id = ?))
      ON CONFLICT (event_id, user_id) DO UPDATE SET status = excluded.status`,
   )
-    .bind(id, userId, body.status)
+    .bind(id, userId, body.status, userId)
     .run();
   return c.json({ status: body.status });
 });
