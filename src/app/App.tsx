@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
 import { Button, Chip, Frame, Label, LinkButton, Segmented, Sheet, Tag, Toast } from "../components/ui";
 import { api, ApiError, devSignInUrl, signInUrl } from "../lib/api";
-import { clock, dayLabel, isLive, overlaps, windowRange, type WindowId } from "../lib/time";
+import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 import { EventSheet } from "./EventSheet";
@@ -15,6 +15,7 @@ const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
   { id: "weekend", label: "Weekend", heading: "This weekend." },
   { id: "week", label: "7 days", heading: "Next 7 days." },
   { id: "all", label: "All", heading: "Coming up." },
+  { id: "date", label: "Date", heading: "" },
 ];
 
 const FALLBACK_CITY: City = { id: "memphis", name: "Memphis", timezone: "America/Chicago", center: [-90.01, 35.14], zoom: 12.2 };
@@ -32,6 +33,8 @@ export function App() {
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [loadError, setLoadError] = useState("");
   const [windowId, setWindowId] = useState<WindowId>("tonight");
+  const [pickedDate, setPickedDate] = useState(() => tonightDate(new Date(), "America/Chicago"));
+  const dateInput = useRef<HTMLInputElement>(null);
   const [scenes, setScenes] = useState<SceneId[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(eventIdFromPath());
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
@@ -111,13 +114,36 @@ export function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const now = useMemo(() => new Date(), [events, windowId]);
+  const now = useMemo(() => new Date(), [events, windowId, pickedDate]);
+
+  // The list covers two weeks. A picked date further out loads that night and merges it in.
+  useEffect(() => {
+    if (windowId !== "date") return;
+    const night = nightRange(pickedDate, city.timezone);
+    if (!night || night.to.getTime() < Date.now()) return;
+    let stale = false;
+    api
+      .events("memphis", night)
+      .then((list) => {
+        if (stale || !list.length) return;
+        setEvents((cur) => {
+          const ids = new Set(cur.map((e) => e.id));
+          const add = list.filter((e) => !ids.has(e.id));
+          return add.length ? [...cur, ...add] : cur;
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [windowId, pickedDate, city.timezone]);
+
   const shown = useMemo(() => {
-    const range = windowRange(windowId, now, city.timezone);
+    const range = windowRange(windowId, now, city.timezone, pickedDate);
     return events
       .filter((e) => overlaps(e.startsAt, e.endsAt, range))
       .filter((e) => scenes.length === 0 || scenes.some((s) => e.scenes.includes(s)));
-  }, [events, windowId, scenes, now, city.timezone]);
+  }, [events, windowId, scenes, now, city.timezone, pickedDate]);
 
   const selected = events.find((e) => e.id === selectedId) ?? (extra && extra.id === selectedId ? extra : null);
 
@@ -197,7 +223,7 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadState]);
 
-  const heading = WINDOWS.find((w) => w.id === windowId)!.heading;
+  const heading = windowId === "date" ? `${dateHeading(pickedDate)}.` : WINDOWS.find((w) => w.id === windowId)!.heading;
   const [signInIntent, setSignInIntent] = useState<"post" | null>(null);
   const returnTo = signInIntent === "post" ? "/?compose=1" : selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
   const openSignIn = (intent: "post" | null = null) => {
@@ -249,7 +275,36 @@ export function App() {
           )}
         </nav>
         <div className="filters" role="toolbar" aria-label="Filter events">
-          <Segmented label="When" options={WINDOWS.map((w) => ({ id: w.id, label: w.label }))} value={windowId} onChange={setWindowId} />
+          <Segmented
+            label="When"
+            options={WINDOWS.map((w) => ({ id: w.id, label: w.id === "date" && windowId === "date" ? dateHeading(pickedDate) : w.label }))}
+            value={windowId}
+            onChange={(id) => {
+              setWindowId(id);
+              // Choosing Date opens the picker right away.
+              if (id === "date") {
+                const el = dateInput.current;
+                try {
+                  el?.showPicker();
+                } catch {
+                  el?.focus();
+                }
+              }
+            }}
+          />
+          <input
+            ref={dateInput}
+            className="date-picker"
+            type="date"
+            aria-label="Pick a date"
+            value={pickedDate}
+            min={tonightDate(new Date(), city.timezone)}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              setPickedDate(e.target.value);
+              setWindowId("date");
+            }}
+          />
           <span className="filters-sep" aria-hidden="true" />
           {SCENES.map((s) => (
             <Chip
@@ -280,7 +335,7 @@ export function App() {
             {loadState === "error" && <div className="rail-empty">{loadError}</div>}
             {loadState === "ready" && shown.length === 0 && (
               <div className="rail-empty">
-                Nothing on the schedule {windowId === "tonight" ? "tonight" : "for these filters"}.{" "}
+                Nothing on the schedule {windowId === "tonight" ? "tonight" : windowId === "date" ? "that night yet" : "for these filters"}.{" "}
                 {windowId === "tonight" ? (
                   <button className="link" onClick={() => setWindowId("weekend")}>
                     Check the weekend →

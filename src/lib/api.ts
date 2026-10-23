@@ -76,7 +76,10 @@ export interface EventDraft {
 
 export const api = {
   city: (slug: string) => request<City>(`/api/cities/${enc(slug)}`),
-  events: (city: string) => request<{ events: EventSummary[] }>(`/api/events?city=${enc(city)}`).then((r) => r.events),
+  events: (city: string, range?: { from: Date; to: Date }) =>
+    request<{ events: EventSummary[] }>(
+      `/api/events?city=${enc(city)}${range ? `&from=${enc(range.from.toISOString())}&to=${enc(range.to.toISOString())}` : ""}`,
+    ).then((r) => r.events),
   event: (id: string) => request<EventDetail>(`/api/events/${enc(id)}`),
   me: () => request<{ user: Me | null }>("/api/me").then((r) => r.user),
   providers: () => request<AuthProviders>("/api/auth/providers"),

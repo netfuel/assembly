@@ -1,6 +1,6 @@
 // Time windows and labels, computed in the city's timezone (not the viewer's device).
 
-export type WindowId = "tonight" | "weekend" | "week" | "all";
+export type WindowId = "tonight" | "weekend" | "week" | "all" | "date";
 
 interface Parts {
   year: number;
@@ -61,7 +61,7 @@ export function zonedTime(year: number, month: number, day: number, hour: number
 /** The nightlife day: anything before 6 am still belongs to the previous night. */
 const NIGHT_ROLLOVER_HOUR = 6;
 
-export function windowRange(id: WindowId, now: Date, tz: string): { from: Date; to: Date } {
+export function windowRange(id: WindowId, now: Date, tz: string, date?: string): { from: Date; to: Date } {
   const p = localParts(now, tz);
   const nightOffset = p.hour < NIGHT_ROLLOVER_HOUR ? -1 : 0;
   const endOfTonight = zonedTime(p.year, p.month, p.day + nightOffset + 1, NIGHT_ROLLOVER_HOUR, tz);
@@ -80,6 +80,11 @@ export function windowRange(id: WindowId, now: Date, tz: string): { from: Date; 
     }
     case "week":
       return { from: now, to: new Date(now.getTime() + 7 * 86400e3) };
+    case "date": {
+      const night = date ? nightRange(date, tz) : null;
+      if (!night) return { from: now, to: endOfTonight };
+      return { from: night.from < now ? now : night.from, to: night.to };
+    }
     case "all":
     default:
       return { from: now, to: new Date(now.getTime() + 14 * 86400e3) };
@@ -147,4 +152,25 @@ export function fromInputs(date: string, start: string, end: string, tz: string)
   const startsAt = zonedTime(y, m, day, Number(s[1]), tz, Number(s[2]));
   const endsAt = zonedTime(y, m, day + (endMin <= startMin ? 1 : 0), Number(e[1]), tz, Number(e[2]));
   return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
+}
+
+/** The night of a calendar date: 6 am that day until 6 am the next, in the city's timezone. */
+export function nightRange(date: string, tz: string): { from: Date; to: Date } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  return { from: zonedTime(y, mo, d, NIGHT_ROLLOVER_HOUR, tz), to: zonedTime(y, mo, d + 1, NIGHT_ROLLOVER_HOUR, tz) };
+}
+
+/** Today's nightlife date as YYYY-MM-DD (before 6 am still counts as last night). */
+export function tonightDate(now: Date, tz: string): string {
+  const p = localParts(now, tz);
+  const d = new Date(Date.UTC(p.year, p.month - 1, p.day - (p.hour < NIGHT_ROLLOVER_HOUR ? 1 : 0)));
+  return d.toISOString().slice(0, 10);
+}
+
+/** "Sat Oct 31" for a YYYY-MM-DD date. */
+export function dateHeading(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]} ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }

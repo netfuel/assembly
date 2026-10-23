@@ -95,6 +95,9 @@
 }
 .filters::-webkit-scrollbar { display: none; }
 .filters-sep { flex: none; width: 1px; height: 18px; background: var(--color-line); }
+/* Native date picker, visually hidden: the Date segment opens it. Kept focusable for keyboards. */
+.date-picker { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.filters { position: relative; }
 
 /* Bottom rail */
 .rail-wrap {

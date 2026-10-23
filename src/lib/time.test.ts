@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clock, dayLabel, fromInputs, localParts, toInputs, windowRange, zonedTime } from "./time";
+import { clock, dateHeading, dayLabel, fromInputs, localParts, nightRange, toInputs, tonightDate, windowRange, zonedTime } from "./time";
 
 const TZ = "America/Chicago";
 
@@ -77,5 +77,23 @@ describe("form wall-clock helpers", () => {
   });
   it("rejects incomplete input", () => {
     expect(fromInputs("", "22:00", "03:00", tz)).toBeNull();
+  });
+});
+
+describe("pick a date", () => {
+  const tz = "America/Chicago";
+  it("covers 6 am to 6 am local", () => {
+    expect(nightRange("2026-10-31", tz)).toEqual({ from: new Date("2026-10-31T11:00:00Z"), to: new Date("2026-11-01T12:00:00Z") });
+  });
+  it("starts from now when the night is under way", () => {
+    const now = new Date("2026-10-31T04:00:00Z"); // 11 pm Oct 30 local
+    expect(windowRange("date", now, tz, "2026-10-30").from).toEqual(now);
+  });
+  it("treats 2 am as last night", () => {
+    expect(tonightDate(new Date("2026-10-24T07:00:00Z"), tz)).toBe("2026-10-23");
+    expect(tonightDate(new Date("2026-10-24T13:00:00Z"), tz)).toBe("2026-10-24");
+  });
+  it("labels a date", () => {
+    expect(dateHeading("2026-10-31")).toBe("Sat Oct 31");
   });
 });
