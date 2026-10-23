@@ -3,6 +3,7 @@ import { Button, Frame, Label, LinkButton, Sheet, Tag } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
+import { saveForOffline } from "../lib/offline";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
@@ -109,6 +110,7 @@ export function EventSheet({
     setBusy(true);
     try {
       await api.rsvp(e.id, next);
+      if (next) saveForOffline([e]);
       if (next === "going") toast("You're going. Saved to your list.");
       else if (next === "interested") toast("Marked as interested.");
     } catch (err) {
@@ -253,6 +255,7 @@ export function EventSheet({
           </Button>
           <p className="going num">
             <span ref={goingEl}>{going}</span> going
+            {rsvp && <span className="dim"> · Saved on this device for the door</span>}
           </p>
         </div>
 

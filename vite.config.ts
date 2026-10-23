@@ -56,14 +56,49 @@ export default defineConfig({
             },
           },
           {
-            // Event data: fresh when online, last copy when the signal drops at the door.
-            urlPattern: ({ url }) => url.pathname.startsWith("/api/events"),
+            // One event's details. Saved events are fetched ahead (src/lib/offline.ts) so the address and
+            // set times open at the door with no signal. Kept apart from list queries so those can't evict them.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /^\/api\/events\/[^/]+$/.test(url.pathname),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "event-details",
+              networkTimeoutSeconds: 4,
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 150, maxAgeSeconds: 60 * 24 * 3600 },
+            },
+          },
+          {
+            // Event lists: fresh when online, last copy when the signal drops.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname === "/api/events",
             handler: "NetworkFirst",
             options: {
               cacheName: "api-events",
               networkTimeoutSeconds: 4,
-              expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 3600 },
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 60, maxAgeSeconds: 7 * 24 * 3600 },
             },
+          },
+          {
+            // Your profile and your Going list, so the app still knows you offline. Cleared on sign-out.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && (url.pathname === "/api/me" || url.pathname === "/api/me/events"),
+            handler: "NetworkFirst",
+            options: { cacheName: "api-me", networkTimeoutSeconds: 4, cacheableResponse: { statuses: [200] } },
+          },
+          {
+            // Flyers and profile photos: immutable, so cache first.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/api/media/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "media",
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 24 * 3600 },
+            },
+          },
+          {
+            // City record (center, timezone).
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/api/cities/"),
+            handler: "StaleWhileRevalidate",
+            options: { cacheName: "api-city" },
           },
           {
             // Map tiles, styles, and glyphs.

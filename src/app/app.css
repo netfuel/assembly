@@ -312,3 +312,4 @@
 .mod-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
 .mod-notes { margin: 0; padding-left: var(--space-4); font-size: var(--text-xs); color: var(--color-muted); font-family: var(--font-serif); font-style: italic; }
 .mod .note .varsity { vertical-align: -2px; }
+.offline-tag { padding: 1px 6px; border: 1px solid var(--color-warn); border-radius: var(--radius-xs); color: var(--color-warn); font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; }

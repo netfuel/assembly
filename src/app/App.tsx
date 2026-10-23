@@ -5,6 +5,7 @@ import { api, ApiError, devSignInUrl, signInUrl } from "../lib/api";
 import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
 import { useTheme } from "../lib/theme";
+import { clearUserCaches, saveForOffline, saveProfileForOffline, useOnline } from "../lib/offline";
 import { EventSheet } from "./EventSheet";
 import { AnnounceForm } from "./AnnounceForm";
 import { ProfileSheet } from "./ProfileSheet";
@@ -51,6 +52,18 @@ export function App() {
   const [detailVersion, setDetailVersion] = useState(0);
   const [devName, setDevName] = useState("Test Organizer");
   const [theme, setTheme] = useTheme();
+  const online = useOnline();
+
+  // Keep your saved nights on the device for when the signal drops at the door.
+  const meId = me?.id;
+  useEffect(() => {
+    if (!meId) return;
+    saveProfileForOffline();
+    api
+      .myEvents()
+      .then((r) => saveForOffline(r.going))
+      .catch(() => undefined);
+  }, [meId]);
   const railRef = useRef<HTMLDivElement>(null);
   const smallSheetRef = useRef<HTMLDivElement>(null);
 
@@ -239,6 +252,11 @@ export function App() {
             <span className="logo-word">Assembly</span>
           </a>
           <span className="nav-city">{city.name}</span>
+          {!online && (
+            <span className="offline-tag" role="status">
+              Offline
+            </span>
+          )}
           <span className="spacer" />
           <button
             className="theme-toggle"
@@ -464,6 +482,7 @@ export function App() {
             }}
             onModerate={() => setSheet("moderation")}
             onSignedOut={(message) => {
+              clearUserCaches();
               setMe(null);
               setSheet(null);
               setSelectedId(null);
