@@ -15,7 +15,8 @@
     "deploy": "npm run check:fonts && npm run build && wrangler deploy",
     "cf-typegen": "wrangler types worker/worker-configuration.d.ts",
     "setup:local": "npm run db:migrate:local && npm run db:seed:local",
-    "check:fonts": "node scripts/check-fonts.mjs"
+    "check:fonts": "node scripts/check-fonts.mjs",
+    "setup:cloudflare": "node scripts/setup-cloudflare.mjs"
   },
   "dependencies": {
     "arctic": "^3.7.0",

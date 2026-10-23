@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import type { AppContext, Env } from "./env";
+import type { AppContext } from "./env";
 
 export const SESSION_COOKIE = "asm_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 60; // 60 days
@@ -15,8 +15,13 @@ async function hashToken(token: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function isSecure(env: Env) {
-  return env.APP_URL.startsWith("https://");
+/** The site's own origin, taken from the request: works on localhost, previews, and assembly.rsvp alike. */
+export function siteOrigin(c: Context<AppContext>) {
+  return new URL(c.req.url).origin;
+}
+
+function isSecure(c: Context<AppContext>) {
+  return new URL(c.req.url).protocol === "https:";
 }
 
 /** Creates a session for a user and sets the cookie. Only the token's hash is stored. */
@@ -27,7 +32,7 @@ export async function startSession(c: Context<AppContext>, userId: string) {
   });
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: isSecure(c.env),
+    secure: isSecure(c),
     sameSite: "Lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,

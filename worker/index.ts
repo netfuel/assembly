@@ -18,7 +18,7 @@ app.use("*", async (c, next) => {
   const method = c.req.method;
   if (method !== "GET" && method !== "HEAD" && !c.req.path.startsWith("/api/auth/apple/callback")) {
     const origin = c.req.header("Origin");
-    if (origin && origin !== new URL(c.env.APP_URL).origin) {
+    if (origin && origin !== new URL(c.req.url).origin) {
       return c.json({ error: "Cross-site request blocked." }, 403);
     }
   }

@@ -2,18 +2,18 @@ import { Hono } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { Apple, Google, decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import type { AppContext, Env } from "./env";
-import { endSession, startSession } from "./session";
+import { endSession, siteOrigin, startSession } from "./session";
 import type { AuthProviders } from "../shared/types";
 
 const STATE_TTL = 60 * 10;
 
-function redirectUri(env: Env, provider: "google" | "apple") {
-  return `${env.APP_URL}/api/auth/${provider}/callback`;
+function redirectUri(origin: string, provider: "google" | "apple") {
+  return `${origin}/api/auth/${provider}/callback`;
 }
 
-function google(env: Env) {
+function google(env: Env, origin: string) {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
-  return new Google(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, redirectUri(env, "google"));
+  return new Google(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, redirectUri(origin, "google"));
 }
 
 function pemToPkcs8(pem: string): Uint8Array {
@@ -24,9 +24,9 @@ function pemToPkcs8(pem: string): Uint8Array {
   return Uint8Array.from(atob(body), (ch) => ch.charCodeAt(0));
 }
 
-function apple(env: Env) {
+function apple(env: Env, origin: string) {
   if (!env.APPLE_CLIENT_ID || !env.APPLE_TEAM_ID || !env.APPLE_KEY_ID || !env.APPLE_PRIVATE_KEY) return null;
-  return new Apple(env.APPLE_CLIENT_ID, env.APPLE_TEAM_ID, env.APPLE_KEY_ID, pemToPkcs8(env.APPLE_PRIVATE_KEY), redirectUri(env, "apple"));
+  return new Apple(env.APPLE_CLIENT_ID, env.APPLE_TEAM_ID, env.APPLE_KEY_ID, pemToPkcs8(env.APPLE_PRIVATE_KEY), redirectUri(origin, "apple"));
 }
 
 /** Only same-site paths are allowed as a post-sign-in destination. */
@@ -64,18 +64,18 @@ async function upsertUser(
 export const auth = new Hono<AppContext>();
 
 auth.get("/providers", (c) => {
-  const providers: AuthProviders = { google: !!google(c.env), apple: !!apple(c.env) };
+  const providers: AuthProviders = { google: !!google(c.env, siteOrigin(c)), apple: !!apple(c.env, siteOrigin(c)) };
   return c.json(providers);
 });
 
 auth.get("/google", (c) => {
-  const client = google(c.env);
+  const client = google(c.env, siteOrigin(c));
   if (!client) return c.json({ error: "Google sign-in isn't configured on this server." }, 503);
   const state = generateState();
   const verifier = generateCodeVerifier();
   const url = client.createAuthorizationURL(state, verifier, ["openid", "profile", "email"]);
   url.searchParams.set("prompt", "select_account");
-  const opts = { httpOnly: true, secure: c.env.APP_URL.startsWith("https://"), sameSite: "Lax" as const, path: "/", maxAge: STATE_TTL };
+  const opts = { httpOnly: true, secure: siteOrigin(c).startsWith("https://"), sameSite: "Lax" as const, path: "/", maxAge: STATE_TTL };
   setCookie(c, "asm_oauth_state", state, opts);
   setCookie(c, "asm_oauth_verifier", verifier, opts);
   setCookie(c, "asm_return_to", safeReturnTo(c.req.query("return_to")), opts);
@@ -83,7 +83,7 @@ auth.get("/google", (c) => {
 });
 
 auth.get("/google/callback", async (c) => {
-  const client = google(c.env);
+  const client = google(c.env, siteOrigin(c));
   const code = c.req.query("code");
   const state = c.req.query("state");
   const storedState = getCookie(c, "asm_oauth_state");
@@ -106,7 +106,7 @@ auth.get("/google/callback", async (c) => {
 });
 
 auth.get("/apple", (c) => {
-  const client = apple(c.env);
+  const client = apple(c.env, siteOrigin(c));
   if (!client) return c.json({ error: "Apple sign-in isn't configured on this server." }, 503);
   const state = generateState();
   const url = client.createAuthorizationURL(state, ["name", "email"]);
@@ -120,7 +120,7 @@ auth.get("/apple", (c) => {
 });
 
 auth.post("/apple/callback", async (c) => {
-  const client = apple(c.env);
+  const client = apple(c.env, siteOrigin(c));
   const form = await c.req.parseBody();
   const code = typeof form.code === "string" ? form.code : null;
   const state = typeof form.state === "string" ? form.state : null;

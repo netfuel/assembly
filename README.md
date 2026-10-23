@@ -54,16 +54,13 @@ Sign-in buttons stay disabled until the provider is configured. For local work c
 
 ## Deploy to Cloudflare
 
-```sh
-npx wrangler login
-npx wrangler d1 create assembly              # paste the database_id into wrangler.jsonc
-npx wrangler kv namespace create SESSIONS    # paste the id into wrangler.jsonc
-npx wrangler r2 bucket create assembly-media
-npm run db:migrate:remote
-npx wrangler secret put GOOGLE_CLIENT_ID     # and the other secrets above
-```
+The production site is **https://assembly.rsvp**. The app and API ship as one Worker named `assembly`, and Cloudflare Workers Builds deploys it from GitHub on every push to `main`.
 
-Then set `APP_URL` in `wrangler.jsonc` to your production origin (for example `https://assembly.example`) and run `npm run deploy`. Don't load `db/seed.sql` in production; it's sample data.
+**One-time setup.** On a Mac, double-click `setup-cloudflare.command` (or run `npm run setup:cloudflare`). It signs you in to Cloudflare, creates or reuses the D1 database (`assembly`), KV namespace (`assembly-sessions`), and R2 bucket (`assembly-media`), writes their IDs into `wrangler.jsonc`, and applies the database migrations. Commit `wrangler.jsonc` afterward; the IDs aren't secret. Then add the sign-in secrets (`npx wrangler secret put GOOGLE_CLIENT_ID`, and the others under "Set up sign-in").
+
+**Fonts in production.** Workers Builds clones the public repo, so it won't have the Timeless fonts and production would fall back to system fonts. Until fonts come from private storage during the build, deploy from your Mac with `npm run deploy` (it checks for the fonts first).
+
+The site's own address is read from each request, so there's no URL to configure: sign-in redirects and the cross-site check work on localhost, preview URLs, and assembly.rsvp alike. Don't load `db/seed.sql` in production; it's sample data.
 
 ## Project layout
 

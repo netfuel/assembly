@@ -3,7 +3,6 @@ export interface Env {
   SESSIONS: KVNamespace;
   MEDIA: R2Bucket;
   ASSETS: Fetcher;
-  APP_URL: string;
   DEFAULT_CITY: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;

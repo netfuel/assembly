@@ -11,10 +11,9 @@
   },
   "observability": { "enabled": true },
   "vars": {
-    "APP_URL": "http://localhost:5173",
     "DEFAULT_CITY": "memphis"
   },
-  // Create these with the commands in README.md, then paste the IDs here.
+  // Real IDs are written here by setup-cloudflare.command (scripts/setup-cloudflare.mjs).
   "d1_databases": [
     {
       "binding": "DB",
