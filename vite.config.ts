@@ -44,9 +44,16 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith("/fonts/"),
+            // Our own font route only (the tile host also has /fonts/ paths, for map glyphs).
+            // Cache only real WOFF2 responses, so an error page can never be stored as a font.
+            // Named fonts-v2 to abandon an early cache that stored HTML responses.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/fonts/timeless/"),
             handler: "CacheFirst",
-            options: { cacheName: "fonts", expiration: { maxEntries: 10, maxAgeSeconds: 365 * 24 * 3600 } },
+            options: {
+              cacheName: "fonts-v2",
+              cacheableResponse: { statuses: [200], headers: { "Content-Type": "font/woff2" } },
+              expiration: { maxEntries: 10, maxAgeSeconds: 365 * 24 * 3600 },
+            },
           },
           {
             // Event data: fresh when online, last copy when the signal drops at the door.
