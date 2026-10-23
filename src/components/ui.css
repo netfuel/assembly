@@ -1,0 +1,112 @@
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 38px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-weight: 650;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast), border-color var(--dur-fast);
+}
+.btn:hover { border-color: var(--color-line-strong); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-lg { min-height: var(--tap); border-radius: var(--radius-md); font-size: var(--text-md); }
+.btn-primary { background: var(--color-sodium); border-color: var(--color-sodium); color: var(--color-sodium-ink); }
+.btn-uv { background: var(--color-uv); border-color: var(--color-uv); color: var(--color-uv-ink); }
+.btn-confirmed { background: var(--color-ok); border-color: var(--color-ok); color: var(--color-ok-ink); }
+.btn-primary:hover, .btn-uv:hover, .btn-confirmed:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; }
+
+/* Chips */
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.chip[aria-pressed="true"] { color: var(--color-fg); border-color: var(--color-fg); background: var(--color-surface-raised); }
+.chip-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* Sheets */
+.scrim { position: fixed; inset: 0; z-index: 30; background: rgb(5 6 12 / 0.6); }
+.scrim-soft { background: rgb(5 6 12 / 0.35); }
+.sheet {
+  position: fixed;
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-float);
+  outline: none;
+  overflow: hidden;
+  animation: sheet-in var(--dur-med) var(--ease-out);
+}
+.sheet-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-5);
+  padding-left: max(var(--space-5), env(safe-area-inset-left));
+  padding-right: max(var(--space-5), env(safe-area-inset-right));
+  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  display: grid;
+  gap: var(--space-5);
+}
+.sheet-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-raised);
+}
+@media (max-width: 899px) {
+  .sheet { left: 0; right: 0; bottom: 0; max-height: 88%; border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-bottom: 0; }
+  .sheet::before { content: ""; flex: none; width: 40px; height: 4px; border-radius: 2px; margin: 10px auto 0; background: var(--color-line-strong); }
+  @keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } }
+}
+@media (min-width: 900px) {
+  .sheet { top: var(--space-3); right: var(--space-3); bottom: var(--space-3); width: 420px; border-radius: var(--radius-lg); }
+  .sheet-center { top: 50%; left: 50%; right: auto; bottom: auto; width: 440px; max-height: calc(100% - 48px); transform: translate(-50%, -50%); }
+  .scrim-soft { background: transparent; pointer-events: none; }
+  @keyframes sheet-in { from { opacity: 0; } }
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-fg);
+  color: var(--color-ground);
+  font-weight: 650;
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-float);
+}

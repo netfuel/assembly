@@ -1,0 +1,8 @@
+# Copy to .dev.vars for local sign-in. Never commit .dev.vars.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+# Paste the .p8 key contents on one line with \n for line breaks.
+APPLE_PRIVATE_KEY=

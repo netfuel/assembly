@@ -1,0 +1,79 @@
+/*
+  Assembly design tokens.
+  Direction: a 90s rave flyer on a night map. Sodium streetlight orange for most events,
+  UV violet for queer-centered events, photocopy grain, info-line mono for times and addresses.
+  Dark-first; a light "daytime" theme is planned for later (PRD P2).
+*/
+:root {
+  color-scheme: dark;
+
+  /* Ground and surfaces */
+  --color-ground: #0b0d16;
+  --color-surface: #151827;
+  --color-surface-raised: #1e2236;
+  --color-line: #2c3250;
+  --color-line-strong: #454c70;
+
+  /* Text */
+  --color-fg: #efeaf6;
+  --color-muted: #9d99b5;
+  --color-faint: #6b6a88;
+
+  /* Scene and status colors */
+  --color-sodium: #ff9a3c; /* default events, primary action */
+  --color-sodium-ink: #241304;
+  --color-uv: #b98cff; /* queer-centered events */
+  --color-uv-ink: #1a0f2e;
+  --color-pink: #ff6fae; /* flyer pink: highlights */
+  --color-hazard: #ffd23f; /* warnings, "updated" flags */
+  --color-live: #ff4f7b; /* happening now */
+  --color-ok: #6fe3b4; /* confirmed RSVP */
+  --color-ok-ink: #062117;
+
+  /* Map */
+  --map-land: #10131f;
+  --map-water: #0a1828;
+  --map-park: #10211b;
+  --map-road-minor: #1b2033;
+  --map-road-major: #2a3050;
+  --map-label: #5d6489;
+
+  /* Type */
+  --font-display: "Rubik Mono One", "Arial Black", Impact, sans-serif;
+  --font-body: "Figtree Variable", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-xs: 0.75rem; /* 12 */
+  --text-sm: 0.8125rem; /* 13 */
+  --text-md: 0.9375rem; /* 15 */
+  --text-lg: 1.125rem; /* 18 */
+  --text-xl: 1.5rem; /* 24 */
+  --text-2xl: 2rem; /* 32 */
+
+  /* Space (4 px steps) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Shape and depth */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --shadow-float: 0 10px 30px rgb(0 0 0 / 0.45);
+
+  /* Touch: minimum target size for one-handed use at night */
+  --tap: 44px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+
+  /* Photocopy grain, used on flyer placeholders and the stamp */
+  --texture-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
