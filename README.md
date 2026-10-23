@@ -18,10 +18,12 @@ The app and API ship as one Cloudflare Worker with static assets: `/api/*` runs 
 
 Requires Node 22+.
 
+On a Mac, double-click `start-dev.command`. It installs dependencies when they change, sets up the local database on first run, keeps generated folders out of Dropbox sync, and starts the dev server. Or by hand:
+
 ```sh
 npm install
 npm run setup:local   # creates the local D1 database and loads Memphis sample events
-npm run dev           # http://localhost:5173 (app + API + local D1/KV/R2)
+npm run dev           # http://localhost:5173 (app + API + local D1/KV/R2), plus a Network URL for your phone
 ```
 
 Sample event times are relative to when you seed. Run `npm run db:seed:local` again to refresh them.
