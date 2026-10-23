@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clock, dayLabel, localParts, windowRange, zonedTime } from "./time";
+import { clock, dayLabel, fromInputs, localParts, toInputs, windowRange, zonedTime } from "./time";
 
 const TZ = "America/Chicago";
 
@@ -49,5 +49,33 @@ describe("labels", () => {
   it("formats clock times", () => {
     expect(clock("2026-10-24T03:00:00Z", TZ)).toBe("10 pm");
     expect(clock("2026-10-24T06:30:00Z", TZ)).toBe("1:30 am");
+  });
+});
+
+describe("form wall-clock helpers", () => {
+  const tz = "America/Chicago";
+  it("converts a night that runs past midnight", () => {
+    // Oct 24 2026 is CDT (UTC-5).
+    expect(fromInputs("2026-10-24", "22:00", "03:00", tz)).toEqual({
+      startsAt: "2026-10-25T03:00:00.000Z",
+      endsAt: "2026-10-25T08:00:00.000Z",
+    });
+  });
+  it("keeps same-day ranges on the same day", () => {
+    expect(fromInputs("2026-12-05", "14:30", "18:00", tz)).toEqual({
+      startsAt: "2026-12-05T20:30:00.000Z",
+      endsAt: "2026-12-06T00:00:00.000Z",
+    });
+  });
+  it("handles the night DST ends", () => {
+    // Oct 31 → Nov 1 2026: clocks fall back at 2 am, so 10 pm CDT to 4 am CST is seven hours.
+    const r = fromInputs("2026-10-31", "22:00", "04:00", tz)!;
+    expect((Date.parse(r.endsAt) - Date.parse(r.startsAt)) / 3600e3).toBe(7);
+  });
+  it("round-trips to input values", () => {
+    expect(toInputs("2026-10-25T03:00:00.000Z", tz)).toEqual({ date: "2026-10-24", time: "22:00" });
+  });
+  it("rejects incomplete input", () => {
+    expect(fromInputs("", "22:00", "03:00", tz)).toBeNull();
   });
 });

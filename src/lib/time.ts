@@ -47,8 +47,8 @@ export function localParts(date: Date, tz: string): Parts {
 }
 
 /** UTC instant for a wall-clock time in a timezone. Day overflow (day 32) rolls over correctly. */
-export function zonedTime(year: number, month: number, day: number, hour: number, tz: string): Date {
-  const target = Date.UTC(year, month - 1, day, hour);
+export function zonedTime(year: number, month: number, day: number, hour: number, tz: string, minute = 0): Date {
+  const target = Date.UTC(year, month - 1, day, hour, minute);
   let guess = target;
   for (let i = 0; i < 3; i++) {
     const p = localParts(new Date(guess), tz);
@@ -120,4 +120,31 @@ export function clock(iso: string, tz: string): string {
 
 export function timeRange(startsAt: string, endsAt: string, tz: string): string {
   return `${clock(startsAt, tz)} to ${clock(endsAt, tz)}`;
+}
+
+// Form helpers: the posting form shows the city's wall clock, whatever the poster's device is set to.
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** ISO instant → values for <input type="date"> and <input type="time"> in the city's timezone. */
+export function toInputs(iso: string, tz: string): { date: string; time: string } {
+  const p = localParts(new Date(iso), tz);
+  return { date: `${p.year}-${pad2(p.month)}-${pad2(p.day)}`, time: `${pad2(p.hour)}:${pad2(p.minute)}` };
+}
+
+/**
+ * Date + start and end times (city wall clock) → ISO start and end.
+ * An end time at or before the start time means the next morning: 10 pm to 3 am.
+ */
+export function fromInputs(date: string, start: string, end: string, tz: string): { startsAt: string; endsAt: string } | null {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const s = /^(\d{1,2}):(\d{2})$/.exec(start);
+  const e = /^(\d{1,2}):(\d{2})$/.exec(end);
+  if (!d || !s || !e) return null;
+  const [y, m, day] = [Number(d[1]), Number(d[2]), Number(d[3])];
+  const startMin = Number(s[1]) * 60 + Number(s[2]);
+  const endMin = Number(e[1]) * 60 + Number(e[2]);
+  const startsAt = zonedTime(y, m, day, Number(s[1]), tz, Number(s[2]));
+  const endsAt = zonedTime(y, m, day + (endMin <= startMin ? 1 : 0), Number(e[1]), tz, Number(e[2]));
+  return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 }

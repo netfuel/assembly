@@ -59,6 +59,9 @@ export interface EventSummary {
   videoId: string | null;
   goingCount: number;
   isSample: boolean;
+  /** Edited meaningfully after posting (more than 10 minutes later). */
+  updated: boolean;
+  status: "live" | "cancelled" | "hidden";
 }
 
 export interface EventDetail extends EventSummary {
@@ -66,7 +69,49 @@ export interface EventDetail extends EventSummary {
   gettingThere: string | null;
   lineup: LineupSlot[];
   viewerRsvp: RsvpStatus | null;
+  viewerIsHost: boolean;
+  venueId: string | null;
+  flyerKey: string | null;
+  createdAt: string;
   updatedAt: string;
+}
+
+export interface Venue {
+  id: string;
+  name: string;
+  type: string;
+  address: string;
+  neighborhood: string | null;
+  lat: number;
+  lng: number;
+}
+
+export interface ArtistMatch {
+  id: string;
+  name: string;
+  slug: string;
+  links: ArtistLinks;
+}
+
+export interface GeocodeResult {
+  label: string;
+  address: string;
+  neighborhood: string | null;
+  lat: number;
+  lng: number;
+}
+
+export interface ServerConfig {
+  video: boolean;
+  streamCustomerCode: string | null;
+}
+
+export interface MyEvent {
+  id: string;
+  title: string;
+  starts_at: string;
+  status: string;
+  rsvp?: RsvpStatus;
 }
 
 export type RsvpStatus = "going" | "interested";
@@ -89,4 +134,6 @@ export interface Me {
 export interface AuthProviders {
   google: boolean;
   apple: boolean;
+  /** Local testing sign-in (DEV_LOGIN=1 on localhost only). */
+  dev?: boolean;
 }

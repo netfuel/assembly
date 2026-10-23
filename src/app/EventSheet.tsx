@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button, Frame, Label, LinkButton, Sheet, Tag } from "../components/ui";
-import { api, ApiError } from "../lib/api";
+import { api, ApiError, videoPlayerUrl } from "../lib/api";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
-import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type Me, type RsvpStatus } from "../../shared/types";
+import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type Me, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 // three.js loads only when someone opens an event without uploaded art.
 const FlyerShader = lazy(() => import("../components/FlyerShader"));
@@ -44,6 +44,8 @@ export function EventSheet({
   me,
   onClose,
   onNeedSignIn,
+  onEdit,
+  config,
   toast,
 }: {
   summary: EventSummary;
@@ -51,6 +53,8 @@ export function EventSheet({
   me: Me | null;
   onClose: () => void;
   onNeedSignIn: () => void;
+  onEdit: (detail: EventDetail) => void;
+  config: ServerConfig;
   toast: (msg: string) => void;
 }) {
   const [detail, setDetail] = useState<EventDetail | null>(null);
@@ -63,7 +67,8 @@ export function EventSheet({
   const now = new Date();
   const e = detail ?? summary;
   const queer = e.scenes.includes("queer");
-  const live = isLive(e.startsAt, e.endsAt, now);
+  const cancelled = e.status === "cancelled";
+  const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
   const directions = directionsLinks(e);
   const baseGoing = e.goingCount - (detail?.viewerRsvp === "going" ? 1 : 0);
   const going = baseGoing + (rsvp === "going" ? 1 : 0);
@@ -136,12 +141,31 @@ export function EventSheet({
           {e.flyerUrl ? <img className="flyer" src={e.flyerUrl} alt={`Flyer for ${e.title}`} /> : <GeneratedFlyer event={e} />}
         </div>
 
+        {cancelled && (
+          <p className="cancelled-banner" role="status" data-reveal>
+            <strong>Cancelled.</strong> The organizer called this one off. Check their links for a new date.
+          </p>
+        )}
+
+        {detail?.viewerIsHost && (
+          <div className="host-bar" data-reveal>
+            <span>
+              <Tag tone="strong">Host</Tag> {e.status === "hidden" ? "Hidden after reports. We'll review it." : "You posted this."}
+            </span>
+            <Button size="sm" onClick={() => onEdit(detail)}>
+              Edit
+            </Button>
+          </div>
+        )}
+
         <header className="event-head" data-reveal>
           <div className="event-meta">
             <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} aria-hidden="true" />
             {live ? <span className="live-tag">Happening now</span> : <span>{sceneLabels.join(" / ")}</span>}
+            {cancelled && <Tag tone="accent">Cancelled</Tag>}
+            {e.updated && !cancelled && <Tag>Updated</Tag>}
           </div>
-          <h1 className="event-title">{e.title}</h1>
+          <h1 className={`event-title ${cancelled ? "is-cancelled" : ""}`}>{e.title}</h1>
           {e.pitch && <p className="event-pitch">{e.pitch}</p>}
           <p className="event-when num">
             {dayLabel(e.startsAt, now, tz)} <span className="dim">/</span> {timeRange(e.startsAt, e.endsAt, tz)}
@@ -154,15 +178,15 @@ export function EventSheet({
             size="lg"
             variant={rsvp === "going" ? "confirmed" : "primary"}
             onClick={() => choose("going")}
-            disabled={busy}
+            disabled={busy || cancelled}
             aria-pressed={rsvp === "going"}
           >
             {rsvp === "going" ? "Going ✓" : "RSVP"}
           </Button>
-          <Button size="lg" variant={rsvp === "interested" ? "confirmed" : "default"} onClick={() => choose("interested")} disabled={busy} aria-pressed={rsvp === "interested"}>
+          <Button size="lg" variant={rsvp === "interested" ? "confirmed" : "default"} onClick={() => choose("interested")} disabled={busy || cancelled} aria-pressed={rsvp === "interested"}>
             {rsvp === "interested" ? "Interested ✓" : "Interested"}
           </Button>
-          {e.ticketUrl && (
+          {e.ticketUrl && !cancelled && (
             <LinkButton size="lg" href={e.ticketUrl} target="_blank" rel="noopener noreferrer">
               Tickets ↗
             </LinkButton>
@@ -174,6 +198,21 @@ export function EventSheet({
             <span ref={goingEl}>{going}</span> going
           </p>
         </div>
+
+        {e.videoId && (
+          <section aria-label="Promo video" data-reveal>
+            <Label glyph="▷">Promo</Label>
+            <div className="video-frame event-video">
+              <iframe
+                src={videoPlayerUrl(e.videoId, config.streamCustomerCode)}
+                title={`Promo video for ${e.title}`}
+                allow="accelerometer; gyroscope; encrypted-media; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          </section>
+        )}
 
         <Frame as="section" className="where" aria-label="Location" data-reveal>
           <Label glyph="⌖">Where</Label>
@@ -248,7 +287,72 @@ export function EventSheet({
           )}
           Tickets are sold by the organizer on their own site. Assembly links out and never handles payment.
         </p>
+
+        {!detail?.viewerIsHost && <ReportBox eventId={e.id} me={me} onNeedSignIn={onNeedSignIn} toast={toast} />}
       </div>
     </Sheet>
+  );
+}
+
+const REPORT_REASONS = [
+  { id: "unsafe", label: "Unsafe or dangerous" },
+  { id: "hateful", label: "Hateful or harassing" },
+  { id: "spam", label: "Spam or scam" },
+  { id: "wrong-info", label: "Wrong time or place" },
+  { id: "other", label: "Something else" },
+];
+
+function ReportBox({ eventId, me, onNeedSignIn, toast }: { eventId: string; me: Me | null; onNeedSignIn: () => void; toast: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (sent) return <p className="note">Thanks. We'll take a look.</p>;
+  if (!open) {
+    return (
+      <p className="note">
+        <button className="link report-link" onClick={() => (me ? setOpen(true) : onNeedSignIn())}>
+          Report this event
+        </button>
+      </p>
+    );
+  }
+  return (
+    <Frame as="section" className="report" aria-label="Report this event">
+      <Label glyph="!">Report</Label>
+      <div className="report-reasons" role="radiogroup" aria-label="Reason">
+        {REPORT_REASONS.map((r) => (
+          <button key={r.id} type="button" role="radio" aria-checked={reason === r.id} className="chip" aria-pressed={reason === r.id} onClick={() => setReason(r.id)}>
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <textarea className="report-note" rows={2} maxLength={280} value={note} onChange={(ev) => setNote(ev.target.value)} placeholder="Anything we should know? (optional)" aria-label="Details" />
+      <div className="report-actions">
+        <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          Never mind
+        </Button>
+        <Button
+          size="sm"
+          disabled={!reason || busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await api.report(eventId, reason!, note);
+              setSent(true);
+            } catch (err) {
+              toast(err instanceof ApiError ? err.message : "Couldn't send the report. Try again.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Send report
+        </Button>
+      </div>
+      <p className="note">Reports are private. The organizer doesn't see who sent them.</p>
+    </Frame>
   );
 }

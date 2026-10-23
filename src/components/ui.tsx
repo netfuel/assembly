@@ -112,6 +112,7 @@ export function Sheet({
   label,
   modal = false,
   center = false,
+  className = "",
   children,
 }: {
   open: boolean;
@@ -119,27 +120,31 @@ export function Sheet({
   label: string;
   modal?: boolean;
   center?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Held in a ref so a new onClose each render doesn't re-run the focus effect and steal focus from inputs.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (
     <>
       <div className={`scrim ${modal ? "" : "scrim-soft"}`} onClick={onClose} />
-      <div ref={ref} className={`sheet ${center ? "sheet-center" : ""}`} role="dialog" aria-modal={modal} aria-label={label} tabIndex={-1}>
+      <div ref={ref} className={`sheet ${center ? "sheet-center" : ""} ${className}`} role="dialog" aria-modal={modal} aria-label={label} tabIndex={-1}>
         <button className="sheet-close" onClick={onClose} aria-label="Close">
           <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
             <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
