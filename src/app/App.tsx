@@ -8,6 +8,7 @@ import { useTheme } from "../lib/theme";
 import { EventSheet } from "./EventSheet";
 import { AnnounceForm } from "./AnnounceForm";
 import { ProfileSheet } from "./ProfileSheet";
+import { ModerationSheet } from "./ModerationSheet";
 import { SCENES, type AuthProviders, type City, type EventDetail, type EventSummary, type MeProfile, type SceneId, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
@@ -41,7 +42,7 @@ export function App() {
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [me, setMe] = useState<MeProfile | null>(null);
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
-  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile">(null);
+  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation">(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<ServerConfig>({ video: false, streamCustomerCode: null });
   const [editing, setEditing] = useState<EventDetail | null>(null);
@@ -461,6 +462,7 @@ export function App() {
               setEditing(null);
               setSheet("announce");
             }}
+            onModerate={() => setSheet("moderation")}
             onSignedOut={(message) => {
               setMe(null);
               setSheet(null);
@@ -470,6 +472,10 @@ export function App() {
             toast={toast}
           />
         )}
+      </Sheet>
+
+      <Sheet open={sheet === "moderation" && !!me?.moderator} onClose={() => setSheet("profile")} label="Review reports" modal center className="sheet-compose">
+        <ModerationSheet tz={city.timezone} onOpenEvent={openEvent} toast={toast} />
       </Sheet>
 
       <Toast message={toastMsg} />

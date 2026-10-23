@@ -64,6 +64,15 @@ Organizers can attach a promo video up to 1:30. The browser uploads it straight 
 
 Files up to 200 MB are accepted. Longer videos are refused in the browser before upload, and Stream rejects anything over 1:30 regardless.
 
+## Moderation
+
+Moderators review reports, restore or remove hidden events, and give organizers the verified badge. They're listed by sign-in email in the `MODERATORS` setting, comma-separated:
+
+- Production: `npx wrangler secret put MODERATORS` and enter, for example, `you@gmail.com,partner@icloud.com`. Use the email your Google or Apple sign-in uses.
+- Locally: `MODERATORS=test-moderator@dev.localhost` in `.dev.vars`, then use the test sign-in with the name "Test Moderator".
+
+Moderators get a "Review reports" button on their profile, can open hidden events, and see Verify on the organizer line of any event.
+
 ## Deploy to Cloudflare
 
 The production site is **https://assembly.rsvp**. The app and API ship as one Worker named `assembly`, and Cloudflare Workers Builds deploys it from GitHub on every push to `main`.
@@ -117,6 +126,10 @@ Core build: posting is live.
 - **Make an announcement**: flyer upload (resized in the browser, metadata such as GPS stripped, stored in R2), title and one-liner, date and times in Memphis time (an end before the start means the next morning), a listed venue or any address with a draggable pin, scenes and door policies, door price, ticket link, lineup builder with artist search and links per service, and promo video up to 1:30.
 - New posts keep a draft on the device until they're posted.
 - Hosts can edit or cancel. Cancelled events stay on the map, marked, so people who planned around them find out; edits more than 10 minutes after posting show an Updated tag.
-- Anyone signed in can report an event. Three different reporters hide it until it's reviewed (there's no review screen yet; reviewing is a database task for now).
+- Anyone signed in can report an event or its organizer. Three different reporters hide an event until a moderator restores or removes it. Reports on people go to the review queue and never hide anything automatically.
+- Profiles: name, photo, pronouns, bio, scenes, and links. Showing up on "who's going" lists is opt-in. Delete account removes the profile, RSVPs, photos, and events hosted alone.
+- Sharing: copy link, native share, and a 1080x1920 story card with the flyer, date, and a QR code.
+- Map filters include any date, not just the next two weeks.
+- Promo video plays muted while it's on screen (waits for a tap with reduced motion).
 - Limits: 10 posts an hour, 30 flyer uploads an hour, 10 videos an hour per account.
 - Address search uses Photon (OpenStreetMap data). If it's down, the form falls back to placing the pin by hand.

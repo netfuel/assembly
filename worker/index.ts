@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import { readSession } from "./session";
 import { profile } from "./profile";
+import { moderation } from "./moderation";
 import { auth } from "./auth";
 import { events } from "./events";
 import { fonts } from "./fonts";
@@ -66,6 +67,7 @@ app.route("/auth", auth);
 app.route("/me", profile);
 app.route("/uploads", uploads);
 app.route("/", posting);
+app.route("/", moderation);
 app.route("/events", events);
 
 app.notFound((c) => c.json({ error: "Not found." }, 404));

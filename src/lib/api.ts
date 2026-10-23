@@ -5,6 +5,7 @@ import type {
   EventDetail,
   EventSummary,
   GeocodeResult,
+  ModItem,
   MeProfile,
   MyEvent,
   RsvpStatus,
@@ -103,6 +104,15 @@ export const api = {
   cancelEvent: (id: string) => request<{ id: string; status: "cancelled" }>(`/api/events/${enc(id)}/cancel`, { method: "POST" }),
   report: (id: string, reason: string, note: string) =>
     request<{ ok: true }>(`/api/events/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  reportUser: (id: string, reason: string, note: string) =>
+    request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  modQueue: () => request<{ items: ModItem[] }>("/api/mod/queue").then((r) => r.items),
+  modEvent: (id: string, action: "restore" | "remove" | "dismiss") =>
+    request<{ ok: true }>(`/api/mod/events/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
+  modUser: (id: string, action: "dismiss" | "hide-events") =>
+    request<{ ok: true }>(`/api/mod/users/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
+  setVerified: (id: string, verified: boolean) =>
+    request<{ ok: true; verified: boolean }>(`/api/mod/users/${enc(id)}/verified`, { method: "PUT", body: JSON.stringify({ verified }) }),
   myEvents: () => request<{ hosting: MyEvent[]; going: MyEvent[] }>("/api/me/events"),
 
   venues: () => request<{ venues: Venue[] }>("/api/venues").then((r) => r.venues),

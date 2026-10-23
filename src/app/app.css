@@ -293,3 +293,22 @@
 .promo-video iframe { z-index: 1; }
 .promo-play { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; width: 100%; border: 0; background: rgb(0 0 0 / 0.25); color: #fff; cursor: pointer; }
 .promo-play svg { width: 56px; height: 56px; padding: 16px; border-radius: 50%; background: var(--color-accent); color: var(--color-accent-ink); }
+
+/* Organizer line and verified badge */
+.host-line { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--color-line); border-bottom: 1px solid var(--color-line); font-size: var(--text-sm); }
+.host-line-text { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--space-2); min-width: 0; }
+.verified { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-accent-text); }
+.varsity { flex: none; }
+.report-links { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+.report-links > .report { flex-basis: 100%; }
+
+/* Moderation queue */
+.mod { display: grid; gap: var(--space-6); padding-bottom: var(--space-6); }
+.mod-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.mod-item { display: grid; gap: var(--space-2); padding: var(--space-4) 0; border-top: 1px solid var(--color-line); }
+.mod-item:last-child { border-bottom: 1px solid var(--color-line); }
+.mod-head { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-2xs); }
+.mod-title { margin: 0; font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-size: 1.25rem; letter-spacing: -0.015em; }
+.mod-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
+.mod-notes { margin: 0; padding-left: var(--space-4); font-size: var(--text-xs); color: var(--color-muted); font-family: var(--font-serif); font-style: italic; }
+.mod .note .varsity { vertical-align: -2px; }

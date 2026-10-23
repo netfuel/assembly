@@ -70,6 +70,8 @@ export interface EventDetail extends EventSummary {
   lineup: LineupSlot[];
   viewerRsvp: RsvpStatus | null;
   viewerIsHost: boolean;
+  /** The organizer who posted it. */
+  host: HostSummary | null;
   venueId: string | null;
   flyerKey: string | null;
   createdAt: string;
@@ -139,7 +141,30 @@ export interface MeProfile extends Me {
   /** Opt-in: appear on "who's going" lists. Off by default. */
   showAttendance: boolean;
   verified: boolean;
+  /** Can review reports and verify organizers (listed in MODERATORS). */
+  moderator: boolean;
 }
+
+export interface HostSummary {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  verified: boolean;
+}
+
+/** One entry in the moderators' review queue. */
+export type ModItem =
+  | {
+      type: "event";
+      id: string;
+      title: string;
+      status: string;
+      startsAt: string;
+      host: { id: string; displayName: string; verified: boolean } | null;
+      reasons: string[];
+      latest: string;
+    }
+  | { type: "user"; id: string; title: string; verified: boolean; hosted: number; reasons: string[]; latest: string };
 
 export interface AuthProviders {
   google: boolean;

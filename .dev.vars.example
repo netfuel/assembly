@@ -14,3 +14,6 @@ CLOUDFLARE_ACCOUNT_ID=
 STREAM_API_TOKEN=
 # Optional: Stream customer code for playback URLs (customer-<code>.cloudflarestream.com).
 STREAM_CUSTOMER_CODE=
+# Moderators: comma-separated sign-in emails. Locally, a test sign-in named "Test Moderator"
+# gets the address test-moderator@dev.localhost.
+MODERATORS=

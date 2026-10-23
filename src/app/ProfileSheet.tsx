@@ -4,6 +4,7 @@ import { api, ApiError } from "../lib/api";
 import { MediaError, prepareAvatar } from "../lib/media";
 import { clock, dayLabel } from "../lib/time";
 import { SCENES, type MeProfile, type MyEvent } from "../../shared/types";
+import { VarsityMark } from "./EventSheet";
 import "./announce.css";
 
 const LINKS: { key: string; label: string; placeholder: string }[] = [
@@ -31,9 +32,11 @@ export function ProfileSheet({
   onSignedOut,
   onOpenEvent,
   onAnnounce,
+  onModerate,
   toast,
 }: {
   me: MeProfile;
+  onModerate: () => void;
   tz: string;
   onChange: (me: MeProfile) => void;
   onSignedOut: (message: string) => void;
@@ -73,7 +76,12 @@ export function ProfileSheet({
         <div className="stack">
           <Label glyph="◇">Profile</Label>
           <h1 className="sheet-title">
-            {me.displayName} {me.verified && <Tag tone="strong">Verified organizer</Tag>}
+            {me.displayName}
+            {me.verified && (
+              <span className="verified">
+                <VarsityMark /> Verified
+              </span>
+            )}
           </h1>
           {me.pronouns && <p className="note">{me.pronouns}</p>}
         </div>
@@ -99,6 +107,11 @@ export function ProfileSheet({
         <Button size="sm" onClick={() => setMode("edit")}>
           Edit profile
         </Button>
+        {me.moderator && (
+          <Button size="sm" onClick={onModerate}>
+            Review reports
+          </Button>
+        )}
         <span className="note">{me.showAttendance ? "You show up on who's going lists." : "Your RSVPs are private."}</span>
       </div>
 

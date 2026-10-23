@@ -2,10 +2,11 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button, Frame, Label, LinkButton, Sheet, Tag } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
+import { Avatar } from "./ProfileSheet";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
-import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type Me, type RsvpStatus, type ServerConfig } from "../../shared/types";
+import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type HostSummary, type Me, type MeProfile, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 // three.js loads only when someone opens an event without uploaded art.
 const FlyerShader = lazy(() => import("../components/FlyerShader"));
@@ -51,7 +52,7 @@ export function EventSheet({
 }: {
   summary: EventSummary;
   tz: string;
-  me: Me | null;
+  me: MeProfile | null;
   onClose: () => void;
   onNeedSignIn: () => void;
   onEdit: (detail: EventDetail) => void;
@@ -315,19 +316,27 @@ export function EventSheet({
           )}
         </section>
 
-        <section aria-label="Door" data-reveal>
-          <Label glyph="▣">Door</Label>
-          <ul className="door">
-            {e.doorPrice && (
-              <li>
-                <strong>{e.doorPrice}</strong>
-              </li>
-            )}
-            {e.policyTags.map((t) => (
-              <li key={t}>{POLICY_TAGS[t] ?? t}</li>
-            ))}
-          </ul>
-        </section>
+        {detail?.host && (
+          <div data-reveal>
+            <HostLine host={detail.host} me={me} toast={toast} />
+          </div>
+        )}
+
+        {(e.doorPrice || e.policyTags.length > 0) && (
+          <section aria-label="Door" data-reveal>
+            <Label glyph="▣">Door</Label>
+            <ul className="door">
+              {e.doorPrice && (
+                <li>
+                  <strong>{e.doorPrice}</strong>
+                </li>
+              )}
+              {e.policyTags.map((t) => (
+                <li key={t}>{POLICY_TAGS[t] ?? t}</li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <p className="note" data-reveal>
           {e.isSample && (
@@ -338,49 +347,89 @@ export function EventSheet({
           Tickets are sold by the organizer on their own site. Assembly links out and never handles payment.
         </p>
 
-        {!detail?.viewerIsHost && <ReportBox eventId={e.id} me={me} onNeedSignIn={onNeedSignIn} toast={toast} />}
+        {!detail?.viewerIsHost && (
+          <div className="report-links" data-reveal>
+            <ReportBox target={{ kind: "event", id: e.id, name: e.title }} me={me} onNeedSignIn={onNeedSignIn} toast={toast} />
+            {detail?.host && detail.host.id !== me?.id && (
+              <ReportBox target={{ kind: "user", id: detail.host.id, name: "the organizer" }} me={me} onNeedSignIn={onNeedSignIn} toast={toast} />
+            )}
+          </div>
+        )}
       </div>
     </Sheet>
     </>
   );
 }
 
-const REPORT_REASONS = [
+const EVENT_REASONS = [
   { id: "unsafe", label: "Unsafe or dangerous" },
   { id: "hateful", label: "Hateful or harassing" },
   { id: "spam", label: "Spam or scam" },
   { id: "wrong-info", label: "Wrong time or place" },
   { id: "other", label: "Something else" },
 ];
+const USER_REASONS = [
+  { id: "unsafe", label: "Unsafe or dangerous" },
+  { id: "hateful", label: "Hateful or harassing" },
+  { id: "impersonation", label: "Pretending to be someone" },
+  { id: "spam", label: "Spam or scam" },
+  { id: "other", label: "Something else" },
+];
 
-function ReportBox({ eventId, me, onNeedSignIn, toast }: { eventId: string; me: Me | null; onNeedSignIn: () => void; toast: (m: string) => void }) {
+function ReportBox({
+  target,
+  me,
+  onNeedSignIn,
+  toast,
+}: {
+  target: { kind: "event" | "user"; id: string; name: string };
+  me: Me | null;
+  onNeedSignIn: () => void;
+  toast: (m: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const reasons = target.kind === "event" ? EVENT_REASONS : USER_REASONS;
+  const label = target.kind === "event" ? "Report this event" : `Report ${target.name}`;
 
   if (sent) return <p className="note">Thanks. We'll take a look.</p>;
   if (!open) {
     return (
-      <p className="note">
-        <button className="link report-link" onClick={() => (me ? setOpen(true) : onNeedSignIn())}>
-          Report this event
-        </button>
-      </p>
+      <button className="link report-link" onClick={() => (me ? setOpen(true) : onNeedSignIn())}>
+        {label}
+      </button>
     );
   }
   return (
-    <Frame as="section" className="report" aria-label="Report this event">
-      <Label glyph="!">Report</Label>
+    <Frame as="section" className="report" aria-label={label}>
+      <Label glyph="!">{label}</Label>
       <div className="report-reasons" role="radiogroup" aria-label="Reason">
-        {REPORT_REASONS.map((r) => (
-          <button key={r.id} type="button" role="radio" aria-checked={reason === r.id} className="chip" aria-pressed={reason === r.id} onClick={() => setReason(r.id)}>
+        {reasons.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            role="radio"
+            aria-checked={reason === r.id}
+            className="chip"
+            aria-pressed={reason === r.id}
+            onClick={() => setReason(r.id)}
+          >
             {r.label}
           </button>
         ))}
       </div>
-      <textarea className="report-note" rows={2} maxLength={280} value={note} onChange={(ev) => setNote(ev.target.value)} placeholder="Anything we should know? (optional)" aria-label="Details" />
+      <textarea
+        className="report-note"
+        rows={2}
+        maxLength={280}
+        value={note}
+        onChange={(ev) => setNote(ev.target.value)}
+        placeholder="Anything we should know? (optional)"
+        aria-label="Details"
+      />
       <div className="report-actions">
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
           Never mind
@@ -391,7 +440,8 @@ function ReportBox({ eventId, me, onNeedSignIn, toast }: { eventId: string; me: 
           onClick={async () => {
             setBusy(true);
             try {
-              await api.report(eventId, reason!, note);
+              if (target.kind === "event") await api.report(target.id, reason!, note);
+              else await api.reportUser(target.id, reason!, note);
               setSent(true);
             } catch (err) {
               toast(err instanceof ApiError ? err.message : "Couldn't send the report. Try again.");
@@ -403,7 +453,52 @@ function ReportBox({ eventId, me, onNeedSignIn, toast }: { eventId: string; me: 
           Send report
         </Button>
       </div>
-      <p className="note">Reports are private. The organizer doesn't see who sent them.</p>
+      <p className="note">Reports are private. {target.kind === "event" ? "The organizer doesn't" : "They don't"} see who sent them.</p>
     </Frame>
+  );
+}
+
+/** Who posted it, with the verified badge. Moderators can verify from here. */
+function HostLine({ host, me, toast }: { host: HostSummary; me: MeProfile | null; toast: (m: string) => void }) {
+  const [verified, setVerified] = useState(host.verified);
+  return (
+    <div className="host-line">
+      <Avatar user={host} size={32} />
+      <span className="host-line-text">
+        <span className="dim">Posted by</span> {host.displayName}
+        {verified && (
+          <span className="verified" title="Verified organizer: vetted by the Assembly team">
+            <VarsityMark /> Verified
+          </span>
+        )}
+      </span>
+      {me?.moderator && me.id !== host.id && (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={async () => {
+            try {
+              const r = await api.setVerified(host.id, !verified);
+              setVerified(r.verified);
+              toast(r.verified ? `${host.displayName} is verified.` : "Verification removed.");
+            } catch (err) {
+              toast(err instanceof ApiError ? err.message : "Couldn't change verification.");
+            }
+          }}
+        >
+          {verified ? "Unverify" : "Verify"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** The verified badge: a small varsity-letter A, the one place the assembly theme shows up in trust UI. */
+export function VarsityMark() {
+  return (
+    <svg className="varsity" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M2 1h12v10l-6 4-6-4z" fill="var(--color-accent)" />
+      <path d="M5.2 10.5 8 3.5l2.8 7M6.2 8h3.6" fill="none" stroke="var(--color-accent-ink)" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
   );
 }

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { AppContext } from "./env";
+import { isModerator } from "./moderation";
 import type { EventDetail, EventSummary, LineupSlot, RsvpStatus, SceneId } from "../shared/types";
 
 interface EventRow {
@@ -112,8 +113,9 @@ events.get("/:id", async (c) => {
     userId &&
     (await c.env.DB.prepare("SELECT 1 FROM event_hosts WHERE event_id = ? AND user_id = ?").bind(id, userId).first())
   );
-  // Hidden events (reported, or drafts) are visible only to their hosts.
-  if (!row || ((row.status === "hidden" || row.status === ("draft" as string)) && !viewerIsHost)) {
+  // Hidden events (reported, or drafts) are visible only to their hosts and moderators.
+  const restricted = row && (row.status === "hidden" || row.status === ("draft" as string));
+  if (!row || (restricted && !viewerIsHost && !(await isModerator(c.env, userId)))) {
     return c.json({ error: "We couldn't find that event. It may have been removed." }, 404);
   }
 
@@ -143,6 +145,13 @@ events.get("/:id", async (c) => {
     note: s.note,
   }));
 
+  const hostRow = await c.env.DB.prepare(
+    `SELECT u.id, u.display_name, u.avatar_url, u.is_verified_organizer FROM event_hosts h JOIN users u ON u.id = h.user_id
+     WHERE h.event_id = ? ORDER BY h.role = 'owner' DESC LIMIT 1`,
+  )
+    .bind(id)
+    .first<{ id: string; display_name: string; avatar_url: string | null; is_verified_organizer: number }>();
+
   const detail: EventDetail = {
     ...toSummary(row),
     description: row.description,
@@ -150,6 +159,7 @@ events.get("/:id", async (c) => {
     lineup,
     viewerRsvp,
     viewerIsHost,
+    host: hostRow ? { id: hostRow.id, displayName: hostRow.display_name, avatarUrl: hostRow.avatar_url, verified: hostRow.is_verified_organizer === 1 } : null,
     venueId: row.venue_id,
     flyerKey: row.flyer_key,
     createdAt: row.created_at,

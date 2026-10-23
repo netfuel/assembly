@@ -5,6 +5,7 @@ import { endAllSessions, endSession } from "./session";
 import { rateLimit } from "./posting";
 import { sniffImage, validateProfile } from "./validate";
 import { streamConfigured } from "./uploads";
+import { isModerator } from "./moderation";
 
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const CONTENT_TYPES = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" } as const;
@@ -29,7 +30,7 @@ function parse<T>(raw: string | null, fallback: T): T {
   }
 }
 
-export function toProfile(row: UserRow): MeProfile {
+export function toProfile(row: UserRow, moderator = false): MeProfile {
   return {
     id: row.id,
     displayName: row.display_name,
@@ -40,6 +41,7 @@ export function toProfile(row: UserRow): MeProfile {
     links: parse(row.links, {}),
     showAttendance: row.show_attendance === 1,
     verified: row.is_verified_organizer === 1,
+    moderator,
   };
 }
 
@@ -64,7 +66,7 @@ profile.get("/", async (c) => {
   const userId = c.get("userId");
   if (!userId) return c.json({ user: null });
   const row = await loadUser(c.env, userId);
-  return c.json({ user: row ? toProfile(row) : null });
+  return c.json({ user: row ? toProfile(row, await isModerator(c.env, userId)) : null });
 });
 
 profile.patch("/", async (c) => {
@@ -81,7 +83,7 @@ profile.patch("/", async (c) => {
   // RSVPs follow the profile setting, so turning it off hides you from every "who's going" list at once.
   await c.env.DB.prepare("UPDATE rsvps SET visible = ? WHERE user_id = ?").bind(v.showAttendance ? 1 : 0, userId).run();
   const row = await loadUser(c.env, userId);
-  return c.json({ user: row ? toProfile(row) : null });
+  return c.json({ user: row ? toProfile(row, await isModerator(c.env, userId)) : null });
 });
 
 /** Profile photo: the browser sends a square image it has already resized. */
@@ -103,7 +105,7 @@ profile.post("/avatar", async (c) => {
   const old = ownAvatarKey(before?.avatar_url ?? null, userId);
   if (old) await c.env.MEDIA.delete(old);
   const row = await loadUser(c.env, userId);
-  return c.json({ user: row ? toProfile(row) : null });
+  return c.json({ user: row ? toProfile(row, await isModerator(c.env, userId)) : null });
 });
 
 profile.delete("/avatar", async (c) => {
@@ -114,7 +116,7 @@ profile.delete("/avatar", async (c) => {
   const old = ownAvatarKey(before?.avatar_url ?? null, userId);
   if (old) await c.env.MEDIA.delete(old);
   const row = await loadUser(c.env, userId);
-  return c.json({ user: row ? toProfile(row) : null });
+  return c.json({ user: row ? toProfile(row, await isModerator(c.env, userId)) : null });
 });
 
 /**

@@ -54,7 +54,11 @@ async function upsertUser(
     .prepare("SELECT user_id FROM identities WHERE provider = ? AND provider_subject = ?")
     .bind(provider, subject)
     .first<{ user_id: string }>();
-  if (existing) return existing.user_id;
+  if (existing) {
+    // Keep the email current (Google can change it; Apple only sends it the first time).
+    if (email) await db.prepare("UPDATE identities SET email = ? WHERE provider = ? AND provider_subject = ?").bind(email, provider, subject).run();
+    return existing.user_id;
+  }
 
   const userId = crypto.randomUUID();
   const displayName = name?.trim() || email?.split("@")[0] || "New member";
@@ -171,7 +175,9 @@ auth.get("/dev", async (c) => {
   const host = new URL(c.req.url).hostname;
   if (c.env.DEV_LOGIN !== "1" || !["localhost", "127.0.0.1"].includes(host)) return c.notFound();
   const name = (c.req.query("name") ?? "Test Organizer").slice(0, 40);
-  const userId = await upsertUser(c.env.DB, "google", `dev-${slugifyName(name)}`, null, name, null);
+  // Test accounts get a fake address, so MODERATORS in .dev.vars can name one (e.g. test-moderator@dev.localhost).
+  const slug = slugifyName(name);
+  const userId = await upsertUser(c.env.DB, "google", `dev-${slug}`, `${slug}@dev.localhost`, name, null);
   await startSession(c, userId);
   return c.redirect(withResult(safeReturnTo(c.req.query("return_to")), "ok"));
 });
