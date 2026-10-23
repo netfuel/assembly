@@ -1,8 +1,13 @@
 import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// MapLibre finds its worker relative to its own file, which Vite's pre-bundling breaks.
+// Point it at a worker Vite builds itself, so it works in dev and production.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { CITY } from '../data/events.js'
 import { isLive } from '../lib/time.js'
+
+maplibregl.setWorkerUrl(workerUrl)
 
 // Dev basemap. Swap for the Protomaps night style on R2 before launch (see PRD: Technical architecture).
 const STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
@@ -31,7 +36,13 @@ export default function MapView({ events, selectedId, onSelect }) {
       }
     })
     map.current = m
-    return () => m.remove()
+    return () => {
+      // Drop cached markers with the map, or a remount (React StrictMode in dev) leaves them on a dead map.
+      markers.current.forEach((mk) => mk.remove())
+      markers.current.clear()
+      m.remove()
+      map.current = null
+    }
   }, [])
 
   // Sync markers with the filtered event list.
@@ -60,12 +71,12 @@ export default function MapView({ events, selectedId, onSelect }) {
       }
       const node = mk.getElement()
       const size = pinSize(e.rsvps)
-      node.className = [
-        'pin',
-        e.scenes.includes('queer') ? 'pin--uv' : 'pin--sodium',
-        isLive(e) ? 'pin--live' : '',
-        e.id === selectedId ? 'pin--selected' : '',
-      ].join(' ')
+      // Toggle our classes only: MapLibre's own marker classes handle positioning.
+      node.classList.add('pin')
+      node.classList.toggle('pin--uv', e.scenes.includes('queer'))
+      node.classList.toggle('pin--sodium', !e.scenes.includes('queer'))
+      node.classList.toggle('pin--live', isLive(e))
+      node.classList.toggle('pin--selected', e.id === selectedId)
       node.style.setProperty('--size', `${size}px`)
     }
   }, [events, selectedId, onSelect])
