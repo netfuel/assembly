@@ -1,7 +1,11 @@
 node_modules
 dist
 dev-dist
+.wrangler
+.dev.vars
+.env
+*.local
 .DS_Store
-*.log
-.env*
-!.env.example
+
+# Timeless fonts: their license forbids public repositories. Copy them in locally (see README).
+public/fonts/timeless/

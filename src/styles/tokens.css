@@ -1,0 +1,133 @@
+/*
+  Assembly design tokens, v3.
+  Structure after save.design: hairline frames with diamond corner nodes, one hot magenta accent,
+  color carried by content (flyers, video, pins). Type after timeless.co/type: the Timeless family
+  set editorially. Light is the default theme (cool paper gray, like the Timeless specimen);
+  dark is the near-black night mode. The theme lives on <html data-theme>.
+*/
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Ground and surfaces: cool paper gray */
+  --color-ground: #e9eaec;
+  --color-surface: #f4f4f5;
+  --color-surface-raised: #fbfbfc;
+  --color-line: #d2d4d8; /* hairline frames */
+  --color-line-strong: #b4b7bd;
+  --color-glass: rgb(244 244 245 / 0.82); /* floating nav */
+
+  /* Text */
+  --color-fg: #121315;
+  --color-muted: #5b5e65;
+  --color-faint: #8a8d94;
+
+  /* The one UI accent: primary action, selection, "featured", live */
+  --color-accent: #ff3df2;
+  --color-accent-ink: #1a0119;
+  --color-accent-text: #b8139f; /* accent used as text on light ground, for contrast */
+  --color-accent-wash: rgb(255 61 242 / 0.08);
+
+  /* Scene markers (pins, small squares) */
+  --color-sodium: #f07f12; /* everything else */
+  --color-uv: #7b5cf0; /* queer-centered */
+
+  /* Status */
+  --color-ok: #138a5e;
+  --color-ok-ink: #ffffff;
+  --color-warn: #b88600;
+
+  --color-scrim: rgb(18 19 21 / 0.35);
+  --shadow-float: 0 12px 32px rgb(18 19 21 / 0.14), 0 1px 2px rgb(18 19 21 / 0.06);
+  --dot-color: rgb(18 19 21 / 0.1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-ground: #0a0a0b;
+  --color-surface: #0f0f11;
+  --color-surface-raised: #161619;
+  --color-line: #232327;
+  --color-line-strong: #34343a;
+  --color-glass: rgb(15 15 17 / 0.85);
+
+  --color-fg: #ededee;
+  --color-muted: #8e8e96;
+  --color-faint: #5c5c64;
+
+  --color-accent: #ff3df2;
+  --color-accent-ink: #1a0119;
+  --color-accent-text: #ff3df2;
+  --color-accent-wash: rgb(255 61 242 / 0.08);
+
+  --color-sodium: #ff9a3c;
+  --color-uv: #a98bff;
+
+  --color-ok: #6fe3b4;
+  --color-ok-ink: #062117;
+  --color-warn: #ffd23f;
+
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --shadow-float: 0 16px 40px rgb(0 0 0 / 0.55);
+  --dot-color: rgb(255 255 255 / 0.07);
+}
+
+:root {
+  /*
+    Type: the Timeless family (src/styles/fonts.css), set editorially after timeless.co/type.
+    Grotesk carries the interface and data; Serif carries display and reading; Serif Italic sets decks.
+    STYL picks the cut inside each variable font.
+  */
+  --font-grotesk: "Timeless Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-serif: "Timeless Serif", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --vary-grotesk: "STYL" 0; /* Timeless Sans Grotesk */
+  --vary-sans: "STYL" 100; /* Timeless Sans Sans */
+  --vary-display: "STYL" 0; /* Timeless Serif, display sizes */
+  --vary-text: "STYL" 100; /* Timeless Serif Text, reading sizes */
+
+  --text-2xs: 0.6875rem; /* 11: labels, counters */
+  --text-xs: 0.75rem; /* 12: buttons, meta */
+  --text-sm: 0.8125rem; /* 13: body */
+  --text-md: 0.9375rem; /* 15 */
+  --text-lg: 1.5rem; /* 24: rail and sheet headings (serif) */
+  --text-xl: 2.25rem; /* 36: event title (serif) */
+  --text-2xl: 3rem; /* 48: display */
+  --leading-display: 0.98;
+  --tracking-display: -0.025em;
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 650;
+
+  --tracking-label: 0.09em;
+
+  /* Space (4 px steps) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Shape: tight radii, frames instead of shadows */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+  --node-size: 7px; /* diamond at frame corners */
+
+  --tap: 44px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+
+  /* Dot-grid canvas */
+  --texture-dots: radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 1.2px) 0 0 / 16px 16px;
+  /* Photocopy grain for flyer placeholders */
+  --texture-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
