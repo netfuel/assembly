@@ -31,7 +31,14 @@ fonts.get("/timeless/:file", async (c) => {
   if (!fromOwnSite(c.req.raw)) return c.text("Fonts are served only to assembly.rsvp pages.", 403);
 
   const obj = await c.env.MEDIA.get(`fonts/timeless/${file}`);
-  if (!obj) return c.env.ASSETS.fetch(c.req.raw);
+  if (!obj) {
+    // Local dev: serve from public/fonts/timeless/. Static-asset hosting answers unknown paths with
+    // the app's index.html (single-page fallback), so pass through only a real font.
+    const local = await c.env.ASSETS.fetch(c.req.raw);
+    const type = local.headers.get("Content-Type") ?? "";
+    if (local.ok && (type.includes("font") || type.includes("octet-stream"))) return local;
+    return c.text("Font not uploaded yet. Run npm run fonts:upload.", 404);
+  }
 
   const headers = new Headers({
     "Content-Type": "font/woff2",
