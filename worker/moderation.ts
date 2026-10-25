@@ -6,9 +6,10 @@ import { notifyUsers } from "./push";
 /** True when one of this user's sign-in emails is listed in MODERATORS. */
 export async function isModerator(env: Env, userId: string | null): Promise<boolean> {
   if (!userId || !env.MODERATORS) return false;
-  const allowed = env.MODERATORS.split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+  // Tolerate how people type lists: commas, spaces, or new lines, with stray quotes or brackets.
+  const allowed = env.MODERATORS.split(/[\s,;]+/)
+    .map((e) => e.replace(/["'<>\[\]]/g, "").trim().toLowerCase())
+    .filter((e) => e.includes("@"));
   if (!allowed.length) return false;
   const { results } = await env.DB.prepare("SELECT email FROM identities WHERE user_id = ? AND email IS NOT NULL").bind(userId).all<{ email: string }>();
   return results.some((r) => allowed.includes(r.email.toLowerCase()));
