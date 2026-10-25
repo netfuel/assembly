@@ -103,17 +103,26 @@ emailAuth.post("/start", async (c) => {
   const origin = new URL(c.req.url).origin;
   if (canSend) {
     const msg = codeEmail(code, origin);
+    // Secrets pasted into a terminal can carry quotes or a trailing newline; Email Sending rejects those.
+    const from = normalizeEmail(c.env.EMAIL_FROM!.replace(/["'<>]/g, ""));
+    if (!from) {
+      console.error("EMAIL_FROM isn't a valid address", JSON.stringify(c.env.EMAIL_FROM));
+      await kv.delete(key);
+      return c.json({ error: "We couldn't send the email. Try again in a minute. (BAD_SENDER)", code: "BAD_SENDER" }, 502);
+    }
     try {
-      await c.env.EMAIL!.send({
-        from: { email: c.env.EMAIL_FROM!, name: "Assembly" },
-        to: email,
-        subject: msg.subject,
-        text: msg.text,
-        html: msg.html,
-      });
+      try {
+        await c.env.EMAIL!.send({ from: { email: from, name: "Assembly" }, to: email, subject: msg.subject, text: msg.text, html: msg.html });
+      } catch (first) {
+        if ((first as { code?: string }).code !== "E_VALIDATION_ERROR") throw first;
+        // Fall back to the plainest message the API accepts, and log what it objected to.
+        console.error("email validation error, retrying plain", (first as Error).message);
+        await c.env.EMAIL!.send({ from, to: email, subject: msg.subject, text: msg.text });
+      }
     } catch (err) {
       const codeName = (err as { code?: string }).code;
       console.error("email send failed", codeName, (err as Error).message);
+      const detail = ((err as Error).message ?? "").replace(/[\w.+-]+@[\w.-]+/g, "<address>").slice(0, 120);
       if (!local) {
         await kv.delete(key);
         if (codeName === "E_RECIPIENT_SUPPRESSED") return c.json({ error: "Email to that address is bouncing. Try another address." }, 400);
@@ -122,7 +131,7 @@ emailAuth.post("/start", async (c) => {
         }
         // Sender or account setup problems are ours to fix; the code (no personal data) helps us find it.
         const ref = (codeName ?? (err as Error).name ?? "unknown").replace(/[^A-Z0-9_]/gi, "").slice(0, 40);
-        return c.json({ error: `We couldn't send the email. Try again in a minute. (${ref})`, code: ref }, 502);
+        return c.json({ error: `We couldn't send the email. Try again in a minute. (${ref})`, code: ref, detail }, 502);
       }
     }
   }
