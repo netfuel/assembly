@@ -120,6 +120,12 @@ root.use("*", async (c, next) => {
   } catch (err) {
     // Never take the site down over headers: log it and send the response as is.
     console.error("security headers failed", c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
+    // TEMPORARY diagnostic, remove once fixed.
+    try {
+      c.res.headers.set("X-Debug-Header-Error", (err instanceof Error ? `${err.name}: ${err.message}` : String(err)).slice(0, 200));
+    } catch {
+      // ignore
+    }
   }
 });
 root.onError((err, c) => {
