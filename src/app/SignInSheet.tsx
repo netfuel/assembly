@@ -256,6 +256,10 @@ export function SignInSheet({
           </Button>
         </form>
       )}
+      <p className="note consent" data-reveal>
+        By continuing, you confirm you're 18 or older and agree to the <a href="/terms">Terms</a>, <a href="/privacy">Privacy policy</a>, and{" "}
+        <a href="/guidelines">Community guidelines</a>.
+      </p>
       {!sso && !providers.email && !providers.dev && (
         <p className="note" data-reveal>
           <Tag>Setup</Tag> Sign-in isn't configured on this server yet. See README, "Set up sign-in".

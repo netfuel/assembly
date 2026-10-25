@@ -143,6 +143,10 @@ export function ProfileSheet({
         )}
         {mine && mine.hosting.length > 0 && <MyList items={mine.hosting} tz={tz} onOpen={onOpenEvent} />}
       </section>
+      <p className="note policy-links" data-reveal>
+        <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/guidelines">Community guidelines</a> ·{" "}
+        <a href="mailto:hello@assembly.rsvp">Contact</a>
+      </p>
       <Button
         data-reveal
         onClick={async () => {

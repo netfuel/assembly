@@ -1,0 +1,32 @@
+/* Policy pages: editorial reading layout in the Timeless family. */
+html:has(.legal), body:has(.legal), #root:has(.legal) { height: auto; overflow: auto; }
+.legal { min-height: 100dvh; background: var(--color-ground); color: var(--color-fg); }
+.legal-nav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+  padding: var(--space-3) max(var(--space-4), env(safe-area-inset-left));
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.legal-nav nav { display: flex; flex-wrap: wrap; gap: var(--space-4); font-size: var(--text-xs); }
+.legal-nav nav a { color: var(--color-muted); text-decoration: none; }
+.legal-nav nav a[aria-current="page"] { color: var(--color-fg); text-decoration: underline; text-decoration-color: var(--color-accent); text-underline-offset: 4px; }
+.legal-main { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--space-4) calc(var(--space-8) * 2); }
+.legal-main h1 { margin: var(--space-3) 0 var(--space-4); font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 300; font-size: clamp(2.25rem, 7vw, 3.25rem); line-height: var(--leading-display); letter-spacing: var(--tracking-display); }
+.legal-lede { margin: 0 0 var(--space-8); font-family: var(--font-serif); font-style: italic; font-weight: 350; font-size: 1.25rem; line-height: 1.4; color: var(--color-muted); }
+.legal-main section { padding: var(--space-5) 0; border-top: 1px solid var(--color-line); }
+.legal-main section h2 { margin: 0 0 var(--space-3); font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 400; font-size: 1.375rem; letter-spacing: -0.015em; }
+.legal-main p, .legal-main li { font-family: var(--font-serif); font-variation-settings: var(--vary-text); font-size: 1.0625rem; line-height: 1.6; }
+.legal-main p { margin: 0 0 var(--space-3); }
+.legal-main ul { margin: 0 0 var(--space-3); padding-left: 1.2em; }
+.legal-main li { margin-bottom: var(--space-2); }
+.legal-main li::marker { color: var(--color-accent-text); }
+.legal-main a { color: var(--color-fg); text-decoration-color: var(--color-accent); text-underline-offset: 3px; }
+.legal-foot { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--color-line); font-size: var(--text-sm); }

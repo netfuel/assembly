@@ -332,3 +332,7 @@
 .dev-code { margin: 0; display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
 .dev-code .num { font-size: var(--text-md); letter-spacing: 0.15em; }
 .signin .field-error { margin: 0; }
+
+/* Policy links */
+.consent a, .policy-links a, .compose-consent a { color: inherit; text-decoration: underline; text-decoration-color: var(--color-line-strong); text-underline-offset: 2px; }
+.consent a:hover, .policy-links a:hover, .compose-consent a:hover { color: var(--color-fg); text-decoration-color: var(--color-accent); }

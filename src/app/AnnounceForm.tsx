@@ -457,6 +457,10 @@ export function AnnounceForm({
             {errorCount > 1 && <span className="dim"> ({errorCount} fields)</span>}
           </p>
         )}
+        <p className="note compose-consent">
+          Posting means you agree to the <a href="/guidelines" target="_blank" rel="noopener">Community guidelines</a> and{" "}
+          <a href="/terms" target="_blank" rel="noopener">Terms</a>, and that the address you share is OK to make public.
+        </p>
         <div className="compose-actions">
           {editing && !confirmCancel && existing?.status === "live" && (
             <Button type="button" variant="ghost" onClick={() => setConfirmCancel(true)} disabled={saving}>
