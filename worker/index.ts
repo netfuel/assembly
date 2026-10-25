@@ -115,7 +115,16 @@ const root = new Hono<{ Bindings: Env }>();
 root.use("*", async (c, next) => {
   await next();
   // import.meta.env.DEV is true under `vite` (local dev) and false in builds, including `vite preview`.
-  c.res = withSecurityHeaders(c.res, import.meta.env.DEV);
+  try {
+    c.res = withSecurityHeaders(c.res, import.meta.env.DEV);
+  } catch (err) {
+    // Never take the site down over headers: log it and send the response as is.
+    console.error("security headers failed", c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
+  }
+});
+root.onError((err, c) => {
+  console.error("worker error", c.req.method, c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
+  return c.json({ error: "Something went wrong on our end. Try again in a minute." }, 500);
 });
 root.route("/fonts", fonts);
 root.route("/e", og);
