@@ -117,6 +117,14 @@ Real listings come from WYXR 91.7 FM's [Memphis concert calendar](https://concer
 - `import-events-local.command`: the same for your local database, so local work shows real listings. Doesn't touch the live site.
 - `import-events.command`: double-click to load `db/import/wyxr.sql` into the live database. Safe to repeat: events update in place, RSVPs are kept, and future WYXR events missing from a newer export are removed unless someone RSVP'd.
 
+## Imported events (We Are Memphis and the Overton Park Shell)
+
+A second batch comes from [We Are Memphis](https://wearememphis.com/live/) (the Memphis Brand's live-music calendar) and the [Overton Park Shell](https://overtonparkshell.org/eventpage?view=list) (music events only). Each event is credited in its description and links to the ticket page.
+
+- `db/import/wearememphis-<date>.json`: the scrape (titles, dates, venues, blurbs, image URLs, ticket links). The calendar is rendered by JavaScript, so it was collected in a browser from `/live-music-search/?start_date=…&end_date=…`, 50 per page.
+- `scripts/import-wearememphis.py`: turns the scrape into `db/import/wearememphis.sql` plus `db/import/wearememphis-artwork.tsv` (event id, image URL, R2 key). It skips anything already listed from WYXR (same night, same venue, matching title) but still gives those events the We Are Memphis artwork when they have none. Only event-specific images are used; a venue's stock photo reused across its listings is left out. Venues are placed from the table in the script.
+- `import-wearememphis.command`: double-click to download the artwork, fit it inside 2000 px with a 160 px square thumbnail (`sips`), upload both to R2 under `flyers/import/wam/`, and load the SQL into the live database. Safe to repeat: finished images are skipped (`db/import/artwork/*.done`), events update in place, RSVPs are kept, and future listings missing from a newer scrape are removed unless someone RSVP'd or an organizer took the event over.
+
 ## Deploy to Cloudflare
 
 The production site is **https://assembly.rsvp**. The app and API ship as one Worker named `assembly`, and Cloudflare Workers Builds deploys it from GitHub on every push to `main`.
