@@ -1,5 +1,6 @@
 // Writes public/_headers (security headers for static files) from worker/security.ts.
-// Run after changing the policy: npm run headers
+// Run after changing the policy: npm run headers. (The theme script hash alone is kept in sync
+// automatically before every build by scripts/sync-theme-hash.mjs.)
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 const { SECURITY_HEADERS } = await import("../worker/security.ts");

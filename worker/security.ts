@@ -1,9 +1,10 @@
 // Security headers. The same policy goes on Worker responses (API, event pages) and, via
-// public/_headers, on static files. scripts/write-headers.mjs writes _headers from this file,
-// and worker/security.test.ts fails if they drift or the inline theme script in index.html changes.
+// public/_headers, on static files. npm run headers writes _headers from this file; before every
+// build, scripts/sync-theme-hash.mjs recomputes THEME_SCRIPT_HASH from index.html in both places.
+// tests/security.test.ts fails if they drift.
 
 /** Hash of the inline theme script in index.html (it sets light or dark before first paint). */
-export const THEME_SCRIPT_HASH = "'sha256-u1Sh1vCqPnLKxbFTOBB+RvVd+JdYY3e0uRKgEDuhoQ4='";
+export const THEME_SCRIPT_HASH = "'sha256-Jmm4CheuVPsGb2cBeZcc9p4HcDAB2hAGjh0EGr4yM6E='";
 
 const STREAM = ["https://iframe.videodelivery.net", "https://videodelivery.net", "https://upload.videodelivery.net", "https://*.cloudflarestream.com"];
 
