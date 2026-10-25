@@ -117,7 +117,12 @@ emailAuth.post("/start", async (c) => {
       if (!local) {
         await kv.delete(key);
         if (codeName === "E_RECIPIENT_SUPPRESSED") return c.json({ error: "Email to that address is bouncing. Try another address." }, 400);
-        return c.json({ error: "We couldn't send the email. Try again in a minute." }, 502);
+        if (codeName === "E_RATE_LIMIT_EXCEEDED" || codeName === "E_DAILY_LIMIT_EXCEEDED") {
+          return c.json({ error: "We're sending a lot of email right now. Try again in a few minutes." }, 503);
+        }
+        // Sender or account setup problems are ours to fix; the code (no personal data) helps us find it.
+        const ref = (codeName ?? (err as Error).name ?? "unknown").replace(/[^A-Z0-9_]/gi, "").slice(0, 40);
+        return c.json({ error: `We couldn't send the email. Try again in a minute. (${ref})`, code: ref }, 502);
       }
     }
   }
