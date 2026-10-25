@@ -97,9 +97,34 @@ try {
        https://assembly.rsvp/api/auth/google/callback
        http://localhost:5173/api/auth/google/callback
    - Publish the app (Audience > Publish) so anyone can sign in, not just test users.`);
-    if (await yes("Have the client ID and secret ready?")) {
-      await putSecret("GOOGLE_CLIENT_ID", await ask("Client ID:"));
-      await putSecret("GOOGLE_CLIENT_SECRET", await ask("Client secret:"));
+    console.log("   Easiest: drag the client_secret_….json file Google gave you into this window when asked.");
+    const answer = await ask("Path to the Google JSON file, or press Enter to type the ID and secret instead:");
+    let id = "";
+    let secret = "";
+    if (answer) {
+      // Dragging a file into Terminal adds quotes or backslash-escaped spaces.
+      const path = answer.replace(/^['"]|['"]$/g, "").replace(/\\ /g, " ").replace(/^~/, process.env.HOME);
+      const { readFileSync } = await import("node:fs");
+      const json = JSON.parse(readFileSync(path, "utf8"));
+      const client = json.web ?? json.installed;
+      if (!client?.client_id || !client?.client_secret) throw new Error("That file doesn't look like a Google OAuth client (no client_id/client_secret).");
+      if (json.installed) console.log("   \x1b[33m!\x1b[0m This is a Desktop client. Create a Web application client instead, or redirects will fail.");
+      const uris = client.redirect_uris ?? [];
+      const needed = "https://assembly.rsvp/api/auth/google/callback";
+      if (!uris.includes(needed)) {
+        console.log(`   \x1b[33m!\x1b[0m The file doesn't list ${needed} as a redirect URI.`);
+        console.log("     Add it in Google Cloud Console > Credentials > your client, or sign-in will fail. (Files downloaded before adding it won't show it.)");
+      } else ok("Redirect URI for assembly.rsvp is listed");
+      id = client.client_id;
+      secret = client.client_secret;
+    } else if (await yes("Have the client ID and secret ready to paste?")) {
+      id = await ask("Client ID:");
+      secret = await ask("Client secret:");
+    }
+    if (id && secret) {
+      await putSecret("GOOGLE_CLIENT_ID", id);
+      await putSecret("GOOGLE_CLIENT_SECRET", secret);
+      console.log("   You can delete the JSON file now; the secret is stored in Cloudflare.");
     } else todo.push("Google sign-in: create the OAuth client (step 6 above), then run this again.");
   }
 
