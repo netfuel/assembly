@@ -117,9 +117,9 @@ Real listings come from WYXR 91.7 FM's [Memphis concert calendar](https://concer
 - `import-events-local.command`: the same for your local database, so local work shows real listings. Doesn't touch the live site.
 - `import-events.command`: double-click to load `db/import/wyxr.sql` into the live database. Safe to repeat: events update in place, RSVPs are kept, and future WYXR events missing from a newer export are removed unless someone RSVP'd.
 
-## Imported events (We Are Memphis and the Overton Park Shell)
+## Imported events (We Are Memphis, the Overton Park Shell, Satellite Music Hall)
 
-A second batch comes from [We Are Memphis](https://wearememphis.com/live/) (the Memphis Brand's live-music calendar) and the [Overton Park Shell](https://overtonparkshell.org/eventpage?view=list) (music events only). Each event is credited in its description and links to the ticket page.
+A second batch comes from [We Are Memphis](https://wearememphis.com/live/) (the Memphis Brand's live-music calendar), the [Overton Park Shell](https://overtonparkshell.org/eventpage?view=list) (music events only) and [Satellite Music Hall](https://www.satellitemusichall.com/shows) (every show there is already on WYXR's calendar, so this source only contributes artwork and lineups; the shows page carries JSON-LD per event and a More Info panel with the lineup). Each event is credited in its description and links to the ticket page.
 
 - `db/import/wearememphis-<date>.json`: the scrape (titles, dates, venues, blurbs, image URLs, ticket links). The calendar is rendered by JavaScript, so it was collected in a browser from `/live-music-search/?start_date=…&end_date=…`, 50 per page.
 - `scripts/import-wearememphis.py`: turns the scrape into `db/import/wearememphis.sql` plus `db/import/wearememphis-artwork.tsv` (event id, image URL, R2 key). It skips anything already listed from WYXR (same night, same venue, matching title) but still gives those events the We Are Memphis artwork when they have none. Only event-specific images are used; a venue's stock photo reused across its listings is left out. Venues are placed from the table in the script.

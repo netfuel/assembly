@@ -1,4 +1,4 @@
-"""Turns the We Are Memphis live-music scrape (plus Overton Park Shell) into SQL for Assembly's database.
+"""Turns the We Are Memphis live-music scrape (plus Overton Park Shell and Satellite Music Hall) into SQL for Assembly's database.
 
 Run:  python3 scripts/import-wearememphis.py db/import/wearememphis-2026-10-25.json
 Then: double-click import-wearememphis.command (downloads the artwork, uploads it to R2, loads the SQL)
@@ -153,8 +153,8 @@ def own_artwork(e):
     img = e.get("image") or ""
     if not img:
         return False
-    if e["source"] == "overtonparkshell":
-        return True
+    if e["source"] != "wearememphis":
+        return True  # the Shell and Satellite publish one image per show
     s = slug(e["title"])
     return s[:24] in img or (len(s) > 12 and s.split("-")[0] + "-" + s.split("-")[1] in img if "-" in s else s in img)
 
@@ -244,7 +244,7 @@ def main(path):
         # We Are Memphis files some multi-band bills under EDM; only call it a rave when it reads like one.
         if genre == "Electronic/EDM" and (DANCE.search(text) or re.search(r"electronic|techno|\bbass\b|\bedm\b|\bhouse\b", text, re.I) or " & " not in e["title"]):
             scenes += ["rave", "bass"]
-        elif DANCE.search(text):
+        elif DANCE.search(text) or (e["source"] == "satellitemusichall" and re.search(r"\bparty\b", e["title"], re.I)):
             scenes.append("house")
         if re.search(r"\bdiy\b", text, re.I):
             scenes.append("diy")
@@ -259,6 +259,8 @@ def main(path):
             desc.append("Lineup: " + ", ".join(e["lineup"]))
         if e["source"] == "overtonparkshell":
             desc.append("Listed by the Overton Park Shell: overtonparkshell.org")
+        elif e["source"] == "satellitemusichall":
+            desc.append("Listed by Satellite Music Hall: satellitemusichall.com/shows" + (f" · Genre: {genre}" if genre and genre != "Other" else ""))
         else:
             desc.append(f"Listed on We Are Memphis: wearememphis.com/live" + (f" · Genre: {genre}" if genre and genre != "Other" else ""))
         has_art = own_artwork(e)

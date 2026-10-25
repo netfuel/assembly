@@ -1,7 +1,8 @@
 {
  "sources": [
   "https://wearememphis.com/live/ (search 2026-10-25 to 2027-01-10)",
-  "https://overtonparkshell.org/eventpage?view=list (music events only)"
+  "https://overtonparkshell.org/eventpage?view=list (music events only)",
+  "https://www.satellitemusichall.com/shows (JSON-LD on the shows page plus the More Info lineups)"
  ],
  "fetched": "2026-10-25",
  "events": [
@@ -4414,6 +4415,610 @@
    "lineup": [
     "Iron Mic Coalition",
     "DJ Larry"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006497B26B2F0A",
+   "url": "https://www.ticketmaster.com/iron-wine-memphis-tennessee-10-27-2026/event/1B006497B26B2F0A",
+   "title": "Iron & Wine",
+   "start": "2026-10-27T19:00:00-05:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: Iron and Wine, DUG",
+   "image": "https://s1.ticketm.net/dam/a/56a/f87fa906-f84d-4911-927d-e7cd163e056a_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/iron-wine-memphis-tennessee-10-27-2026/event/1B006497B26B2F0A",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "Iron and Wine",
+    "DUG"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00651A31EDCC42",
+   "url": "https://www.ticketmaster.com/gasolina-reggaeton-party-18-memphis-tennessee-10-30-2026/event/1B00651A31EDCC42",
+   "title": "Gasolina Reggaetón Party (+18)",
+   "start": "2026-10-30T21:00:00-05:00",
+   "end": null,
+   "genre": "Latin",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/937/06f3770b-0b33-435a-b067-55f5ff989937_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/gasolina-reggaeton-party-18-memphis-tennessee-10-30-2026/event/1B00651A31EDCC42",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00650DED874B43",
+   "url": "https://www.ticketmaster.com/love-in-the-club-2000s-hip-memphis-tennessee-10-31-2026/event/1B00650DED874B43",
+   "title": "Love in the Club - 2000's Hip Hop and R&B Party",
+   "start": "2026-10-31T20:00:00-05:00",
+   "end": null,
+   "genre": "Hip-Hop/Rap",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/9cd/021373e1-cb2f-489e-9725-b60a861e89cd_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/love-in-the-club-2000s-hip-memphis-tennessee-10-31-2026/event/1B00650DED874B43",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00649CB4F813B1",
+   "url": "https://www.ticketmaster.com/prof-memphis-tennessee-11-04-2026/event/1B00649CB4F813B1",
+   "title": "Prof",
+   "start": "2026-11-04T19:00:00-06:00",
+   "end": null,
+   "genre": "Hip-Hop/Rap",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: Prof, Khantrast",
+   "image": "https://s1.ticketm.net/dam/a/b04/b1627e57-7415-43fc-b6fd-43f3e313fb04_30431_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/prof-memphis-tennessee-11-04-2026/event/1B00649CB4F813B1",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "Prof",
+    "Khantrast"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B0064ABE17A3759",
+   "url": "https://www.ticketmaster.com/fetty-wap-nostalgia-tour-memphis-tennessee-11-07-2026/event/1B0064ABE17A3759",
+   "title": "Fetty Wap: Nostalgia Tour",
+   "start": "2026-11-07T19:00:00-06:00",
+   "end": null,
+   "genre": "Hip-Hop/Rap",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/26d/064fcb36-4986-40ee-97cd-0931e9ecc26d_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/fetty-wap-nostalgia-tour-memphis-tennessee-11-07-2026/event/1B0064ABE17A3759",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B0064D1179BAA17",
+   "url": "https://www.ticketmaster.com/bowling-for-soup-memphis-tennessee-11-09-2026/event/1B0064D1179BAA17",
+   "title": "Bowling for Soup",
+   "start": "2026-11-09T18:30:00-06:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: Bowling for Soup, Ballyhoo!, rosecoloredworld",
+   "image": "https://s1.ticketm.net/dam/a/c50/899fe350-1b9e-4eb0-9b3d-1977f75b3c50_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/bowling-for-soup-memphis-tennessee-11-09-2026/event/1B0064D1179BAA17",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "Bowling for Soup",
+    "Ballyhoo!",
+    "rosecoloredworld"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B0065322AF4CA38",
+   "url": "https://www.ticketmaster.com/kings-x-memphis-tennessee-11-10-2026/event/1B0065322AF4CA38",
+   "title": "King's X",
+   "start": "2026-11-10T18:30:00-06:00",
+   "end": null,
+   "genre": "Metal",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/bc6/f820c4cf-2aec-4ba3-b504-7947d4434bc6_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/kings-x-memphis-tennessee-11-10-2026/event/1B0065322AF4CA38",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B0064D014552F77",
+   "url": "https://www.ticketmaster.com/medium-build-presents-the-king-of-memphis-tennessee-11-12-2026/event/1B0064D014552F77",
+   "title": "Medium Build Presents The King of Having Fun on Tour",
+   "start": "2026-11-12T19:00:00-06:00",
+   "end": null,
+   "genre": "Alternative",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: Medium Build, Eden Joel",
+   "image": "https://s1.ticketm.net/dam/a/705/0d5a5e8f-676c-4f24-bdd8-61a92e46f705_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/medium-build-presents-the-king-of-memphis-tennessee-11-12-2026/event/1B0064D014552F77",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "Medium Build",
+    "Eden Joel"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00654EFE015751",
+   "url": "https://www.ticketmaster.com/red-bull-turn-it-up-18-memphis-tennessee-11-14-2026/event/1B00654EFE015751",
+   "title": "Red Bull Turn It Up 18+",
+   "start": "2026-11-14T19:00:00-06:00",
+   "end": null,
+   "genre": "Other",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/e/410/f37f7e80-807a-447b-92a4-16db90927410_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/red-bull-turn-it-up-18-memphis-tennessee-11-14-2026/event/1B00654EFE015751",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006536132A1CAF",
+   "url": "https://www.ticketmaster.com/hunxho-memphis-tennessee-11-15-2026/event/1B006536132A1CAF",
+   "title": "Hunxho",
+   "start": "2026-11-15T19:00:00-06:00",
+   "end": null,
+   "genre": "Hip-Hop/Rap",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/970/76b9d21a-ce0e-48ba-9aa1-a8225049c970_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/hunxho-memphis-tennessee-11-15-2026/event/1B006536132A1CAF",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00653ECB289B07",
+   "url": "https://www.ticketmaster.com/josh-meloy-memphis-tennessee-11-20-2026/event/1B00653ECB289B07",
+   "title": "Josh Meloy",
+   "start": "2026-11-20T19:00:00-06:00",
+   "end": null,
+   "genre": "Country",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/5ee/b2c0488e-42fa-4a99-aacd-cee4464285ee_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/josh-meloy-memphis-tennessee-11-20-2026/event/1B00653ECB289B07",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "memphis-10-17",
+   "url": "https://trapkaraoke.com/events/memphis-10-17",
+   "title": "Trap Karaoke",
+   "start": "2026-11-21T19:00:00-06:00",
+   "end": null,
+   "genre": "Hip-Hop/Rap",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/64c/76cc8226-9c36-4d1a-b616-d5acc3fa564c_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://trapkaraoke.com/events/memphis-10-17",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B0064C5B85FF1DB",
+   "url": "https://www.ticketmaster.com/pouya-memphis-tennessee-12-01-2026/event/1B0064C5B85FF1DB",
+   "title": "Pouya",
+   "start": "2026-12-01T18:30:00-06:00",
+   "end": null,
+   "genre": "Hip-Hop/Rap",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: Pouya, Ramirez, Fat Nick",
+   "image": "https://s1.ticketm.net/dam/a/9fd/12d38709-d7b1-4f7b-9a55-a583f16c99fd_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/pouya-memphis-tennessee-12-01-2026/event/1B0064C5B85FF1DB",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "Pouya",
+    "Ramirez",
+    "Fat Nick"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00651CD2E5F470",
+   "url": "https://www.ticketmaster.com/wyxr-raised-by-sound-fest-presents-memphis-tennessee-12-04-2026/event/1B00651CD2E5F470",
+   "title": "WYXR Raised by Sound Fest presents Soccer Mommy & Late Night Cardigan",
+   "start": "2026-12-04T19:00:00-06:00",
+   "end": null,
+   "genre": "Alternative",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/71e/9f88e2f0-ace6-4156-a8dd-0101b686f71e_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/wyxr-raised-by-sound-fest-presents-memphis-tennessee-12-04-2026/event/1B00651CD2E5F470",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006552F4C31D4C",
+   "url": "https://www.ticketmaster.com/bar-kays-memphis-tennessee-12-11-2026/event/1B006552F4C31D4C",
+   "title": "Bar Kays",
+   "start": "2026-12-11T19:00:00-06:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/383/14031b0a-b5e4-4c9a-bafe-de5bd3cd8383_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/bar-kays-memphis-tennessee-12-11-2026/event/1B006552F4C31D4C",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00653DB2F8FDD2",
+   "url": "https://www.ticketmaster.com/aj-mclean-presents-alexander-james-the-memphis-tennessee-01-29-2027/event/1B00653DB2F8FDD2",
+   "title": "AJ McLean presents Alexander James : The Better Man Tour",
+   "start": "2027-01-29T19:00:00-06:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/6b5/840992b1-69c9-4339-9643-227101ea36b5_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/aj-mclean-presents-alexander-james-the-memphis-tennessee-01-29-2027/event/1B00653DB2F8FDD2",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00654A018AC672",
+   "url": "https://www.ticketmaster.com/red-not-chili-peppers-memphis-tennessee-01-30-2027/event/1B00654A018AC672",
+   "title": "Red NOT Chili Peppers",
+   "start": "2027-01-30T19:00:00-06:00",
+   "end": null,
+   "genre": "",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/810/bece33fc-db29-4070-a136-7dbc7e038810_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/red-not-chili-peppers-memphis-tennessee-01-30-2027/event/1B00654A018AC672",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B00654EEC0DEEEE",
+   "url": "https://www.ticketmaster.com/tell-me-lies-a-tribute-to-memphis-tennessee-02-05-2027/event/1B00654EEC0DEEEE",
+   "title": "Tell Me Lies - A Tribute to Fleetwood Mac",
+   "start": "2027-02-05T19:00:00-06:00",
+   "end": null,
+   "genre": "",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/daa/5bb068e3-b480-4925-9088-91c505e99daa_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/tell-me-lies-a-tribute-to-memphis-tennessee-02-05-2027/event/1B00654EEC0DEEEE",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006545CF1C4EA1",
+   "url": "https://www.ticketmaster.com/trombone-shorty-orleans-avenue-shorty-gras-memphis-tennessee-02-27-2027/event/1B006545CF1C4EA1",
+   "title": "Trombone Shorty & Orleans Avenue - Shorty Gras Tour",
+   "start": "2027-02-27T19:00:00-06:00",
+   "end": null,
+   "genre": "Jazz",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/205/cd2fd807-6f45-423a-a025-4e18dd43e205_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/trombone-shorty-orleans-avenue-shorty-gras-memphis-tennessee-02-27-2027/event/1B006545CF1C4EA1",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B0065531B24E3A6",
+   "url": "https://www.ticketmaster.com/lake-street-dive-what-about-flamingos-memphis-tennessee-03-02-2027/event/1B0065531B24E3A6",
+   "title": "Lake Street Dive - What About Flamingos? 2027 Tour",
+   "start": "2027-03-02T19:00:00-06:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: Lake Street Dive, SNACKTIME",
+   "image": "https://s1.ticketm.net/dam/a/cd0/f966d84d-7863-450b-b27b-a0f7d8bafcd0_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/lake-street-dive-what-about-flamingos-memphis-tennessee-03-02-2027/event/1B0065531B24E3A6",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "Lake Street Dive",
+    "SNACKTIME"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006532A1DDC138",
+   "url": "https://www.ticketmaster.com/sammy-rae-the-friends-the-get-memphis-tennessee-03-09-2027/event/1B006532A1DDC138",
+   "title": "Sammy Rae & The Friends - the GET DOWN!",
+   "start": "2027-03-09T19:00:00-06:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/179/ef41dd90-262b-4508-a1e2-47fb26e3c179_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/sammy-rae-the-friends-the-get-memphis-tennessee-03-09-2027/event/1B006532A1DDC138",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006532A956D773",
+   "url": "https://www.ticketmaster.com/needtobreathe-the-long-surrender-tour-memphis-tennessee-03-17-2027/event/1B006532A956D773",
+   "title": "NEEDTOBREATHE: The Long Surrender Tour",
+   "start": "2027-03-17T18:00:00-05:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: NEEDTOBREATHE, The National Parks",
+   "image": "https://s1.ticketm.net/dam/a/425/39cb4eac-2f20-4c4e-b25f-105b29986425_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/needtobreathe-the-long-surrender-tour-memphis-tennessee-03-17-2027/event/1B006532A956D773",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "NEEDTOBREATHE",
+    "The National Parks"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006532A95BD788",
+   "url": "https://www.ticketmaster.com/needtobreathe-the-long-surrender-tour-memphis-tennessee-03-18-2027/event/1B006532A95BD788",
+   "title": "NEEDTOBREATHE: The Long Surrender Tour",
+   "start": "2027-03-18T18:00:00-05:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: NEEDTOBREATHE, The National Parks",
+   "image": "https://s1.ticketm.net/dam/a/425/39cb4eac-2f20-4c4e-b25f-105b29986425_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/needtobreathe-the-long-surrender-tour-memphis-tennessee-03-18-2027/event/1B006532A95BD788",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "NEEDTOBREATHE",
+    "The National Parks"
+   ]
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B0065524CDCC79E",
+   "url": "https://www.ticketmaster.com/interpol-north-america-tour-2027-memphis-tennessee-03-22-2027/event/1B0065524CDCC79E",
+   "title": "Interpol - North America Tour 2027",
+   "start": "2027-03-22T19:00:00-05:00",
+   "end": null,
+   "genre": "Rock",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "",
+   "image": "https://s1.ticketm.net/dam/a/8e9/0abb8d34-41fa-46e8-936e-03b5db3818e9_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/interpol-north-america-tour-2027-memphis-tennessee-03-22-2027/event/1B0065524CDCC79E",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": null
+  },
+  {
+   "source": "satellitemusichall",
+   "id": "1B006541CB5D93D8",
+   "url": "https://www.ticketmaster.com/dylan-gossett-the-ramblin-tour-2027-memphis-tennessee-04-03-2027/event/1B006541CB5D93D8",
+   "title": "Dylan Gossett - The Ramblin' Tour 2027",
+   "start": "2027-04-03T19:00:00-05:00",
+   "end": null,
+   "genre": "Country",
+   "venue": "Satellite Music Hall",
+   "address": "1291 Autumn Ave, Memphis, TN 38104",
+   "about": "Lineup: Dylan Gossett, Leon Majcen",
+   "image": "https://s1.ticketm.net/dam/a/879/a257b3f1-230b-48c6-9a5b-00118813f879_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+   "image_credit": "Satellite Music Hall / Ticketmaster",
+   "price": null,
+   "age": null,
+   "links": [
+    {
+     "href": "https://www.ticketmaster.com/dylan-gossett-the-ramblin-tour-2027-memphis-tennessee-04-03-2027/event/1B006541CB5D93D8",
+     "text": "Buy Tickets"
+    }
+   ],
+   "lineup": [
+    "Dylan Gossett",
+    "Leon Majcen"
    ]
   }
  ]
