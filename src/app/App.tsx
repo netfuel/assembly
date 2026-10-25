@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
 import { Button, Chip, Frame, Segmented, Sheet, Tag, Toast } from "../components/ui";
+import { InstallPrompt } from "../components/InstallPrompt";
 import { api, ApiError } from "../lib/api";
 import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
@@ -529,6 +530,7 @@ export function App() {
         <ModerationSheet tz={city.timezone} onOpenEvent={openEvent} toast={toast} />
       </Sheet>
 
+      <InstallPrompt />
       <Toast message={toastMsg} />
     </div>
   );

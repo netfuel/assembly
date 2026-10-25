@@ -7,8 +7,10 @@ import "./styles/base.css";
 import { App } from "./app/App";
 import { LegalPage } from "./legal/LegalPage";
 import { ErrorBoundary, reportError } from "./components/ErrorBoundary";
+import { captureInstallPrompt } from "./lib/install";
 
 registerSW({ immediate: true });
+captureInstallPrompt();
 
 // Uncaught errors outside React rendering (event handlers, promises) go to the Worker log too.
 window.addEventListener("error", (e) => reportError(e.error ?? e.message));

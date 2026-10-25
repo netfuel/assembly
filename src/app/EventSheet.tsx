@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button, Frame, Label, LinkButton, Sheet, Tag } from "../components/ui";
+import { announceGoing } from "../lib/install";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
@@ -129,7 +130,10 @@ export function EventSheet({
     try {
       await api.rsvp(e.id, next);
       if (next) saveForOffline([e]);
-      if (next === "going") toast("You're going. Saved to your list.");
+      if (next === "going") {
+        toast("You're going. Saved to your list.");
+        announceGoing();
+      }
       else if (next === "interested") toast("Marked as interested.");
     } catch (err) {
       setRsvp(prev);

@@ -187,3 +187,29 @@
   box-shadow: var(--shadow-float);
 }
 .toast::before { content: "✓ "; color: var(--color-accent-text); }
+
+/* Add to Home Screen card */
+.install-card {
+  position: fixed;
+  z-index: 49;
+  left: 50%;
+  bottom: calc(var(--space-6) + 52px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-fg);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.28);
+  animation: install-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.install-card img { border-radius: 9px; }
+.install-text { display: grid; gap: 2px; font-size: var(--text-xs); color: var(--color-muted); }
+.install-text strong { color: var(--color-fg); font-size: var(--text-sm); font-weight: 500; }
+.install-actions { grid-column: 2; display: flex; gap: var(--space-2); }
+@keyframes install-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+@media (prefers-reduced-motion: reduce) { .install-card { animation: none; } }
