@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
-import { Button, Chip, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../components/ui";
+import { Button, Frame, Sheet, Tag, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
-import { filtersQuery, initialFilters, saveFilters } from "../lib/filters";
+import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilters, saveFilters, type Filters } from "../lib/filters";
+import { FilterSheet, FilterChips } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
 import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
@@ -15,7 +16,7 @@ import { AnnounceForm } from "./AnnounceForm";
 import { ProfileSheet } from "./ProfileSheet";
 import { SignInSheet } from "./SignInSheet";
 import { ModerationSheet } from "./ModerationSheet";
-import { SCENES, type AuthProviders, type City, type EventDetail, type EventSummary, type MeProfile, type SceneId, type ServerConfig } from "../../shared/types";
+import { type AuthProviders, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
 const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
@@ -43,11 +44,15 @@ export function App() {
     if (loadState !== "loading") hideSplash();
   }, [loadState]);
   const [loadError, setLoadError] = useState("");
-  const [initial] = useState(() => initialFilters(tonightDate(new Date(), "America/Chicago")));
-  const [windowId, setWindowId] = useState<WindowId>(initial.windowId);
-  const [pickedDate, setPickedDate] = useState(() => initial.date ?? tonightDate(new Date(), "America/Chicago"));
-  const dateInput = useRef<HTMLInputElement>(null);
-  const [scenes, setScenes] = useState<SceneId[]>(initial.scenes);
+  // All filters live in one object, shared by the map and the rail, the URL, and the Filters sheet.
+  const [filters, setFilters] = useState<Filters>(() => {
+    const f = initialFilters(tonightDate(new Date(), "America/Chicago"));
+    return { ...f, date: f.date ?? tonightDate(new Date(), "America/Chicago") };
+  });
+  const windowId = filters.windowId;
+  const pickedDate = filters.date ?? tonightDate(new Date(), "America/Chicago");
+  const scenes = filters.scenes;
+  const setWindowId = (windowId: WindowId) => setFilters((f) => ({ ...f, windowId }));
   const [selectedId, setSelectedId] = useState<string | null>(eventIdFromPath());
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [me, setMe] = useState<MeProfile | null>(null);
@@ -128,7 +133,7 @@ export function App() {
 
   // Keep the address bar in step with the open event so links can be shared.
   // On the map, the filters ride along in the query so a filtered view can be shared too.
-  const filterQuery = filtersQuery({ windowId, date: windowId === "date" ? pickedDate : null, scenes });
+  const filterQuery = filtersQuery(filters);
   useEffect(() => {
     const path = selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
     if (location.pathname !== path) history.pushState(null, "", path + (selectedId ? "" : filterQuery));
@@ -138,8 +143,8 @@ export function App() {
     }
   }, [selectedId, filterQuery]);
   useEffect(() => {
-    saveFilters({ windowId, date: windowId === "date" ? pickedDate : null, scenes }, tonightDate(new Date(), "America/Chicago"));
-  }, [windowId, pickedDate, scenes]);
+    saveFilters({ ...filters, date: filters.windowId === "date" ? filters.date : null }, tonightDate(new Date(), "America/Chicago"));
+  }, [filters]);
   useEffect(() => {
     const onPop = () => setSelectedId(eventIdFromPath());
     window.addEventListener("popstate", onPop);
@@ -170,12 +175,15 @@ export function App() {
     };
   }, [windowId, pickedDate, city.timezone]);
 
-  const shown = useMemo(() => {
-    const range = windowRange(windowId, now, city.timezone, pickedDate);
-    return events
-      .filter((e) => overlaps(e.startsAt, e.endsAt, range))
-      .filter((e) => scenes.length === 0 || scenes.some((s) => e.scenes.includes(s)));
-  }, [events, windowId, scenes, now, city.timezone, pickedDate]);
+  const matching = useCallback(
+    (f: Filters) => {
+      const range = windowRange(f.windowId, now, city.timezone, f.date ?? undefined);
+      return events.filter((e) => overlaps(e.startsAt, e.endsAt, range) && matchesFilters(e, f));
+    },
+    [events, now, city.timezone],
+  );
+  const shown = useMemo(() => matching(filters), [matching, filters]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const selected = events.find((e) => e.id === selectedId) ?? (extra && extra.id === selectedId ? extra : null);
 
@@ -335,47 +343,14 @@ export function App() {
           )}
         </nav>
         <div className="filters" role="toolbar" aria-label="Filter events">
-          <Segmented
-            label="When"
-            options={WINDOWS.map((w) => ({ id: w.id, label: w.id === "date" && windowId === "date" ? dateHeading(pickedDate) : w.label }))}
-            value={windowId}
-            onChange={(id) => {
-              setWindowId(id);
-              // Choosing Date opens the picker right away.
-              if (id === "date") {
-                const el = dateInput.current;
-                try {
-                  el?.showPicker();
-                } catch {
-                  el?.focus();
-                }
-              }
-            }}
-          />
-          <input
-            ref={dateInput}
-            className="date-picker"
-            type="date"
-            aria-label="Pick a date"
-            value={pickedDate}
-            min={tonightDate(new Date(), city.timezone)}
-            onChange={(e) => {
-              if (!e.target.value) return;
-              setPickedDate(e.target.value);
-              setWindowId("date");
-            }}
-          />
-          <span className="filters-sep" aria-hidden="true" />
-          {SCENES.map((s) => (
-            <Chip
-              key={s.id}
-              pressed={scenes.includes(s.id)}
-              marker={s.id === "queer" ? "var(--color-uv)" : undefined}
-              onClick={() => setScenes((cur) => (cur.includes(s.id) ? cur.filter((x) => x !== s.id) : [...cur, s.id]))}
-            >
-              {s.label}
-            </Chip>
-          ))}
+          <button className={`filter-button ${activeCount(filters) ? "is-active" : ""}`} onClick={() => setFiltersOpen(true)} aria-haspopup="dialog">
+            <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+              <path d="M2 4h12M4.5 8h7M7 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+            </svg>
+            Filters
+            {activeCount(filters) > 0 && <span className="filter-badge num">{activeCount(filters)}</span>}
+          </button>
+          <FilterChips filters={filters} onChange={setFilters} />
         </div>
       </header>
 
@@ -428,9 +403,9 @@ export function App() {
                   <button className="link" onClick={() => setWindowId("weekend")}>
                     Check the weekend →
                   </button>
-                ) : scenes.length ? (
-                  <button className="link" onClick={() => setScenes([])}>
-                    Clear scenes →
+                ) : activeCount(filters) ? (
+                  <button className="link" onClick={() => setFilters((f) => ({ ...DEFAULT_FILTERS, date: f.date }))}>
+                    Clear filters →
                   </button>
                 ) : null}
               </div>
@@ -574,6 +549,17 @@ export function App() {
         <ModerationSheet tz={city.timezone} onOpenEvent={openEvent} toast={toast} />
       </Sheet>
 
+      <FilterSheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        filters={filters}
+        tz={city.timezone}
+        count={(f) => matching(f).length}
+        onApply={(f) => {
+          setFilters(f);
+          setFiltersOpen(false);
+        }}
+      />
       <SubscribeSheet
         open={sheet === "subscribe"}
         onClose={() => setSheet(null)}

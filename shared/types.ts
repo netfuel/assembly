@@ -25,6 +25,14 @@ export const POLICY_TAGS: Record<string, string> = {
   byob: "BYOB",
 };
 
+export const VENUE_TYPES: Record<string, string> = {
+  diy: "DIY space",
+  warehouse: "Warehouse",
+  bar: "Bar",
+  club: "Club",
+  outdoor: "Outdoor",
+};
+
 export type ArtistLinks = Partial<
   Record<"instagram" | "soundcloud" | "bandcamp" | "mixcloud" | "ra" | "spotify" | "site", string>
 >;
