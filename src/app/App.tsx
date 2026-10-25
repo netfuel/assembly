@@ -644,7 +644,7 @@ export function App() {
                     </span>
                     <span className="card-body">
                       <span className="card-title">{e.title}</span>
-                      {!e.thumbUrl && <GeneratedArt compact id={e.id} queer={queer} className="card-thumb" />}
+                      {!e.thumbUrl && <GeneratedArt compact id={e.id} className="card-thumb" />}
                       {e.thumbUrl && (
                         <img
                           className="card-thumb"

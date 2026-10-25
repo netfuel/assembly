@@ -2,7 +2,8 @@
 // Drawn on a canvas in the browser, so no server rendering and nothing to store.
 import qrcode from "qrcode-generator";
 import { clock, dayLabel } from "./time";
-import { artDataUrl, artNumber } from "./flyerArt";
+import { artFallback, artParams } from "./flyerArt";
+import { renderStill } from "./liquidRenderer";
 import type { EventSummary } from "../../shared/types";
 
 const W = 1080;
@@ -87,21 +88,17 @@ function frame(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
 
 /** Without uploaded art: the event's generated art (same as in the app), with the title set big. */
 async function generatedFlyer(ctx: CanvasRenderingContext2D, e: EventSummary, x: number, y: number, w: number, h: number) {
-  const queer = e.scenes.includes("queer");
-  ctx.fillStyle = queer ? C.uv : C.sodium;
+  const p = artParams(e.id);
+  ctx.fillStyle = artFallback(p);
   ctx.fillRect(x, y, w, h);
-  try {
-    const img = await loadImage(artDataUrl(e.id, queer));
-    // The art is 4:5 and scales without limit: cover the box.
-    const s = Math.max(w / 400, h / 500);
+  // The card is ~2.5x a phone card, so render at that scale for the same chunky pixels.
+  const still = renderStill(p, w / 2.5, h / 2.5);
+  if (still) {
+    // Keep the pixels hard when scaling the art up.
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.clip();
-    ctx.drawImage(img, x + (w - 400 * s) / 2, y + (h - 500 * s) / 2, 400 * s, 500 * s);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(still, x, y, w, h);
     ctx.restore();
-  } catch {
-    // The scene color stays.
   }
   const fade = ctx.createLinearGradient(0, y + h * 0.45, 0, y + h);
   fade.addColorStop(0, "rgba(10,10,11,0)");
@@ -115,7 +112,7 @@ async function generatedFlyer(ctx: CanvasRenderingContext2D, e: EventSummary, x:
   lines.forEach((l, i) => ctx.fillText(l, x + 48, y + h - 64 - (lines.length - 1 - i) * 104));
   ctx.font = `500 26px ui-monospace, Menlo, monospace`;
   ctx.fillStyle = "rgba(237,237,238,0.7)";
-  ctx.fillText(`GEN ${artNumber(e.id)}`, x + 32, y + 52);
+  ctx.fillText(`GEN ${p.number}`, x + 32, y + 52);
 }
 
 export async function renderStoryCard(e: EventSummary, url: string, tz: string): Promise<Blob> {

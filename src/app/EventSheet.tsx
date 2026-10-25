@@ -202,9 +202,7 @@ export function EventSheet({
           ) : (
             <GeneratedArt
               className="flyer-generated"
-              hero
               id={e.id}
-              queer={queer}
               title={e.title}
               when={`${dayLabel(e.startsAt, now, tz)} / ${timeRange(e.startsAt, e.endsAt, tz)}`}
               venue={e.venueName ?? e.neighborhood}
