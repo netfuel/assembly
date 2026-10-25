@@ -9,6 +9,7 @@ import { auth } from "./auth";
 import { emailAuth } from "./emailAuth";
 import { events } from "./events";
 import { fonts } from "./fonts";
+import { og } from "./og";
 import { posting } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
@@ -89,6 +90,7 @@ app.onError((err, c) => {
 // Fonts live outside /api; everything else the Worker handles is under /api.
 const root = new Hono<{ Bindings: Env }>();
 root.route("/fonts", fonts);
+root.route("/e", og);
 root.route("/", app);
 
 export default {
