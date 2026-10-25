@@ -18,7 +18,8 @@
     "check:fonts": "node scripts/check-fonts.mjs",
     "setup:cloudflare": "node scripts/setup-cloudflare.mjs",
     "fonts:upload": "node scripts/upload-fonts.mjs",
-    "push:keys": "node scripts/push-keys.mjs"
+    "push:keys": "node scripts/push-keys.mjs",
+    "headers": "node --experimental-strip-types --no-warnings scripts/write-headers.mjs"
   },
   "dependencies": {
     "arctic": "^3.7.0",

@@ -49,6 +49,27 @@ moderation.use("/mod/*", async (c, next) => {
   await next();
 });
 
+/** Launch numbers from the PRD that the app can count itself (no tracking needed). */
+moderation.get("/mod/stats", async (c) => {
+  const now = Date.now();
+  const ago = (days: number) => new Date(now - days * 86400e3).toISOString();
+  const row = await c.env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM events WHERE is_sample = 0 AND created_at >= ?1) AS events_week,
+       (SELECT COUNT(*) FROM events WHERE is_sample = 0 AND status = 'live' AND ends_at > ?3) AS upcoming,
+       (SELECT COUNT(DISTINCT h.user_id) FROM event_hosts h JOIN events e ON e.id = h.event_id
+          WHERE e.is_sample = 0 AND e.created_at >= ?2) AS organizers_month,
+       (SELECT COUNT(*) FROM users WHERE created_at >= ?1) AS members_week,
+       (SELECT COUNT(*) FROM users) AS members,
+       (SELECT COUNT(*) FROM rsvps WHERE created_at >= ?1) AS rsvps_week,
+       (SELECT COUNT(*) FROM events WHERE status = 'draft') AS in_review,
+       (SELECT COUNT(*) FROM reports WHERE status = 'open') AS open_reports`,
+  )
+    .bind(ago(7), ago(30), new Date(now).toISOString())
+    .first<Record<string, number>>();
+  return c.json({ stats: row });
+});
+
 /** Open reports grouped by what was reported, plus hidden events even if their reports were cleared. */
 moderation.get("/mod/queue", async (c) => {
   const db = c.env.DB;

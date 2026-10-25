@@ -109,6 +109,7 @@ export const api = {
     request<{ ok: true }>(`/api/events/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   reportUser: (id: string, reason: string, note: string) =>
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  modStats: () => request<{ stats: Record<string, number> }>("/api/mod/stats").then((r) => r.stats),
   modQueue: () => request<{ items: ModItem[] }>("/api/mod/queue").then((r) => r.items),
   modEvent: (id: string, action: "restore" | "remove" | "dismiss" | "approve" | "reject") =>
     request<{ ok: true }>(`/api/mod/events/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),

@@ -10,7 +10,8 @@ import { emailAuth } from "./emailAuth";
 import { events } from "./events";
 import { fonts } from "./fonts";
 import { og } from "./og";
-import { posting } from "./posting";
+import { withSecurityHeaders } from "./security";
+import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
 
@@ -46,6 +47,22 @@ app.get("/cities/:slug", async (c) => {
   const city: City = { id: row.id, name: row.name, timezone: row.timezone, center: [row.center_lng, row.center_lat], zoom: row.default_zoom };
   c.header("Cache-Control", "public, max-age=3600");
   return c.json(city);
+});
+
+// Errors from people's browsers, so they show up in Workers Logs next to server errors.
+app.post("/log", async (c) => {
+  const ip = c.req.header("CF-Connecting-IP") ?? "local";
+  if (!(await rateLimit(c.env.SESSIONS, `log:${ip}`, 20, 3600))) return c.body(null, 204);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const clip = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : undefined);
+  console.error("client error", {
+    message: clip(body.message, 500),
+    stack: clip(body.stack, 2000),
+    path: clip(body.path, 200),
+    ua: clip(c.req.header("User-Agent"), 200),
+    signedIn: !!c.get("userId"),
+  });
+  return c.body(null, 204);
 });
 
 // What this server supports, so the app can show or hide features.
@@ -89,6 +106,11 @@ app.onError((err, c) => {
 
 // Fonts live outside /api; everything else the Worker handles is under /api.
 const root = new Hono<{ Bindings: Env }>();
+// Security headers on everything the Worker answers (static files get them from public/_headers).
+root.use("*", async (c, next) => {
+  await next();
+  c.res = withSecurityHeaders(c.res);
+});
 root.route("/fonts", fonts);
 root.route("/e", og);
 root.route("/", app);

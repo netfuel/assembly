@@ -35,6 +35,10 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Couldn't load the queue."));
   }, []);
   useEffect(load, [load]);
+  const [stats, setStats] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    api.modStats().then(setStats).catch(() => undefined);
+  }, [items]);
 
   async function act(key: string, fn: () => Promise<unknown>, done: string) {
     setBusy(key);
@@ -57,6 +61,16 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
         <h1 className="sheet-title">Reports.</h1>
         <p className="note serif-text">New organizers' first events wait here for approval. Events with three reports are hidden until someone here restores or removes them. Reports on people never hide anything on their own.</p>
       </div>
+      {stats && (
+        <section className="mod-stats" aria-label="Launch numbers" data-reveal>
+          <Stat label="Events posted, 7 days" value={stats.events_week} target={25} />
+          <Stat label="Active organizers, 30 days" value={stats.organizers_month} target={40} />
+          <Stat label="New members, 7 days" value={stats.members_week} />
+          <Stat label="RSVPs, 7 days" value={stats.rsvps_week} />
+          <Stat label="Upcoming events" value={stats.upcoming} />
+          <Stat label="Members" value={stats.members} />
+        </section>
+      )}
       {error && <p className="note">{error}</p>}
       {items && items.length === 0 && <p className="note">Nothing to review. The queue is clear.</p>}
       {items && items.length > 0 && (
@@ -160,6 +174,18 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** One number, with the PRD target when there is one. */
+function Stat({ label, value, target }: { label: string; value: number; target?: number }) {
+  const met = target !== undefined && value >= target;
+  return (
+    <div className={`stat ${met ? "is-met" : ""}`}>
+      <span className="stat-value num">{value}</span>
+      <span className="stat-label">{label}</span>
+      {target !== undefined && <span className="stat-target num">{met ? "Target met" : `Target ${target}+`}</span>}
     </div>
   );
 }

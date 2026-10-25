@@ -97,3 +97,9 @@ h3 {
     transition-duration: 1ms !important;
   }
 }
+
+/* Crash screen (src/components/ErrorBoundary.tsx) */
+.crash { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: var(--space-3); padding: var(--space-6); text-align: center; }
+.crash-title { margin: 0; font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 300; font-size: 2.5rem; letter-spacing: var(--tracking-display); }
+.crash-body { margin: 0; color: var(--color-muted); }
+.crash a { color: var(--color-muted); font-size: var(--text-xs); }
