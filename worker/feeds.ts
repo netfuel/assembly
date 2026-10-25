@@ -244,6 +244,7 @@ export async function sitemap(c: Context<{ Bindings: Env }>) {
     .all<{ id: string; updated_at: string }>();
   const urls = [
     `<url><loc>${origin}/</loc><changefreq>hourly</changefreq></url>`,
+    `<url><loc>${origin}/feed</loc><changefreq>hourly</changefreq></url>`,
     ...["terms", "privacy", "guidelines"].map((p) => `<url><loc>${origin}/${p}</loc><changefreq>monthly</changefreq></url>`),
     ...(rows.results ?? []).map(
       (r) => `<url><loc>${origin}/e/${xml(encodeURIComponent(r.id))}</loc><lastmod>${new Date(r.updated_at).toISOString()}</lastmod></url>`,

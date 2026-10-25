@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
-import { Button, Frame, Sheet, Tag, Toast, Skeleton } from "../components/ui";
+import { Button, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
+import { announceGoing } from "../lib/install";
+import { FeedView } from "./FeedView";
 import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilters, saveFilters, type Filters } from "../lib/filters";
 import { FilterSheet, FilterChips } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
@@ -16,7 +18,7 @@ import { AnnounceForm } from "./AnnounceForm";
 import { ProfileSheet } from "./ProfileSheet";
 import { SignInSheet } from "./SignInSheet";
 import { ModerationSheet } from "./ModerationSheet";
-import { type AuthProviders, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
+import { type AuthProviders, type RsvpStatus, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
 const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
@@ -28,6 +30,23 @@ const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
 ];
 
 const FALLBACK_CITY: City = { id: "memphis", name: "Memphis", timezone: "America/Chicago", center: [-90.01, 35.14], zoom: 12.2 };
+
+type View = "map" | "feed";
+const VIEW_KEY = "assembly:view";
+/** /feed or ?view=feed opens the list; otherwise the last view used on this device; the map by default. */
+function initialView(): View {
+  if (location.pathname === "/feed" || location.pathname === "/feed/") return "feed";
+  const q = new URLSearchParams(location.search).get("view");
+  if (q === "feed" || q === "map") return q;
+  if (location.pathname === "/") {
+    try {
+      if (localStorage.getItem(VIEW_KEY) === "feed") return "feed";
+    } catch {
+      // ignore
+    }
+  }
+  return "map";
+}
 
 function eventIdFromPath(): string | null {
   const m = location.pathname.match(/^\/e\/([^/]+)/);
@@ -54,6 +73,17 @@ export function App() {
   const scenes = filters.scenes;
   const setWindowId = (windowId: WindowId) => setFilters((f) => ({ ...f, windowId }));
   const [selectedId, setSelectedId] = useState<string | null>(eventIdFromPath());
+  const [view, setViewState] = useState<View>(initialView);
+  const setView = (v: View) => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // Private mode: it just won't be remembered.
+    }
+  };
+  // Your RSVPs, so feed cards can show "Going" and toggle it.
+  const [rsvps, setRsvps] = useState<Record<string, RsvpStatus>>({});
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [me, setMe] = useState<MeProfile | null>(null);
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
@@ -74,11 +104,19 @@ export function App() {
   useEffect(() => {
     if (!meId) return;
     saveProfileForOffline();
+  }, [meId]);
+  // Saved for the door, and the feed's Going state. Re-read when an event sheet closes, since you may have RSVP'd there.
+  useEffect(() => {
+    if (!meId) return setRsvps({});
+    if (selectedId) return;
     api
       .myEvents()
-      .then((r) => saveForOffline(r.going))
+      .then((r) => {
+        saveForOffline(r.going);
+        setRsvps(Object.fromEntries(r.going.filter((g) => g.rsvp).map((g) => [g.id, g.rsvp as RsvpStatus])));
+      })
       .catch(() => undefined);
-  }, [meId]);
+  }, [meId, selectedId]);
   const railRef = useRef<HTMLDivElement>(null);
 
   const toast = useCallback((msg: string) => setToastMsg(msg), []);
@@ -135,18 +173,21 @@ export function App() {
   // On the map, the filters ride along in the query so a filtered view can be shared too.
   const filterQuery = filtersQuery(filters);
   useEffect(() => {
-    const path = selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
+    const path = selectedId ? `/e/${encodeURIComponent(selectedId)}` : view === "feed" ? "/feed" : "/";
     if (location.pathname !== path) history.pushState(null, "", path + (selectedId ? "" : filterQuery));
     else if (!selectedId && location.search !== filterQuery) {
       // Keep one-off params (sign-in results) out of the way: they're cleared on load.
       history.replaceState(null, "", path + filterQuery);
     }
-  }, [selectedId, filterQuery]);
+  }, [selectedId, filterQuery, view]);
   useEffect(() => {
     saveFilters({ ...filters, date: filters.windowId === "date" ? filters.date : null }, tonightDate(new Date(), "America/Chicago"));
   }, [filters]);
   useEffect(() => {
-    const onPop = () => setSelectedId(eventIdFromPath());
+    const onPop = () => {
+      setSelectedId(eventIdFromPath());
+      if (!eventIdFromPath()) setViewState(location.pathname.startsWith("/feed") ? "feed" : "map");
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -286,9 +327,60 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadState]);
 
+  const emptyNote = (
+    <>
+                Nothing on the schedule {windowId === "tonight" ? "tonight" : windowId === "date" ? "that night yet" : "for these filters"}.{" "}
+                {windowId === "tonight" ? (
+                  <button className="link" onClick={() => setWindowId("weekend")}>
+                    Check the weekend →
+                  </button>
+                ) : activeCount(filters) ? (
+                  <button className="link" onClick={() => setFilters((f) => ({ ...DEFAULT_FILTERS, date: f.date }))}>
+                    Clear filters →
+                  </button>
+                ) : null}
+    </>
+  );
   const heading = windowId === "date" ? `${dateHeading(pickedDate)}.` : WINDOWS.find((w) => w.id === windowId)!.heading;
   const [signInIntent, setSignInIntent] = useState<"post" | null>(null);
   const returnTo = signInIntent === "post" ? "/?compose=1" : selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
+  // RSVP from a feed card: Going on, or off again. Optimistic, like the event page.
+  async function feedRsvp(id: string) {
+    if (!me) return openSignIn();
+    const next = rsvps[id] === "going" ? null : "going";
+    const prev = rsvps[id] ?? null;
+    const delta = next === "going" ? 1 : prev === "going" ? -1 : 0;
+    const apply = (status: RsvpStatus | null, d: number) => {
+      setRsvps((r) => {
+        const copy = { ...r };
+        if (status) copy[id] = status;
+        else delete copy[id];
+        return copy;
+      });
+      setEvents((list) => list.map((e) => (e.id === id ? { ...e, goingCount: Math.max(0, e.goingCount + d) } : e)));
+    };
+    apply(next, delta);
+    try {
+      await api.rsvp(id, next);
+      if (next) {
+        const ev = events.find((e) => e.id === id);
+        if (ev) saveForOffline([ev]);
+        toast("You're going. Saved to your list.");
+        announceGoing();
+      }
+    } catch (err) {
+      apply(prev, -delta);
+      toast(err instanceof ApiError ? err.message : "Couldn't save your RSVP. Try again.");
+    }
+  }
+  function showOnMap(id: string) {
+    const ev = events.find((e) => e.id === id);
+    setView("map");
+    if (!ev) return;
+    setHighlight({ id, follow: true });
+    setFocus({ lng: ev.lng, lat: ev.lat, key: Date.now() });
+  }
+
   const openSignIn = (intent: "post" | null = null) => {
     setSignInIntent(intent);
     setSheet("signin");
@@ -343,6 +435,15 @@ export function App() {
           )}
         </nav>
         <div className="filters" role="toolbar" aria-label="Filter events">
+          <Segmented
+            label="View"
+            options={[
+              { id: "map", label: "Map" },
+              { id: "feed", label: "Feed" },
+            ]}
+            value={view}
+            onChange={(v) => setView(v as View)}
+          />
           <button className={`filter-button ${activeCount(filters) ? "is-active" : ""}`} onClick={() => setFiltersOpen(true)} aria-haspopup="dialog">
             <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
               <path d="M2 4h12M4.5 8h7M7 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
@@ -354,7 +455,24 @@ export function App() {
         </div>
       </header>
 
-      {!selected && (
+      {view === "feed" && (
+        <FeedView
+          events={shown}
+          loadState={loadState}
+          loadError={loadError}
+          online={online}
+          tz={city.timezone}
+          config={config}
+          rsvps={rsvps}
+          emptyNote={emptyNote}
+          onOpen={select}
+          onShowOnMap={showOnMap}
+          onRsvp={feedRsvp}
+          toast={toast}
+        />
+      )}
+
+      {!selected && view === "map" && (
         <section className="rail-wrap" aria-label={`${heading} events`}>
           <div className="rail-head">
             <h2 className="rail-title">{heading}</h2>
@@ -397,18 +515,7 @@ export function App() {
             )}
             {loadState === "error" && <div className="rail-empty">{loadError}</div>}
             {loadState === "ready" && shown.length === 0 && (
-              <div className="rail-empty">
-                Nothing on the schedule {windowId === "tonight" ? "tonight" : windowId === "date" ? "that night yet" : "for these filters"}.{" "}
-                {windowId === "tonight" ? (
-                  <button className="link" onClick={() => setWindowId("weekend")}>
-                    Check the weekend →
-                  </button>
-                ) : activeCount(filters) ? (
-                  <button className="link" onClick={() => setFilters((f) => ({ ...DEFAULT_FILTERS, date: f.date }))}>
-                    Clear filters →
-                  </button>
-                ) : null}
-              </div>
+              <div className="rail-empty">{emptyNote}</div>
             )}
             {shown.map((e, i) => {
               const queer = e.scenes.includes("queer");

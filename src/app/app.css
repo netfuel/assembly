@@ -456,3 +456,69 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
+
+/* Feed view: the same events as a list. The top bar floats over it. */
+.feed {
+  position: absolute;
+  /* Starts below the top bar's controls, so nothing scrolls under them. */
+  inset: var(--feed-top, 140px) 0 0;
+  z-index: 11;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-ground);
+  padding: 0 max(var(--space-4), env(safe-area-inset-right)) calc(var(--space-8) + env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
+}
+/* Solid ground behind the top bar while the list is up. */
+.app:has(.feed) .topbar { background: var(--color-ground); padding-bottom: var(--space-2); }
+.feed-inner { width: min(100%, 640px); margin: 0 auto; display: grid; gap: var(--space-6); }
+.feed-day { display: grid; gap: var(--space-3); }
+.feed-day-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  padding: var(--space-2) 0;
+  background: var(--color-ground);
+  border-bottom: 1px solid var(--color-line);
+  font-family: var(--font-serif);
+  font-variation-settings: var(--vary-display);
+  font-weight: 300;
+  font-size: 1.625rem;
+  letter-spacing: var(--tracking-display);
+}
+.feed-day-head .num { font-family: var(--font-grotesk); font-variation-settings: normal; font-size: var(--text-2xs); color: var(--color-faint); letter-spacing: var(--tracking-label); }
+.feed-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); }
+.feed-card { border: 1px solid var(--color-line); background: var(--color-surface); display: grid; }
+.feed-card.is-live { border-color: var(--color-accent); }
+.feed-card.is-cancelled .feed-flyer, .feed-card.is-cancelled .feed-title { opacity: 0.55; }
+.feed-flyer { all: unset; display: block; cursor: pointer; background: var(--color-ground); }
+.feed-flyer:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+/* Flyers stay uncropped: the image sets its own height, capped so one tall flyer doesn't fill the screen. */
+.feed-flyer img { display: block; width: 100%; height: auto; max-height: 78vh; object-fit: contain; }
+
+.feed-card .promo-video { border: 0; }
+.feed-card-body { display: grid; gap: var(--space-2); padding: var(--space-4); min-width: 0; }
+.feed-card-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.feed-when { font-size: var(--text-xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-muted); }
+.feed-title { margin: 0; font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 300; font-size: clamp(1.5rem, 6vw, 2rem); line-height: 1.05; letter-spacing: -0.015em; }
+.link-plain { all: unset; cursor: pointer; }
+.link-plain:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.link-plain:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.feed-pitch { margin: 0; color: var(--color-muted); font-style: italic; }
+.feed-where { margin: 0; font-size: var(--text-sm); }
+.feed-where .dim { color: var(--color-faint); }
+.feed-scenes { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-muted); }
+.feed-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+.feed-going { font-size: var(--text-2xs); color: var(--color-faint); }
+.feed-empty { color: var(--color-muted); padding: var(--space-5); border: 1px dashed var(--color-line-strong); }
+.feed-sentinel { height: 1px; }
+.feed-end { text-align: center; }
+.feed-card-skeleton { pointer-events: none; }
+.feed-skel-flyer { aspect-ratio: 1; height: auto !important; }
+/* The map's own chrome hides behind the list. */
+.app:has(.feed) .map-dots { display: none; }
+.feed-flyer .flyer-generated { aspect-ratio: 4 / 3; }
+@media (min-width: 900px) { .feed-flyer .flyer-generated { aspect-ratio: 16 / 9; } }
