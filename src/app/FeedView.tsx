@@ -204,11 +204,10 @@ function FeedCard({
               onError={() => setLoaded(true)}
             />
           ) : (
-            // Seeded SVG art; animates only while on screen (GeneratedArt).
+            // Seeded pixel liquid; animates only while on screen (GeneratedArt).
             <GeneratedArt
               className="flyer-generated"
               id={e.id}
-              queer={queer}
               title={e.title}
               when={`${dayLabel(e.startsAt, now, tz)} / ${timeRange(e.startsAt, e.endsAt, tz)}`}
               venue={e.venueName ?? e.neighborhood}

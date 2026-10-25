@@ -1,67 +1,77 @@
-import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
-import { artNumber, artStyle, artSvg } from "../lib/flyerArt";
+import { useEffect, useMemo, useRef } from "react";
+import { artFallback, artParams } from "../lib/flyerArt";
+import { registerArt } from "../lib/liquidRenderer";
 import { prefersReducedMotion } from "../lib/motion";
 
-// three.js loads only for the "print" style on the event page.
-const FlyerShader = lazy(() => import("./FlyerShader"));
-
 /**
- * Generated flyer for an event without uploaded art: seeded artwork, plus the title, date, and venue
- * set like a flyer, and a small "Generated" mark so it never passes for the organizer's own flyer.
- * Animates only while on screen; still under reduced motion.
+ * Generated flyer for an event without uploaded art: seeded pixel liquid (lib/flyerArt.ts, drawn by
+ * lib/liquidRenderer.ts), plus the title, date, and venue set like a flyer and a small "Gen" mark so it never
+ * passes for the organizer's own flyer. Animates while on screen; a still frame under reduced motion and for
+ * thumbnails. Without WebGL, a halftone in the event's middle ink.
  */
 export function GeneratedArt({
   id,
-  queer,
   title,
   when,
   venue,
-  hero = false,
   compact = false,
   className = "",
 }: {
   id: string;
-  queer: boolean;
   title?: string;
   /** Already formatted in the city's timezone, e.g. "Sat Oct 31 / 9 PM". */
   when?: string;
   venue?: string | null;
-  /** Event page: the print style runs as the live WebGL shader. */
-  hero?: boolean;
-  /** Art only, no type (thumbnails). */
+  /** Art only, no type, no motion (thumbnails). */
   compact?: boolean;
   className?: string;
 }) {
-  const style = artStyle(id);
-  const svg = useMemo(() => artSvg(id, queer), [id, queer]);
-  const ref = useRef<HTMLDivElement>(null);
+  const params = useMemo(() => artParams(id), [id]);
+  const host = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el || compact || prefersReducedMotion()) return;
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) el.dataset.play = "true";
-      else delete el.dataset.play;
-    });
+    const el = host.current;
+    const cv = canvas.current;
+    if (!el || !cv) return;
+    const art = registerArt(cv, params, compact || prefersReducedMotion());
+    if (!art.supported()) {
+      el.dataset.fallback = "true";
+      return art.dispose;
+    }
+    const size = () => {
+      const { width, height } = el.getBoundingClientRect();
+      const w = Math.max(1, Math.ceil(width / params.pixel));
+      const h = Math.max(1, Math.ceil(height / params.pixel));
+      if (cv.width !== w || cv.height !== h) {
+        cv.width = w;
+        cv.height = h;
+        art.resized();
+      }
+    };
+    size();
+    const ro = new ResizeObserver(size);
+    ro.observe(el);
+    const io = new IntersectionObserver(([e]) => art.setVisible(e.isIntersecting), { rootMargin: "100px" });
     io.observe(el);
-    return () => io.disconnect();
-  }, [compact]);
+    return () => {
+      ro.disconnect();
+      io.disconnect();
+      art.dispose();
+    };
+  }, [params, compact]);
 
-  const shader = hero && style === "print";
   return (
-    <div ref={ref} className={`gen-art gen-${style} ${queer ? "is-queer" : ""} ${compact ? "is-compact" : ""} ${className}`}>
-      {shader ? (
-        <Suspense fallback={<div className="gen-svg-host" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />}>
-          <FlyerShader id={id} queer={queer} />
-        </Suspense>
-      ) : (
-        // Built from numbers only (no user text), so it's safe to inject.
-        <div className="gen-svg-host" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
-      )}
+    <div
+      ref={host}
+      className={`gen-art ${compact ? "is-compact" : ""} ${className}`}
+      style={{ ["--gen-fallback" as string]: artFallback(params) }}
+    >
+      <canvas ref={canvas} className="gen-canvas" aria-hidden="true" />
       {!compact && (
         <>
           <span className="gen-mark num" title="Generated art: this event has no flyer yet">
-            Gen {artNumber(id)}
+            Gen {params.number}
           </span>
           {title && (
             <div className="flyer-type">

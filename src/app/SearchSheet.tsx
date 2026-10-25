@@ -209,7 +209,6 @@ export function SearchSheet({
             </div>
             <ul className="search-list">
               {results.events.slice(0, 8).map((e) => {
-                const queer = e.scenes.includes("queer");
                 return (
                   <li key={e.id}>
                     <button
@@ -219,7 +218,7 @@ export function SearchSheet({
                         onOpenEvent(e.id);
                       }}
                     >
-                      <SearchThumb url={e.thumbUrl} id={e.id} queer={queer} />
+                      <SearchThumb url={e.thumbUrl} id={e.id} />
                       <span className="search-text">
                         <span className="search-name">
                           {e.status === "cancelled" && <span className="dim">Cancelled: </span>}
@@ -286,8 +285,8 @@ function PlaceGroup({ label, places, now, tz, onPick }: { label: string; places:
 }
 
 /** The flyer thumbnail, or the event's generated art when there isn't one (or it fails to load). */
-function SearchThumb({ url, id, queer }: { url: string | null; id: string; queer: boolean }) {
+function SearchThumb({ url, id }: { url: string | null; id: string }) {
   const [failed, setFailed] = useState(false);
-  if (!url || failed) return <GeneratedArt compact id={id} queer={queer} className="search-thumb" />;
+  if (!url || failed) return <GeneratedArt compact id={id} className="search-thumb" />;
   return <img className="search-thumb" src={url} alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
