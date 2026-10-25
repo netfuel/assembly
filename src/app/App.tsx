@@ -465,7 +465,8 @@ export function App() {
     <div className="app">
       <MapView
         fit={fit}
-        highlight={selectedId ? null : highlight}
+        // While following the viewer's dot, cards still ring their pin but don't pull the map away.
+        highlight={selectedId ? null : followMe && highlight ? { ...highlight, follow: false } : highlight}
         events={mapEvents}
         center={city.center}
         zoom={city.zoom}
