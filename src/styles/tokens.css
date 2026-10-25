@@ -37,6 +37,11 @@
   --color-ok-ink: #ffffff;
   --color-warn: #b88600;
 
+  /* Motion accents (to-do: Gradient micro-animations): pink, purple, green, for selected and processing states only */
+  --grad-pink: #ff3df2;
+  --grad-purple: #7b5cf0;
+  --grad-green: #10b981;
+
   --color-scrim: rgb(18 19 21 / 0.35);
   --shadow-float: 0 12px 32px rgb(18 19 21 / 0.14), 0 1px 2px rgb(18 19 21 / 0.06);
   --dot-color: rgb(18 19 21 / 0.1);
@@ -67,6 +72,10 @@
   --color-ok: #6fe3b4;
   --color-ok-ink: #062117;
   --color-warn: #ffd23f;
+
+  --grad-pink: #ff3df2;
+  --grad-purple: #a98bff;
+  --grad-green: #4fe3a8;
 
   --color-scrim: rgb(0 0 0 / 0.6);
   --shadow-float: 0 16px 40px rgb(0 0 0 / 0.55);
@@ -125,6 +134,10 @@
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --dur-fast: 120ms;
   --dur-med: 220ms;
+  --dur-feedback: 260ms; /* micro-animations: 150–300ms for feedback */
+  --dur-loop: 1.2s; /* looping progress */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --grad-sweep: linear-gradient(90deg, var(--grad-pink), var(--grad-purple), var(--grad-green));
 
   /* Dot-grid canvas */
   --texture-dots: radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 1.2px) 0 0 / 16px 16px;

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
 import { Button, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
+import { LocateButton } from "../components/LocateButton";
+import { formatMiles, milesBetween, useMyLocation } from "../lib/location";
 import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
 import { announceGoing } from "../lib/install";
@@ -99,6 +101,43 @@ export function App() {
   const [highlight, setHighlight] = useState<{ id: string; follow: boolean } | null>(null);
   const [theme, setTheme] = useTheme();
   const online = useOnline();
+  // The viewer's position stays on this device: the dot on the map and distances on cards. Never sent to the API.
+  const loc = useMyLocation();
+  const [followMe, setFollowMe] = useState(false);
+  const locStatus = useRef(loc.status);
+  useEffect(() => {
+    const was = locStatus.current;
+    locStatus.current = loc.status;
+    if (loc.status === "denied" && was !== "denied") {
+      setFollowMe(false);
+      setToastMsg("Location is blocked for this site. Allow it in your browser or phone settings to see where you are.");
+    }
+    if (loc.status === "unavailable" && was !== "unavailable") {
+      setFollowMe(false);
+      setToastMsg("Couldn't find your location right now. The map stays on the city.");
+    }
+  }, [loc.status]);
+  function tapLocate() {
+    if (loc.status === "locating") return;
+    if (loc.status === "on") {
+      if (followMe) {
+        loc.stop();
+        setFollowMe(false);
+        setToastMsg("Location off. Your dot is cleared.");
+      } else {
+        setFollowMe(true);
+      }
+      return;
+    }
+    setToastMsg("Your location stays on this device. Assembly never saves or shares it.");
+    loc.start();
+    setFollowMe(true);
+  }
+  const myPos = loc.position;
+  const distanceTo = useCallback(
+    (e: { lat: number; lng: number }) => (myPos ? formatMiles(milesBetween(myPos, e)) : null),
+    [myPos],
+  );
 
   // Keep your saved nights on the device for when the signal drops at the door.
   const meId = me?.id;
@@ -424,7 +463,20 @@ export function App() {
 
   return (
     <div className="app">
-      <MapView fit={fit} highlight={selectedId ? null : highlight} events={mapEvents} center={city.center} zoom={city.zoom} selectedId={selectedId} onSelect={select} focus={focus} theme={theme} />
+      <MapView
+        fit={fit}
+        highlight={selectedId ? null : highlight}
+        events={mapEvents}
+        center={city.center}
+        zoom={city.zoom}
+        selectedId={selectedId}
+        onSelect={select}
+        focus={focus}
+        theme={theme}
+        myPosition={myPos}
+        followMe={followMe}
+        onUnfollow={() => setFollowMe(false)}
+      />
       <div className="map-dots" aria-hidden="true" />
 
       <header className="topbar">
@@ -492,7 +544,12 @@ export function App() {
               <path d="M2 4h12M4.5 8h7M7 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
             </svg>
             Filters
-            {activeCount(filters) > 0 && <span className="filter-badge num">{activeCount(filters)}</span>}
+            {activeCount(filters) > 0 && (
+              // Keyed by the count so it pops once each time the filters change.
+              <span key={activeCount(filters)} className="filter-badge num">
+                {activeCount(filters)}
+              </span>
+            )}
           </button>
           <FilterChips filters={filters} onChange={setFilters} />
         </div>
@@ -512,11 +569,13 @@ export function App() {
           onShowOnMap={showOnMap}
           onRsvp={feedRsvp}
           toast={toast}
+          distance={myPos ? distanceTo : undefined}
         />
       )}
 
       {!selected && view === "map" && (
         <section className="rail-wrap" aria-label={`${heading} events`}>
+          <LocateButton status={loc.status} following={followMe} onTap={tapLocate} />
           <div className="rail-head">
             <h2 className="rail-title">{heading}</h2>
             <span className="rail-count num">{loadState === "ready" ? `${pad(shown.length)} events` : "—"}</span>
@@ -597,6 +656,7 @@ export function App() {
                     </span>
                     <span className="card-when num">
                       {dayLabel(e.startsAt, now, city.timezone)} / {clock(e.startsAt, city.timezone)}
+                      {myPos && <span className="dim"> / {distanceTo(e)}</span>}
                     </span>
                     <span className="card-meta">
                       <span className="card-venue">{e.venueName ?? e.neighborhood}</span>

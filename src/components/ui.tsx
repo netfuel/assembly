@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type ComponentProps, type HTMLAttributes, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ButtonHTMLAttributes, type ComponentProps, type HTMLAttributes, type ReactNode } from "react";
 import "./ui.css";
 
 type Variant = "default" | "primary" | "solid" | "ghost" | "confirmed";
@@ -58,8 +58,18 @@ export function Segmented<T extends string>({
   onChange: (id: T) => void;
   label: string;
 }) {
+  // A gradient pill slides under the selected option (CSS reads --seg-x and --seg-w).
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = root.current;
+    const btn = el?.querySelector<HTMLButtonElement>('button[aria-checked="true"]');
+    if (!el || !btn) return;
+    el.style.setProperty("--seg-x", `${btn.offsetLeft}px`);
+    el.style.setProperty("--seg-w", `${btn.offsetWidth}px`);
+    el.dataset.pill = "true";
+  }, [value, options.length]);
   return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
+    <div className="segmented" role="radiogroup" aria-label={label} ref={root}>
       {options.map((o) => (
         <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)}>
           {o.label}
@@ -225,7 +235,9 @@ export function Sheet({
 export function Toast({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div className="toast" role="status">
+    // Keyed by message so each new confirmation replays its entrance and ring.
+    <div className="toast" role="status" key={message}>
+      <span className="toast-ring" aria-hidden="true" />
       {message}
     </div>
   );

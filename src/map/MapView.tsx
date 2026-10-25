@@ -6,6 +6,8 @@ import { mapPalette, mapStyle, type MapTheme } from "./mapStyle";
 import { isLive } from "../lib/time";
 import type { EventSummary } from "../../shared/types";
 import { hasThumb, syncThumbs, thumbImageId } from "./thumbPins";
+import { MyLocationMarker } from "./myLocation";
+import type { Position } from "../lib/location";
 import "./map.css";
 
 // MapLibre 6 computes its worker path at runtime, which bundlers can't follow. Point it at the emitted file.
@@ -59,7 +61,16 @@ export function MapView({
   theme,
   highlight = null,
   fit = null,
+  myPosition = null,
+  followMe = false,
+  onUnfollow,
 }: {
+  /** The viewer's own position (stays on the device): drawn as a dot. */
+  myPosition?: Position | null;
+  /** Keep the map centered on the viewer's dot until they pan away. */
+  followMe?: boolean;
+  /** The viewer dragged or zoomed the map by hand while following. */
+  onUnfollow?: () => void;
   /** When this changes, the map frames all these points (search results). */
   fit?: { key: number; points: [number, number][] } | null;
   events: EventSummary[];
@@ -77,8 +88,9 @@ export function MapView({
   const mapRef = useRef<MapLibre | null>(null);
   const ready = useRef(false);
   const loadThumbsRef = useRef<(() => void) | null>(null);
-  const latest = useRef({ events, selectedId, onSelect, theme, highlight });
-  latest.current = { events, selectedId, onSelect, theme, highlight };
+  const latest = useRef({ events, selectedId, onSelect, theme, highlight, onUnfollow });
+  latest.current = { events, selectedId, onSelect, theme, highlight, onUnfollow };
+  const meMarker = useRef<MyLocationMarker | null>(null);
 
   // Create the map once.
   useEffect(() => {
@@ -96,6 +108,12 @@ export function MapView({
     });
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
+    meMarker.current = new MyLocationMarker(map);
+    // A hand on the map ends follow mode; programmatic moves (flyTo, easeTo) have no originalEvent.
+    map.on("dragstart", () => latest.current.onUnfollow?.());
+    map.on("zoomstart", (e) => {
+      if ((e as { originalEvent?: Event }).originalEvent) latest.current.onUnfollow?.();
+    });
     // First full draw (style and visible tiles): the splash waits for this before revealing the app.
     map.once("load", () => window.dispatchEvent(new Event("assembly:map-ready")));
 
@@ -299,6 +317,8 @@ export function MapView({
 
     return () => {
       cancelAnimationFrame(raf);
+      meMarker.current?.destroy();
+      meMarker.current = null;
       ready.current = false;
       map.remove();
       mapRef.current = null;
@@ -384,6 +404,28 @@ export function MapView({
       },
     );
   }, [fit?.key]);
+
+  // The viewer's dot, and follow mode: fly in the first time, then glide with each update.
+  useEffect(() => {
+    meMarker.current?.set(myPosition);
+  }, [myPosition]);
+  const followed = useRef(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !followMe || !myPosition) {
+      if (!followMe) followed.current = false;
+      return;
+    }
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wide = window.matchMedia("(min-width: 900px)").matches;
+    const padding = wide ? { top: 120, bottom: 220, left: 0, right: 0 } : { top: 160, bottom: 240, left: 0, right: 0 };
+    if (!followed.current) {
+      followed.current = true;
+      map.flyTo({ center: [myPosition.lng, myPosition.lat], zoom: Math.max(map.getZoom(), 14.5), padding, duration: reduce ? 0 : 900 });
+    } else {
+      map.easeTo({ center: [myPosition.lng, myPosition.lat], padding, duration: reduce ? 0 : 600 });
+    }
+  }, [followMe, myPosition]);
 
   return <div ref={container} className="map" role="region" aria-label="Map of events" />;
 }

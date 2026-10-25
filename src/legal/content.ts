@@ -46,7 +46,9 @@ export const PRIVACY: LegalDoc = {
     {
       heading: "Location",
       body: [
-        "We don't track or store your device's location. The map shows events where organizers placed them. Address search in the posting form sends what you type to Photon, an OpenStreetMap search service run by Komoot, to find matching addresses.",
+        "We don't track or store your device's location. The map shows events where organizers placed them.",
+        "If you tap the locate button, your browser asks for permission, then the map shows your position as a dot and cards show how far away each event is. That position stays on your device: it's never sent to Assembly, never saved, and never logged. Your device only remembers that you turned location on, so it doesn't ask again. Tap the button again to turn it off and clear the dot.",
+        "Address search in the posting form sends what you type to Photon, an OpenStreetMap search service run by Komoot, to find matching addresses.",
       ],
     },
     {

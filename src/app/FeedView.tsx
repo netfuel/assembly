@@ -37,7 +37,10 @@ export function FeedView({
   onShowOnMap,
   onRsvp,
   toast,
+  distance,
 }: {
+  /** "0.8 mi" from the viewer, when their location is on (computed on the device). */
+  distance?: (e: EventSummary) => string | null;
   events: EventSummary[];
   loadState: "loading" | "ready" | "error";
   loadError: string;
@@ -133,6 +136,7 @@ export function FeedView({
                     onShowOnMap={() => onShowOnMap(e.id)}
                     onRsvp={() => onRsvp(e.id)}
                     onShare={() => setSharing(e)}
+                    distance={distance?.(e) ?? null}
                   />
                 </li>
               ))}
@@ -164,7 +168,9 @@ function FeedCard({
   onShowOnMap,
   onRsvp,
   onShare,
+  distance,
 }: {
+  distance: string | null;
   e: EventSummary;
   now: Date;
   tz: string;
@@ -224,6 +230,7 @@ function FeedCard({
         <p className="feed-where">
           {e.venueName ?? e.address}
           {e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
+          {distance && <span className="dim num distance"> / {distance}</span>}
         </p>
         {labels.length > 0 && (
           <p className="feed-scenes">
