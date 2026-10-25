@@ -19,7 +19,8 @@
     "setup:cloudflare": "node scripts/setup-cloudflare.mjs",
     "fonts:upload": "node scripts/upload-fonts.mjs",
     "push:keys": "node scripts/push-keys.mjs",
-    "headers": "node --experimental-strip-types --no-warnings scripts/write-headers.mjs"
+    "headers": "node --experimental-strip-types --no-warnings scripts/write-headers.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "arctic": "^3.7.0",

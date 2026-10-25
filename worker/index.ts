@@ -114,18 +114,13 @@ const root = new Hono<{ Bindings: Env }>();
 // Security headers on everything the Worker answers (static files get them from public/_headers).
 root.use("*", async (c, next) => {
   await next();
-  // import.meta.env.DEV is true under `vite` (local dev) and false in builds, including `vite preview`.
+  // Vite's dev server defines import.meta.env.DEV. Production is bundled by wrangler, where
+  // import.meta.env doesn't exist, so read it defensively: anything but true means production.
   try {
-    c.res = withSecurityHeaders(c.res, import.meta.env.DEV);
+    c.res = withSecurityHeaders(c.res, import.meta.env?.DEV === true);
   } catch (err) {
     // Never take the site down over headers: log it and send the response as is.
     console.error("security headers failed", c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
-    // TEMPORARY diagnostic, remove once fixed.
-    try {
-      c.res.headers.set("X-Debug-Header-Error", (err instanceof Error ? `${err.name}: ${err.message}` : String(err)).slice(0, 200));
-    } catch {
-      // ignore
-    }
   }
 });
 root.onError((err, c) => {
