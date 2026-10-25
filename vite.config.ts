@@ -37,6 +37,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // A new deploy takes over as soon as it's downloaded instead of waiting for every tab to close;
+        // registerSW (autoUpdate) then reloads the page onto it. Without these, visitors kept the old app.
+        skipWaiting: true,
+        clientsClaim: true,
         // Fonts are served from R2 by the Worker and cached at runtime below, not precached.
         globPatterns: ["**/*.{js,mjs,css,html,svg,png}"],
         navigateFallback: "/index.html",
