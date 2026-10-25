@@ -355,3 +355,4 @@
 .hand-over { flex-basis: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
 .hand-over input { min-width: 0; min-height: 30px; padding: 0 8px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-xs); background: var(--color-surface-raised); color: var(--color-fg); font: inherit; font-size: max(16px, var(--text-xs)); }
 .hand-over .note { grid-column: 1 / -1; }
+.card.is-highlighted .card-frame { border-color: var(--color-fg); }

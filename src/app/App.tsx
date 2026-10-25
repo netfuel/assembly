@@ -52,6 +52,7 @@ export function App() {
   // An open event that isn't in the loaded list: your own hidden event, or a link to one weeks out.
   const [extra, setExtra] = useState<EventSummary | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
+  const [highlight, setHighlight] = useState<{ id: string; follow: boolean } | null>(null);
   const [theme, setTheme] = useTheme();
   const online = useOnline();
 
@@ -205,6 +206,34 @@ export function App() {
   // The open event always keeps its pin, even when the filters would hide it (for example a shared link).
   const mapEvents = useMemo(() => (selected && !shown.includes(selected) ? [...shown, selected] : shown), [shown, selected]);
 
+  // On phones, the card swiped to the front of the rail rings its pin (and the map follows it).
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || selectedId || !window.matchMedia("(max-width: 899px)").matches) return;
+    let timer = 0;
+    const onScroll = () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const left = rail.getBoundingClientRect().left;
+        let best: HTMLElement | null = null;
+        let bestDist = Infinity;
+        for (const card of rail.querySelectorAll<HTMLElement>(".card[data-id]")) {
+          const d = Math.abs(card.getBoundingClientRect().left - left - 16);
+          if (d < bestDist) {
+            bestDist = d;
+            best = card;
+          }
+        }
+        if (best?.dataset.id) setHighlight({ id: best.dataset.id, follow: true });
+      }, 120);
+    };
+    rail.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      rail.removeEventListener("scroll", onScroll);
+      clearTimeout(timer);
+    };
+  }, [selectedId, shown]);
+
   // Cards slide in whenever the set changes.
   useEffect(() => {
     if (!selected) revealCards(railRef.current);
@@ -242,7 +271,7 @@ export function App() {
 
   return (
     <div className="app">
-      <MapView events={mapEvents} center={city.center} zoom={city.zoom} selectedId={selectedId} onSelect={select} focus={focus} theme={theme} />
+      <MapView highlight={selectedId ? null : highlight} events={mapEvents} center={city.center} zoom={city.zoom} selectedId={selectedId} onSelect={select} focus={focus} theme={theme} />
       <div className="map-dots" aria-hidden="true" />
 
       <header className="topbar">
@@ -366,7 +395,15 @@ export function App() {
               const cancelled = e.status === "cancelled";
               const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
               return (
-                <button key={e.id} className={`card ${cancelled ? "is-cancelled" : ""}`} onClick={() => select(e.id)}>
+                <button
+                  key={e.id}
+                  data-id={e.id}
+                  className={`card ${cancelled ? "is-cancelled" : ""} ${highlight?.id === e.id ? "is-highlighted" : ""}`}
+                  onClick={() => select(e.id)}
+                  onMouseEnter={() => setHighlight({ id: e.id, follow: false })}
+                  onMouseLeave={() => setHighlight((h) => (h?.id === e.id ? null : h))}
+                  onFocus={() => setHighlight({ id: e.id, follow: false })}
+                >
                   <Frame featured={live} className="card-frame">
                     <span className="card-top num">
                       <span>

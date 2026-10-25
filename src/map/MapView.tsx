@@ -13,6 +13,7 @@ setWorkerUrl(workerUrl);
 
 const SOURCE = "events";
 const SELECTED_SOURCE = "event-selected";
+const HOVER_SOURCE = "event-hover";
 /** Pins cluster up to this zoom; flyer pins start one level later. */
 const CLUSTER_MAX_ZOOM = 12;
 const UNCLUSTERED: FilterSpecification = ["!", ["has", "point_count"]];
@@ -56,8 +57,11 @@ export function MapView({
   onSelect,
   focus,
   theme,
+  highlight = null,
 }: {
   events: EventSummary[];
+  /** A card the person is looking at in the rail: its pin gets a ring. `follow` pans the map to it if it's off screen. */
+  highlight?: { id: string; follow: boolean } | null;
   center: [number, number];
   zoom: number;
   selectedId: string | null;
@@ -70,8 +74,8 @@ export function MapView({
   const mapRef = useRef<MapLibre | null>(null);
   const ready = useRef(false);
   const loadThumbsRef = useRef<(() => void) | null>(null);
-  const latest = useRef({ events, selectedId, onSelect, theme });
-  latest.current = { events, selectedId, onSelect, theme };
+  const latest = useRef({ events, selectedId, onSelect, theme, highlight });
+  latest.current = { events, selectedId, onSelect, theme, highlight };
 
   // Create the map once.
   useEffect(() => {
@@ -108,6 +112,7 @@ export function MapView({
       });
       // The open event keeps its ring even when its pin is inside a cluster.
       map.addSource(SELECTED_SOURCE, { type: "geojson", data: selectedFeature(latest.current.events, latest.current.selectedId) });
+      map.addSource(HOVER_SOURCE, { type: "geojson", data: selectedFeature(latest.current.events, latest.current.highlight?.id ?? null) });
 
       const color: unknown = ["case", ["get", "queer"], MAP_COLORS.uv, MAP_COLORS.sodium];
       // Pin size grows with RSVPs, capped so a big party doesn't swallow the block.
@@ -171,6 +176,20 @@ export function MapView({
           "text-allow-overlap": true,
         },
         paint: { "text-color": "#0a0a0b" },
+      });
+
+      // The card you're looking at in the rail. Drawn above clusters so it shows even inside one.
+      map.addLayer({
+        id: "event-hover",
+        type: "circle",
+        source: HOVER_SOURCE,
+        paint: {
+          "circle-radius": 17,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-color": MAP_COLORS.fg,
+          "circle-stroke-width": 2,
+          "circle-stroke-opacity": 0.85,
+        },
       });
 
       // Zoomed in, events with a flyer show it as the pin.
@@ -292,6 +311,27 @@ export function MapView({
     const map = mapRef.current;
     if (map && ready.current) applySelection(map, selectedId, latest.current.events);
   }, [selectedId]);
+
+  // Ring the pin of the card in view; on phones, bring it on screen if the map has wandered off.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    (map.getSource(HOVER_SOURCE) as unknown as GeoSource | undefined)?.setData(selectedFeature(latest.current.events, highlight?.id ?? null));
+    if (!highlight?.follow) return;
+    const e = latest.current.events.find((x) => x.id === highlight.id);
+    if (!e) return;
+    const p = map.project([e.lng, e.lat]);
+    const { clientWidth: w, clientHeight: h } = map.getContainer();
+    // Visible band: below the filters, above the rail.
+    const inView = p.x > 24 && p.x < w - 24 && p.y > 140 && p.y < h - 230;
+    if (!inView) {
+      map.easeTo({
+        center: [e.lng, e.lat],
+        padding: { top: 120, bottom: 220, left: 0, right: 0 },
+        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450,
+      });
+    }
+  }, [highlight?.id, highlight?.follow]);
 
   useEffect(() => {
     const map = mapRef.current;
