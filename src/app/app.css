@@ -344,3 +344,4 @@
 .stat-target { font-size: var(--text-2xs); color: var(--color-faint); }
 .stat.is-met .stat-target { color: var(--color-accent-text); }
 @media (max-width: 480px) { .mod-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sso .btn, .email-start .btn { white-space: normal; text-align: center; line-height: 1.25; padding-top: 6px; padding-bottom: 6px; }
