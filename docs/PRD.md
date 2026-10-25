@@ -1,6 +1,6 @@
 # Assembly PRD
 
-Oct 23, 2026 · Matt · Living doc: https://claude.ai/artifact/1tFSZkf9n1XXcZHNf1gJgc (source of truth; this file is a snapshot)
+Oct 23, 2026 (updated Oct 25) · Matt · Living doc: https://claude.ai/artifact/1tFSZkf9n1XXcZHNf1gJgc (source of truth; this file is a snapshot)
 
 ## Overview
 
@@ -121,7 +121,7 @@ P0 ships at launch, P1 within 60 days after, P2 is later. Everything below is a 
 | Posting | Recurring events (weekly, monthly) | P1 |
 | Posting | Co-hosts: multiple organizers on one event | P1 |
 | Posting | Capacity cap with a waitlist | P1 |
-| Accounts | Sign in with Google and Apple | P0 |
+| Accounts | Sign in with Google and Apple, or a 6-digit code by email (no password); a verified email links them to one account | P0 |
 | Accounts | Social sign-in: see open question on Instagram; Discord as a candidate | P1 |
 | Accounts | Profile: name, photo, pronouns, scenes, links; attendance history visible only if the user opts in | P0 |
 | Accounts | Organizer and artist profiles with follow | P1 |
@@ -209,7 +209,7 @@ Ten tables in D1 cover launch. Every event belongs to a city so new cities need 
 | --- | --- | --- |
 | cities | id, name, slug, timezone, center lat/lng, default zoom | Memphis at launch |
 | users | id, display name, avatar, pronouns, bio, scenes, links, show attendance (bool), created at | One row per person |
-| identities | user id, provider (google, apple), provider subject, email | Multiple sign-in methods per user |
+| identities | user id, provider (google, apple, email), provider subject, email, email verified | Multiple sign-in methods per user, linked by verified email |
 | venues | id, city id, name, type (DIY, warehouse, bar, club, outdoor), address, lat/lng, claimed by | Optional for events at one-off addresses |
 | events | id, city id, venue id, title, pitch, starts at, ends at, address, lat/lng, door price, ticket URL, policy tags, scenes, flyer key, video id, status (live, cancelled), updated at | Address and lat/lng stored on the event even when a venue is set |
 | event hosts | event id, user id, role (owner, co-host) | Co-hosts in P1 |
@@ -246,15 +246,20 @@ The biggest risk is a quiet map at launch; most open questions are about how we 
 | Stream and R2 costs grow with video | Monthly bill | 90 s cap, one video per event, archive videos 30 days after the event |
 | Instagram sign-in | Instagram's consumer login API was retired in late 2024; current Instagram login is for business and creator accounts | Launch with Google and Apple; evaluate Discord or Instagram for organizers only |
 
+## Decisions log
+
+- Oct 24: email-code sign-in (Cloudflare Email Service) for people without Google or Apple.
+- Oct 25: first post reviewed by a moderator; accounts 18+; policies (terms, privacy, community guidelines) published at /terms, /privacy, /guidelines with Matt Ladner as operator and hello@assembly.rsvp as contact.
+
 **Questions for Matt**
 
 - [ ] What's the target launch date, and is there an event we want to launch around?
 - [ ] Who is building: you plus Claude, or a small team? Any budget for design and dev help?
 - [ ] Which crews, DIY spaces, and venues can commit to posting before launch?
-- [ ] Can anyone post at launch, or only approved organizers for the first 60 days?
+- [x] Can anyone post at launch? Decided Oct 25: anyone can post; a new organizer's first event waits for moderator approval, then posts go live right away. Verified organizers post instantly.
 - [ ] If a DIY host won't share an address publicly, do we turn the event away or allow "address at the door via the organizer"?
-- [ ] Is the app 18+, or open to all-ages users for all-ages shows?
-- [ ] Social sign-in: Discord, Instagram for organizers only, or skip for v1?
+- [x] Is the app 18+? Decided Oct 25: accounts are 18+. Events can still be tagged all ages, and event pages are public without an account.
+- [ ] Social sign-in: Discord, Instagram for organizers only, or skip for v1? (Oct 24: email-code sign-in added for anyone without Google or Apple.)
 - [ ] Business model: free forever, organizer premium features, or a ticketing cut later?
 - [ ] Which cities come after Memphis?
-- [ ] Do we have a domain and handle locked for Assembly?
+- [ ] Domain resolved: assembly.rsvp, purchased Oct 23, 2026 and on Cloudflare. Still open: lock the Instagram handle and other socials.
