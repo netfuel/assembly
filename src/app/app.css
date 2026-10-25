@@ -611,3 +611,31 @@
   .locate-spin, .filter-badge { animation: none; }
   .card-frame::after { transition: none; }
 }
+
+/* Generated flyer art (GeneratedArt.tsx, lib/flyerArt.ts). The artwork layer looks the same in both themes. */
+.gen-art { position: relative; overflow: hidden; background: #0a0a0b; }
+.gen-svg-host, .gen-svg-host svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.gen-art .flyer-shader { position: absolute; inset: 0; }
+.gen-mark {
+  position: absolute; top: var(--space-3); left: var(--space-3); z-index: 1;
+  padding: 3px 6px; border: 1px solid rgb(244 244 245 / 0.5); background: rgb(10 10 11 / 0.55);
+  color: #f4f4f5; font-size: 10px; letter-spacing: var(--tracking-label); text-transform: uppercase;
+}
+.gen-when { font-size: var(--text-2xs); font-weight: 500; letter-spacing: var(--tracking-label); text-transform: uppercase; color: #f4f4f5; opacity: 0.85; }
+.gen-art.is-compact { display: block; }
+.gen-art.card-thumb { border-color: var(--color-sodium); }
+.gen-art.card-thumb.is-queer { border-color: var(--color-uv); }
+
+/* Slow, quiet motion; only while on screen ([data-play]) and never under reduced motion. */
+.gen-art[data-play] .a-spin { animation: gen-spin 90s linear infinite; }
+.gen-art[data-play] .a-pulse { animation: gen-pulse 5s ease-in-out infinite alternate; }
+.gen-art[data-play] .a-drift-slow { animation: gen-drift 14s ease-in-out infinite alternate; }
+.gen-art[data-play] .a-blink { animation: gen-blink 2.8s steps(2) infinite; }
+.gen-art[data-play] .a-slide { animation: gen-slide 7s ease-in-out infinite alternate; }
+.gen-art[data-play] .a-wave { animation: gen-wave 26s linear infinite; }
+@keyframes gen-spin { to { transform: rotate(360deg); } }
+@keyframes gen-pulse { to { transform: scale(1.08); } }
+@keyframes gen-drift { to { transform: translate(-18px, 14px); } }
+@keyframes gen-blink { 50% { opacity: 0.35; } }
+@keyframes gen-slide { to { transform: translateX(260px); } }
+@keyframes gen-wave { to { transform: translateX(-400px); } }

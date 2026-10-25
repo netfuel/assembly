@@ -2,6 +2,7 @@
 // Drawn on a canvas in the browser, so no server rendering and nothing to store.
 import qrcode from "qrcode-generator";
 import { clock, dayLabel } from "./time";
+import { artDataUrl, artNumber } from "./flyerArt";
 import type { EventSummary } from "../../shared/types";
 
 const W = 1080;
@@ -84,27 +85,37 @@ function frame(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
     diamond(ctx, cx, cy, 7, stroke);
 }
 
-/** Without uploaded art: scene color through a halftone, with the title set big. */
-function generatedFlyer(ctx: CanvasRenderingContext2D, e: EventSummary, x: number, y: number, w: number, h: number) {
-  const color = e.scenes.includes("queer") ? C.uv : C.sodium;
-  ctx.fillStyle = color;
+/** Without uploaded art: the event's generated art (same as in the app), with the title set big. */
+async function generatedFlyer(ctx: CanvasRenderingContext2D, e: EventSummary, x: number, y: number, w: number, h: number) {
+  const queer = e.scenes.includes("queer");
+  ctx.fillStyle = queer ? C.uv : C.sodium;
   ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = C.ground;
-  const step = 14;
-  for (let yy = 0; yy < h; yy += step) {
-    for (let xx = 0; xx < w; xx += step) {
-      // Dots grow toward the bottom, like a printed gradient.
-      const r = 1 + (yy / h) * (step / 2 - 1);
-      ctx.beginPath();
-      ctx.arc(x + xx + step / 2, y + yy + step / 2, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  try {
+    const img = await loadImage(artDataUrl(e.id, queer));
+    // The art is 4:5 and scales without limit: cover the box.
+    const s = Math.max(w / 400, h / 500);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.drawImage(img, x + (w - 400 * s) / 2, y + (h - 500 * s) / 2, 400 * s, 500 * s);
+    ctx.restore();
+  } catch {
+    // The scene color stays.
   }
+  const fade = ctx.createLinearGradient(0, y + h * 0.45, 0, y + h);
+  fade.addColorStop(0, "rgba(10,10,11,0)");
+  fade.addColorStop(0.6, "rgba(10,10,11,0.85)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(x, y + h * 0.45, w, h * 0.55);
   ctx.fillStyle = C.fg;
   ctx.font = `italic 800 112px ${SANS}`;
   ctx.textBaseline = "alphabetic";
   const lines = wrap(ctx, e.title.toUpperCase(), w - 96, 4);
   lines.forEach((l, i) => ctx.fillText(l, x + 48, y + h - 64 - (lines.length - 1 - i) * 104));
+  ctx.font = `500 26px ui-monospace, Menlo, monospace`;
+  ctx.fillStyle = "rgba(237,237,238,0.7)";
+  ctx.fillText(`GEN ${artNumber(e.id)}`, x + 32, y + 52);
 }
 
 export async function renderStoryCard(e: EventSummary, url: string, tz: string): Promise<Blob> {
@@ -157,7 +168,7 @@ export async function renderStoryCard(e: EventSummary, url: string, tz: string):
       // Fall through to the generated flyer.
     }
   }
-  if (!drew) generatedFlyer(ctx, e, fx, fy, fw, fh);
+  if (!drew) await generatedFlyer(ctx, e, fx, fy, fw, fh);
   const queer = e.scenes.includes("queer");
   frame(ctx, fx, fy, fw, fh, e.status === "cancelled" ? C.muted : C.accent);
 

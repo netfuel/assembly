@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Skeleton, Tag } from "../components/ui";
 import { PromoVideo } from "../components/PromoVideo";
+import { GeneratedArt } from "../components/GeneratedArt";
 import { ShareSheet } from "../components/ShareSheet";
 import { SCENES, type EventSummary, type RsvpStatus, type ServerConfig } from "../../shared/types";
 import { dayLabel, isLive, timeRange } from "../lib/time";
@@ -203,14 +204,15 @@ function FeedCard({
               onError={() => setLoaded(true)}
             />
           ) : (
-            // A still version of the generated art: one WebGL canvas per card would be too heavy for a long list.
-            <div className={`flyer-generated ${queer ? "is-queer" : ""}`}>
-              <div className="flyer-shader" data-fallback="true" />
-              <div className="flyer-type">
-                <span className="flyer-type-title">{e.title}</span>
-                <span className="flyer-type-sub">{e.venueName ?? e.neighborhood}</span>
-              </div>
-            </div>
+            // Seeded SVG art; animates only while on screen (GeneratedArt).
+            <GeneratedArt
+              className="flyer-generated"
+              id={e.id}
+              queer={queer}
+              title={e.title}
+              when={`${dayLabel(e.startsAt, now, tz)} / ${timeRange(e.startsAt, e.endsAt, tz)}`}
+              venue={e.venueName ?? e.neighborhood}
+            />
           )}
         </button>
       )}

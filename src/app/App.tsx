@@ -3,6 +3,7 @@ import { MapView } from "../map/MapView";
 import { Button, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { LocateButton } from "../components/LocateButton";
+import { GeneratedArt } from "../components/GeneratedArt";
 import { formatMiles, milesBetween, useMyLocation } from "../lib/location";
 import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
@@ -643,6 +644,7 @@ export function App() {
                     </span>
                     <span className="card-body">
                       <span className="card-title">{e.title}</span>
+                      {!e.thumbUrl && <GeneratedArt compact id={e.id} queer={queer} className="card-thumb" />}
                       {e.thumbUrl && (
                         <img
                           className="card-thumb"

@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { GeneratedArt } from "../components/GeneratedArt";
 import { Button, Frame, Label, LinkButton, Sheet, Tag, Skeleton } from "../components/ui";
 import { announceGoing } from "../lib/install";
 import { ShareSheet } from "../components/ShareSheet";
@@ -13,8 +14,6 @@ import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
 import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type HostSummary, type Me, type MeProfile, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
-// three.js loads only when someone opens an event without uploaded art.
-const FlyerShader = lazy(() => import("../components/FlyerShader"));
 
 const LINK_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -28,21 +27,6 @@ const LINK_LABELS: Record<string, string> = {
 
 export function eventUrl(id: string) {
   return `${location.origin}/e/${encodeURIComponent(id)}`;
-}
-
-function GeneratedFlyer({ event }: { event: EventSummary }) {
-  const queer = event.scenes.includes("queer");
-  return (
-    <div className={`flyer-generated ${queer ? "is-queer" : ""}`}>
-      <Suspense fallback={<div className="flyer-shader" data-fallback="true" />}>
-        <FlyerShader id={event.id} queer={queer} />
-      </Suspense>
-      <div className="flyer-type">
-        <span className="flyer-type-title">{event.title}</span>
-        <span className="flyer-type-sub">{event.venueName ?? event.neighborhood}</span>
-      </div>
-    </div>
-  );
 }
 
 export function EventSheet({
@@ -216,7 +200,15 @@ export function EventSheet({
               <FlyerImage src={e.flyerUrl} alt={`Flyer for ${e.title}`} />
             </button>
           ) : (
-            <GeneratedFlyer event={e} />
+            <GeneratedArt
+              className="flyer-generated"
+              hero
+              id={e.id}
+              queer={queer}
+              title={e.title}
+              when={`${dayLabel(e.startsAt, now, tz)} / ${timeRange(e.startsAt, e.endsAt, tz)}`}
+              venue={e.venueName ?? e.neighborhood}
+            />
           )}
         </div>
 

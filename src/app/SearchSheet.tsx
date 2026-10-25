@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GeneratedArt } from "../components/GeneratedArt";
 import { Button, Label, Sheet, Skeleton } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { clock, dayLabel } from "../lib/time";
@@ -218,7 +219,7 @@ export function SearchSheet({
                         onOpenEvent(e.id);
                       }}
                     >
-                      <SearchThumb url={e.thumbUrl} queer={queer} />
+                      <SearchThumb url={e.thumbUrl} id={e.id} queer={queer} />
                       <span className="search-text">
                         <span className="search-name">
                           {e.status === "cancelled" && <span className="dim">Cancelled: </span>}
@@ -284,9 +285,9 @@ function PlaceGroup({ label, places, now, tz, onPick }: { label: string; places:
   );
 }
 
-/** The flyer thumbnail, or a scene-colored square when there isn't one (or it fails to load). */
-function SearchThumb({ url, queer }: { url: string | null; queer: boolean }) {
+/** The flyer thumbnail, or the event's generated art when there isn't one (or it fails to load). */
+function SearchThumb({ url, id, queer }: { url: string | null; id: string; queer: boolean }) {
   const [failed, setFailed] = useState(false);
-  if (!url || failed) return <span className={`search-thumb search-thumb-empty ${queer ? "is-queer" : ""}`} aria-hidden="true" />;
+  if (!url || failed) return <GeneratedArt compact id={id} queer={queer} className="search-thumb" />;
   return <img className="search-thumb" src={url} alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
