@@ -43,6 +43,8 @@ export function useMyLocation() {
     if (watchId.current !== null || document.visibilityState !== "visible") return;
     watchId.current = navigator.geolocation.watchPosition(
       (p) => {
+        // A fix that lands after the person turned location off is dropped.
+        if (!wanted.current) return;
         setPosition({
           lng: p.coords.longitude,
           lat: p.coords.latitude,
