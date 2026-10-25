@@ -55,7 +55,7 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
       <div className="stack" data-reveal>
         <Label glyph="!">Review</Label>
         <h1 className="sheet-title">Reports.</h1>
-        <p className="note serif-text">Events with three reports are hidden until someone here restores or removes them. Reports on people never hide anything on their own.</p>
+        <p className="note serif-text">New organizers' first events wait here for approval. Events with three reports are hidden until someone here restores or removes them. Reports on people never hide anything on their own.</p>
       </div>
       {error && <p className="note">{error}</p>}
       {items && items.length === 0 && <p className="note">Nothing to review. The queue is clear.</p>}
@@ -74,7 +74,7 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
               <li key={key} className="mod-item">
                 <div className="mod-head">
                   <Tag tone="strong">{it.type === "event" ? "Event" : "Person"}</Tag>
-                  {it.type === "event" && it.status !== "live" && <Tag tone={it.status === "hidden" ? "accent" : "default"}>{it.status === "hidden" ? "Hidden" : it.status === "cancelled" ? "Cancelled" : it.status}</Tag>}
+                  {it.type === "event" && it.status !== "live" && <Tag tone={it.status === "hidden" ? "accent" : "default"}>{it.status === "hidden" ? "Hidden" : it.status === "draft" ? "First post: needs review" : it.status === "cancelled" ? "Cancelled" : it.status}</Tag>}
                   <span className="dim num">{it.reasons.length} report{it.reasons.length === 1 ? "" : "s"}</span>
                 </div>
                 <p className="mod-title">{it.title}</p>
@@ -118,14 +118,26 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
                       <Button size="sm" onClick={() => onOpenEvent(it.id)}>
                         Open
                       </Button>
+                      {it.status === "draft" && (
+                        <>
+                          <Button size="sm" variant="primary" disabled={busy === key} onClick={() => act(key, () => api.modEvent(it.id, "approve"), "Approved. It's on the map.")}>
+                            Approve
+                          </Button>
+                          <Button size="sm" disabled={busy === key} onClick={() => act(key, () => api.modEvent(it.id, "reject"), "Rejected.")}>
+                            Reject
+                          </Button>
+                        </>
+                      )}
                       {it.status === "hidden" && (
                         <Button size="sm" disabled={busy === key} onClick={() => act(key, () => api.modEvent(it.id, "restore"), "Restored to the map.")}>
                           Restore
                         </Button>
                       )}
-                      <Button size="sm" disabled={busy === key} onClick={() => act(key, () => api.modEvent(it.id, "remove"), "Removed from the map.")}>
-                        Remove
-                      </Button>
+                      {it.status !== "draft" && (
+                        <Button size="sm" disabled={busy === key} onClick={() => act(key, () => api.modEvent(it.id, "remove"), "Removed from the map.")}>
+                          Remove
+                        </Button>
+                      )}
                       {it.reasons.length > 0 && it.status !== "hidden" && (
                         <Button size="sm" variant="ghost" disabled={busy === key} onClick={() => act(key, () => api.modEvent(it.id, "dismiss"), "Reports dismissed.")}>
                           Dismiss

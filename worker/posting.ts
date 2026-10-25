@@ -111,22 +111,41 @@ posting.post("/events", async (c) => {
 
   const id = `${slugify(v.title)}-${randomSuffix()}`;
   const db = c.env.DB;
+  // A new organizer's first event waits for a moderator (status 'draft' = in review).
+  const trusted = await isTrustedOrganizer(db, userId);
+  const status = trusted ? "live" : "draft";
   await db.batch([
     db
       .prepare(
         `INSERT INTO events (id, city_id, venue_id, title, pitch, description, starts_at, ends_at, address, neighborhood, lat, lng,
            getting_there, door_price, ticket_url, policy_tags, scenes, flyer_key, video_id, status, is_sample)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', 0)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
       )
       .bind(
         id, city, loc.venueId, v.title, v.pitch, v.description, v.startsAt, v.endsAt, loc.address, loc.neighborhood, loc.lat, loc.lng,
-        v.gettingThere, v.doorPrice, v.ticketUrl, JSON.stringify(v.policyTags), JSON.stringify(v.scenes), v.flyerKey, v.videoId,
+        v.gettingThere, v.doorPrice, v.ticketUrl, JSON.stringify(v.policyTags), JSON.stringify(v.scenes), v.flyerKey, v.videoId, status,
       ),
     db.prepare("INSERT INTO event_hosts (event_id, user_id, role) VALUES (?, ?, 'owner')").bind(id, userId),
     ...(await lineupStatements(db, id, v.lineup)),
   ]);
-  return c.json({ id }, 201);
+  return c.json({ id, status }, 201);
 });
+
+/**
+ * Trusted organizers post straight to the map: verified ones, and anyone who already has an
+ * approved event (live or since cancelled). Everyone else's first post goes to review.
+ */
+export async function isTrustedOrganizer(db: D1Database, userId: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT (SELECT is_verified_organizer FROM users WHERE id = ?) AS verified,
+              EXISTS (SELECT 1 FROM events e JOIN event_hosts h ON h.event_id = e.id
+                      WHERE h.user_id = ? AND e.status IN ('live', 'cancelled')) AS approved`,
+    )
+    .bind(userId, userId)
+    .first<{ verified: number | null; approved: number }>();
+  return row?.verified === 1 || row?.approved === 1;
+}
 
 posting.patch("/events/:id", async (c) => {
   const userId = needUser(c);

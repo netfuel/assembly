@@ -207,7 +207,11 @@ export function EventSheet({
         {detail?.viewerIsHost && (
           <div className="host-bar" data-reveal>
             <span>
-              <Tag tone="strong">Host</Tag> {e.status === "hidden" ? "Hidden after reports. We'll review it." : "You posted this."}
+              <Tag tone="strong">Host</Tag> {e.status === "hidden"
+                ? "Hidden after reports. We'll review it."
+                : e.status === "draft"
+                  ? "In review. Only you can see it until a moderator approves it, usually within a day."
+                  : "You posted this."}
             </span>
             <Button size="sm" onClick={() => onEdit(detail)}>
               Edit

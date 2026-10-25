@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import type { ModItem } from "../shared/types";
+import { notifyUsers } from "./push";
 
 /** True when one of this user's sign-in emails is listed in MODERATORS. */
 export async function isModerator(env: Env, userId: string | null): Promise<boolean> {
@@ -65,7 +66,7 @@ moderation.get("/mod/queue", async (c) => {
     g.reasons.push(r.reason);
     groups.set(key, g);
   }
-  const { results: hidden } = await db.prepare("SELECT id FROM events WHERE status = 'hidden'").all<{ id: string }>();
+  const { results: hidden } = await db.prepare("SELECT id FROM events WHERE status IN ('hidden', 'draft')").all<{ id: string }>();
   for (const h of hidden) if (!groups.has(`event:${h.id}`)) groups.set(`event:${h.id}`, { type: "event", id: h.id, reasons: [], latest: "" });
 
   const items: ModItem[] = [];
@@ -104,7 +105,9 @@ moderation.get("/mod/queue", async (c) => {
     }
   }
   // Most-reported first, then newest.
-  items.sort((a, b) => b.reasons.length - a.reasons.length || b.latest.localeCompare(a.latest));
+  // First posts waiting for review first, then most-reported, then newest.
+  const waiting = (i: ModItem) => (i.type === "event" && i.status === "draft" ? 1 : 0);
+  items.sort((a, b) => waiting(b) - waiting(a) || b.reasons.length - a.reasons.length || b.latest.localeCompare(a.latest));
   return c.json({ items });
 });
 
@@ -117,6 +120,24 @@ moderation.post("/mod/events/:id", async (c) => {
   const id = c.req.param("id");
   const { action } = (await c.req.json().catch(() => ({}))) as { action?: string };
   const db = c.env.DB;
+  if (action === "approve" || action === "reject") {
+    const ev = await db
+      .prepare(
+        `SELECT e.title, e.status, h.user_id FROM events e LEFT JOIN event_hosts h ON h.event_id = e.id AND h.role = 'owner' WHERE e.id = ?`,
+      )
+      .bind(id)
+      .first<{ title: string; status: string; user_id: string | null }>();
+    if (!ev || ev.status !== "draft") return c.json({ error: "That event isn't waiting for review." }, 409);
+    await db.prepare("UPDATE events SET status = ? WHERE id = ? AND status = 'draft'").bind(action === "approve" ? "live" : "hidden", id).run();
+    if (ev.user_id) {
+      const msg =
+        action === "approve"
+          ? { title: "You're on the map", body: `${ev.title} is live. Share it around.`, url: `/e/${id}`, tag: `review-${id}` }
+          : { title: "Your event wasn't approved", body: `${ev.title} didn't go live. Reply to hello@assembly.rsvp if you have questions.`, url: `/e/${id}`, tag: `review-${id}` };
+      c.executionCtx.waitUntil(notifyUsers(c.env, [ev.user_id], msg).catch((err) => console.error("review push", err)));
+    }
+    return c.json({ ok: true });
+  }
   if (action === "restore") {
     await db.batch([
       db.prepare("UPDATE events SET status = 'live' WHERE id = ? AND status = 'hidden'").bind(id),

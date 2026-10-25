@@ -216,7 +216,7 @@ export function AnnounceForm({
   theme: MapTheme;
   config: ServerConfig;
   existing: EventDetail | null;
-  onPosted: (id: string, mode: "created" | "updated") => void;
+  onPosted: (id: string, mode: "created" | "updated" | "review") => void;
   onCancelled: (id: string) => void;
   toast: (msg: string) => void;
 }) {
@@ -317,8 +317,9 @@ export function AnnounceForm({
     setSaving(true);
     try {
       const res = existing ? await api.updateEvent(existing.id, draft) : await api.createEvent(draft);
+      const inReview = !existing && "status" in res && res.status === "draft";
       if (!existing) saveDraft(null);
-      onPosted(res.id, existing ? "updated" : "created");
+      onPosted(res.id, existing ? "updated" : inReview ? "review" : "created");
     } catch (err) {
       if (err instanceof ApiError) {
         // Lineup errors are numbered by the rows we sent; empty rows were left out, so map back to form rows.
@@ -360,7 +361,7 @@ export function AnnounceForm({
         <p className="note serif-text">
           {editing
             ? "Changes show right away. People who RSVP'd see an Updated tag."
-            : "Everything goes live as soon as you post: full address, times, and lineup, so people can plan."}
+            : "The full address, times, and lineup show from the moment it's live, so people can plan. A new organizer's first event is reviewed first; after that, posts go up right away."}
         </p>
       </div>
 

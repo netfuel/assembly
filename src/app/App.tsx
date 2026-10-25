@@ -437,7 +437,12 @@ export function App() {
           config={config}
           existing={editing}
           toast={toast}
-          onPosted={(id, mode) => afterSave(id, mode === "created" ? "Posted. It's on the map." : "Changes saved.")}
+          onPosted={(id, mode) =>
+            afterSave(
+              id,
+              mode === "created" ? "Posted. It's on the map." : mode === "review" ? "Sent for review. You'll hear when it's live." : "Changes saved.",
+            )
+          }
           onCancelled={(id) => afterSave(id, "Marked cancelled. It stays on the map so people know.")}
         />
       </Sheet>

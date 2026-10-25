@@ -171,7 +171,7 @@ function MyList({ items, tz, onOpen }: { items: MyEvent[]; tz: string; onOpen: (
             <span className="my-when num">
               {dayLabel(e.starts_at, now, tz)} / {clock(e.starts_at, tz)}
             </span>
-            {e.status === "cancelled" ? <Tag>Cancelled</Tag> : e.status === "hidden" ? <Tag>Hidden</Tag> : e.rsvp === "interested" ? <Tag>Interested</Tag> : null}
+            {e.status === "cancelled" ? <Tag>Cancelled</Tag> : e.status === "hidden" ? <Tag>Hidden</Tag> : e.status === "draft" ? <Tag>In review</Tag> : e.rsvp === "interested" ? <Tag>Interested</Tag> : null}
           </button>
         </li>
       ))}

@@ -101,7 +101,7 @@ export const api = {
       ? request<{ status: RsvpStatus }>(`/api/events/${enc(id)}/rsvp`, { method: "PUT", body: JSON.stringify({ status }) })
       : request<{ status: null }>(`/api/events/${enc(id)}/rsvp`, { method: "DELETE" }),
 
-  createEvent: (draft: EventDraft) => request<{ id: string }>("/api/events", { method: "POST", body: JSON.stringify(draft) }),
+  createEvent: (draft: EventDraft) => request<{ id: string; status: "live" | "draft" }>("/api/events", { method: "POST", body: JSON.stringify(draft) }),
   updateEvent: (id: string, draft: EventDraft) =>
     request<{ id: string }>(`/api/events/${enc(id)}`, { method: "PATCH", body: JSON.stringify(draft) }),
   cancelEvent: (id: string) => request<{ id: string; status: "cancelled" }>(`/api/events/${enc(id)}/cancel`, { method: "POST" }),
@@ -110,7 +110,7 @@ export const api = {
   reportUser: (id: string, reason: string, note: string) =>
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   modQueue: () => request<{ items: ModItem[] }>("/api/mod/queue").then((r) => r.items),
-  modEvent: (id: string, action: "restore" | "remove" | "dismiss") =>
+  modEvent: (id: string, action: "restore" | "remove" | "dismiss" | "approve" | "reject") =>
     request<{ ok: true }>(`/api/mod/events/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
   modUser: (id: string, action: "dismiss" | "hide-events") =>
     request<{ ok: true }>(`/api/mod/users/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),

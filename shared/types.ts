@@ -61,7 +61,7 @@ export interface EventSummary {
   isSample: boolean;
   /** Edited meaningfully after posting (more than 10 minutes later). */
   updated: boolean;
-  status: "live" | "cancelled" | "hidden";
+  status: "live" | "cancelled" | "hidden" | "draft";
 }
 
 export interface EventDetail extends EventSummary {
