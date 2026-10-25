@@ -95,10 +95,18 @@ try {
        terms     https://assembly.rsvp/terms
    - Credentials > Create credentials > OAuth client ID > Web application. Authorized redirect URIs:
        https://assembly.rsvp/api/auth/google/callback
+       https://www.assembly.rsvp/api/auth/google/callback
        http://localhost:5173/api/auth/google/callback
    - Publish the app (Audience > Publish) so anyone can sign in, not just test users.`);
-    console.log("   Easiest: drag the client_secret_….json file Google gave you into this window when asked.");
-    const answer = await ask("Path to the Google JSON file, or press Enter to type the ID and secret instead:");
+    // Use a client_secret_….json in this folder if there is one (it's git-ignored).
+    const { readdirSync } = await import("node:fs");
+    const found = readdirSync(".").find((f) => /^client_secret.*\.json$/.test(f));
+    let answer = "";
+    if (found && (await yes(`Use ${found.slice(0, 40)}… from this folder?`, true))) answer = found;
+    else {
+      console.log("   Easiest: drag the client_secret_….json file Google gave you into this window when asked.");
+      answer = await ask("Path to the Google JSON file, or press Enter to type the ID and secret instead:");
+    }
     let id = "";
     let secret = "";
     if (answer) {
@@ -110,11 +118,14 @@ try {
       if (!client?.client_id || !client?.client_secret) throw new Error("That file doesn't look like a Google OAuth client (no client_id/client_secret).");
       if (json.installed) console.log("   \x1b[33m!\x1b[0m This is a Desktop client. Create a Web application client instead, or redirects will fail.");
       const uris = client.redirect_uris ?? [];
-      const needed = "https://assembly.rsvp/api/auth/google/callback";
-      if (!uris.includes(needed)) {
-        console.log(`   \x1b[33m!\x1b[0m The file doesn't list ${needed} as a redirect URI.`);
-        console.log("     Add it in Google Cloud Console > Credentials > your client, or sign-in will fail. (Files downloaded before adding it won't show it.)");
-      } else ok("Redirect URI for assembly.rsvp is listed");
+      const needed = ["https://assembly.rsvp/api/auth/google/callback", "https://www.assembly.rsvp/api/auth/google/callback"];
+      const missing = needed.filter((u) => !uris.includes(u));
+      if (missing.length) {
+        console.log("   \x1b[33m!\x1b[0m This file doesn't list these redirect URIs:");
+        for (const u of missing) console.log(`       ${u}`);
+        console.log("     Add them in Google Cloud Console > Credentials > your client, or sign-in will fail there.");
+        console.log("     (The ID and secret don't change, so it's fine to continue. A file downloaded before the change won't show them.)");
+      } else ok("Redirect URIs for assembly.rsvp are listed");
       id = client.client_id;
       secret = client.client_secret;
     } else if (await yes("Have the client ID and secret ready to paste?")) {
@@ -124,7 +135,7 @@ try {
     if (id && secret) {
       await putSecret("GOOGLE_CLIENT_ID", id);
       await putSecret("GOOGLE_CLIENT_SECRET", secret);
-      console.log("   You can delete the JSON file now; the secret is stored in Cloudflare.");
+      console.log("   Stored in Cloudflare. You can delete the JSON file now (it's git-ignored either way).");
     } else todo.push("Google sign-in: create the OAuth client (step 6 above), then run this again.");
   }
 

@@ -56,7 +56,7 @@ Locally, with `DEV_LOGIN=1`, the email option works without any of this: the cod
 
 **Google**
 1. In Google Cloud Console, create an OAuth client of type "Web application".
-2. Add authorized redirect URIs: `http://localhost:5173/api/auth/google/callback` and `https://<your-domain>/api/auth/google/callback`.
+2. Add authorized redirect URIs: `https://assembly.rsvp/api/auth/google/callback`, `https://www.assembly.rsvp/api/auth/google/callback`, and `http://localhost:5173/api/auth/google/callback` for local work. The site root alone (`https://assembly.rsvp`) is not enough.
 3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
 **Apple** (needs a paid Apple Developer account, and only works over HTTPS)
