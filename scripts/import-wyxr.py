@@ -266,15 +266,18 @@ def main(path):
         lines.append(
             f"INSERT INTO events ({', '.join(cols)}) VALUES ({', '.join(q(vals[c]) for c in cols)}) "
             f"ON CONFLICT(id) DO UPDATE SET {', '.join(f'{c}=excluded.{c}' for c in upd)}, "
-            "updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now');"
+            "updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') "
+            # Once an organizer has taken the event over (it has a host), their edits win over WYXR's.
+            "WHERE NOT EXISTS (SELECT 1 FROM event_hosts h WHERE h.event_id = events.id);"
         )
     ids = ", ".join(q(e["id"]) for e in kept)
     lines += [
         "",
-        "-- Future WYXR listings that dropped out of this export, unless someone RSVP'd.",
+        "-- Future WYXR listings that dropped out of this export, unless someone RSVP'd or an organizer took them over.",
         f"DELETE FROM events WHERE id LIKE 'wyxr-%' AND id NOT IN ({ids}) "
         "AND starts_at > strftime('%Y-%m-%dT%H:%M:%SZ','now') "
-        "AND NOT EXISTS (SELECT 1 FROM rsvps r WHERE r.event_id = events.id);",
+        "AND NOT EXISTS (SELECT 1 FROM rsvps r WHERE r.event_id = events.id) "
+        "AND NOT EXISTS (SELECT 1 FROM event_hosts h WHERE h.event_id = events.id);",
         "",
     ]
     OUT.write_text("\n".join(lines))

@@ -49,6 +49,7 @@ export function EventSheet({
   onClose,
   onNeedSignIn,
   onEdit,
+  onChanged,
   config,
   toast,
 }: {
@@ -58,6 +59,8 @@ export function EventSheet({
   onClose: () => void;
   onNeedSignIn: () => void;
   onEdit: (detail: EventDetail) => void;
+  /** Something about the event changed (a new host): reload it. */
+  onChanged: () => void;
   config: ServerConfig;
   toast: (msg: string) => void;
 }) {
@@ -216,6 +219,12 @@ export function EventSheet({
             <Button size="sm" onClick={() => onEdit(detail)}>
               Edit
             </Button>
+          </div>
+        )}
+
+        {detail && detail.viewerCanEdit && !detail.viewerIsHost && (
+          <div data-reveal>
+            <ModBar detail={detail} onEdit={() => onEdit(detail)} onHanded={onChanged} toast={toast} />
           </div>
         )}
 
@@ -513,5 +522,54 @@ export function VarsityMark() {
       <path d="M2 1h12v10l-6 4-6-4z" fill="var(--color-accent)" />
       <path d="M5.2 10.5 8 3.5l2.8 7M6.2 8h3.6" fill="none" stroke="var(--color-accent-ink)" strokeWidth="1.6" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+/** Moderator tools on any event: edit it, or hand it to an organizer's account by email. */
+function ModBar({ detail, onEdit, onHanded, toast }: { detail: EventDetail; onEdit: () => void; onHanded: () => void; toast: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const imported = detail.id.startsWith("wyxr-");
+  return (
+    <div className="host-bar mod-bar">
+      <span>
+        <Tag tone="strong">Moderator</Tag>{" "}
+        {detail.host ? `Hosted by ${detail.host.displayName}.` : imported ? "Imported from WYXR. No host yet." : "No host yet."}
+      </span>
+      <span className="inline-actions">
+        <Button size="sm" onClick={onEdit}>
+          Edit
+        </Button>
+        <Button size="sm" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          Hand over
+        </Button>
+      </span>
+      {open && (
+        <form
+          className="hand-over"
+          onSubmit={async (ev) => {
+            ev.preventDefault();
+            setBusy(true);
+            try {
+              const r = await api.handOver(detail.id, email);
+              toast(`${r.host.displayName} is the host now.`);
+              setOpen(false);
+              onHanded();
+            } catch (err) {
+              toast(err instanceof ApiError ? err.message : "Couldn't hand it over.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <input type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} placeholder="Organizer's sign-in email" aria-label="Organizer's sign-in email" required />
+          <Button type="submit" size="sm" variant="primary" disabled={busy || !email.trim()}>
+            {busy ? "Saving…" : "Make them host"}
+          </Button>
+          <p className="note">They need an account first. They'll get a notification and can edit and cancel it.{imported ? " Future WYXR imports won't overwrite it once it has a host." : ""}</p>
+        </form>
+      )}
+    </div>
   );
 }

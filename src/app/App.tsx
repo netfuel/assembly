@@ -416,6 +416,7 @@ export function App() {
             setEditing(d);
             setSheet("announce");
           }}
+          onChanged={() => setDetailVersion((v) => v + 1)}
           toast={toast}
         />
       )}

@@ -94,7 +94,7 @@ Moderators review reports, restore or remove hidden events, and give organizers 
 - Production: `npx wrangler secret put MODERATORS` and enter, for example, `you@gmail.com,partner@icloud.com`. Use the email your Google or Apple sign-in uses.
 - Locally: `MODERATORS=test-moderator@dev.localhost` in `.dev.vars`, then use the test sign-in with the name "Test Moderator".
 
-Moderators get a "Review reports" button on their profile, can open hidden events, and see Verify on the organizer line of any event.
+Moderators get a "Review reports" button on their profile, can open hidden events, and see Verify on the organizer line of any event. They can also edit or cancel any event and hand it to an organizer: open the event, choose Hand over, and enter the organizer's sign-in email (they need an account first). That's how imported WYXR listings and events posted on an organizer's behalf get their real host. Once an event has a host, re-running the WYXR import leaves it alone. Moderators' own posts skip review.
 
 ## Go live
 

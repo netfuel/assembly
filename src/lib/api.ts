@@ -117,6 +117,8 @@ export const api = {
     request<{ ok: true }>(`/api/mod/events/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
   modUser: (id: string, action: "dismiss" | "hide-events") =>
     request<{ ok: true }>(`/api/mod/users/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
+  handOver: (id: string, email: string) =>
+    request<{ ok: true; host: { id: string; displayName: string } }>(`/api/mod/events/${enc(id)}/host`, { method: "POST", body: JSON.stringify({ email }) }),
   setVerified: (id: string, verified: boolean) =>
     request<{ ok: true; verified: boolean }>(`/api/mod/users/${enc(id)}/verified`, { method: "PUT", body: JSON.stringify({ verified }) }),
   myEvents: () => request<{ hosting: MyEvent[]; going: MyEvent[] }>("/api/me/events"),

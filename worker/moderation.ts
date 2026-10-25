@@ -195,6 +195,33 @@ moderation.post("/mod/users/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+/**
+ * Hand an event to an organizer: imported listings, or events a moderator posted for them.
+ * The account with that sign-in email becomes the owner (replacing any current host) and can edit it.
+ */
+moderation.post("/mod/events/:id/host", async (c) => {
+  const id = c.req.param("id");
+  const { email } = (await c.req.json().catch(() => ({}))) as { email?: string };
+  const address = typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return c.json({ error: "Enter the organizer's sign-in email." }, 400);
+  const db = c.env.DB;
+  const ev = await db.prepare("SELECT title FROM events WHERE id = ?").bind(id).first<{ title: string }>();
+  if (!ev) return c.json({ error: "We couldn't find that event." }, 404);
+  const user = await db
+    .prepare("SELECT u.id, u.display_name FROM identities i JOIN users u ON u.id = i.user_id WHERE lower(i.email) = ? ORDER BY i.email_verified DESC LIMIT 1")
+    .bind(address)
+    .first<{ id: string; display_name: string }>();
+  if (!user) return c.json({ error: "No account uses that email yet. Ask them to sign up first, then try again." }, 404);
+  await db.batch([
+    db.prepare("DELETE FROM event_hosts WHERE event_id = ?").bind(id),
+    db.prepare("INSERT INTO event_hosts (event_id, user_id, role) VALUES (?, ?, 'owner')").bind(id, user.id),
+  ]);
+  c.executionCtx.waitUntil(
+    notifyUsers(c.env, [user.id], { title: "You're the host now", body: `${ev.title} is yours to edit on Assembly.`, url: `/e/${id}`, tag: `host-${id}` }).catch(() => 0),
+  );
+  return c.json({ ok: true, host: { id: user.id, displayName: user.display_name } });
+});
+
 /** Verified organizer badge: given by the Assembly team. */
 moderation.put("/mod/users/:id/verified", async (c) => {
   const { verified } = (await c.req.json().catch(() => ({}))) as { verified?: boolean };

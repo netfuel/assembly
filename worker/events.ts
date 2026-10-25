@@ -161,6 +161,7 @@ events.get("/:id", async (c) => {
     lineup,
     viewerRsvp,
     viewerIsHost,
+    viewerCanEdit: viewerIsHost || (!!userId && (await isModerator(c.env, userId))),
     host: hostRow ? { id: hostRow.id, displayName: hostRow.display_name, avatarUrl: hostRow.avatar_url, verified: hostRow.is_verified_organizer === 1 } : null,
     venueId: row.venue_id,
     flyerKey: row.flyer_key,

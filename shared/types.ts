@@ -71,6 +71,8 @@ export interface EventDetail extends EventSummary {
   lineup: LineupSlot[];
   viewerRsvp: RsvpStatus | null;
   viewerIsHost: boolean;
+  /** Host, or a moderator (who can edit any event and hand it to an organizer). */
+  viewerCanEdit: boolean;
   /** The organizer who posted it. */
   host: HostSummary | null;
   venueId: string | null;

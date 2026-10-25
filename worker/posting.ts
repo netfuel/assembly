@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { notifyUsers, rsvpUserIds } from "./push";
 import { describeChange } from "./notify";
+import { isModerator } from "./moderation";
 import type { AppContext } from "./env";
 import { slugify, validateEvent, type EventInput } from "./validate";
 import type { ArtistLinks } from "../shared/types";
@@ -112,7 +113,7 @@ posting.post("/events", async (c) => {
   const id = `${slugify(v.title)}-${randomSuffix()}`;
   const db = c.env.DB;
   // A new organizer's first event waits for a moderator (status 'draft' = in review).
-  const trusted = await isTrustedOrganizer(db, userId);
+  const trusted = (await isTrustedOrganizer(db, userId)) || (await isModerator(c.env, userId));
   const status = trusted ? "live" : "draft";
   await db.batch([
     db
@@ -151,7 +152,8 @@ posting.patch("/events/:id", async (c) => {
   const userId = needUser(c);
   if (!userId) return c.json({ error: "Sign in to edit this event." }, 401);
   const id = c.req.param("id");
-  if (!(await isHost(c.env.DB, id, userId))) return c.json({ error: "Only the event's hosts can edit it." }, 403);
+  // Hosts edit their own events; moderators can edit any (imported listings, posts made for an organizer).
+  if (!(await isHost(c.env.DB, id, userId)) && !(await isModerator(c.env, userId))) return c.json({ error: "Only the event's hosts can edit it." }, 403);
   const city = c.env.DEFAULT_CITY;
   const current = await c.env.DB.prepare("SELECT video_id, flyer_key, title, starts_at, ends_at, address, venue_id, status FROM events WHERE id = ?")
     .bind(id)
@@ -207,7 +209,7 @@ posting.post("/events/:id/cancel", async (c) => {
   const userId = needUser(c);
   if (!userId) return c.json({ error: "Sign in to cancel this event." }, 401);
   const id = c.req.param("id");
-  if (!(await isHost(c.env.DB, id, userId))) return c.json({ error: "Only the event's hosts can cancel it." }, 403);
+  if (!(await isHost(c.env.DB, id, userId)) && !(await isModerator(c.env, userId))) return c.json({ error: "Only the event's hosts can cancel it." }, 403);
   // Only live events can be cancelled; a hidden (reported) event stays hidden until reviewed.
   const res = await c.env.DB.prepare(
     "UPDATE events SET status = 'cancelled', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'live'",
