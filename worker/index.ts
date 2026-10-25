@@ -10,6 +10,7 @@ import { emailAuth } from "./emailAuth";
 import { events } from "./events";
 import { fonts } from "./fonts";
 import { og } from "./og";
+import { feeds, sitemap } from "./feeds";
 import { withSecurityHeaders } from "./security";
 import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
@@ -129,6 +130,8 @@ root.onError((err, c) => {
 });
 root.route("/fonts", fonts);
 root.route("/e", og);
+root.route("/feeds", feeds);
+root.get("/sitemap.xml", sitemap);
 root.route("/", app);
 
 export default {

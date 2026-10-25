@@ -42,7 +42,7 @@ export default defineConfig({
         navigateFallback: "/index.html",
         // Push notifications: public/push-sw.js adds the push and notificationclick handlers.
         importScripts: ["/push-sw.js"],
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/feeds\//, /^\/sitemap\.xml$/],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {

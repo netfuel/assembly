@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button, Frame, Label, LinkButton, Sheet, Tag, Skeleton } from "../components/ui";
 import { announceGoing } from "../lib/install";
+import { ShareSheet } from "../components/ShareSheet";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
@@ -143,20 +144,12 @@ export function EventSheet({
     }
   }
 
-  async function share() {
-    const url = eventUrl(e.id);
-    const text = `${e.title}: ${dayLabel(e.startsAt, now, tz)}, ${timeRange(e.startsAt, e.endsAt, tz)}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: e.title, text, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      toast("Link copied.");
-    } catch (err) {
-      if ((err as DOMException)?.name !== "AbortError") toast(`Copy this link: ${url}`);
-    }
-  }
+  const [sharing, setSharing] = useState(false);
+  const shareTarget = {
+    title: e.title,
+    text: `${e.title}: ${dayLabel(e.startsAt, now, tz)}, ${timeRange(e.startsAt, e.endsAt, tz)}${e.venueName ? ` at ${e.venueName}` : ""}`,
+    url: eventUrl(e.id),
+  };
 
   const [story, setStory] = useState<null | "working" | { url: string; file: File }>(null);
   async function makeStory() {
@@ -279,7 +272,7 @@ export function EventSheet({
               Tickets ↗
             </LinkButton>
           )}
-          <Button size="lg" onClick={share}>
+          <Button size="lg" onClick={() => setSharing(true)}>
             Share
           </Button>
           <Button size="lg" onClick={makeStory} disabled={story === "working"}>
@@ -424,6 +417,7 @@ export function EventSheet({
         )}
       </div>
     </Sheet>
+    <ShareSheet target={shareTarget} open={sharing} onClose={() => setSharing(false)} toast={toast} />
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
 import { Button, Chip, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
+import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
 import { api, ApiError } from "../lib/api";
 import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
@@ -50,7 +51,7 @@ export function App() {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
   const [providersFailed, setProvidersFailed] = useState(false);
-  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation">(null);
+  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation" | "subscribe">(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<ServerConfig>({ video: false, streamCustomerCode: null });
   const [editing, setEditing] = useState<EventDetail | null>(null);
@@ -373,6 +374,9 @@ export function App() {
             <h2 className="rail-title">{heading}</h2>
             <span className="rail-count num">{loadState === "ready" ? `${pad(shown.length)} events` : "—"}</span>
             <span className="spacer" />
+            <button className="link rail-subscribe" onClick={() => setSheet("subscribe")}>
+              Subscribe
+            </button>
             <span className="legend">
               <span className="marker" style={{ background: "var(--color-uv)" }} /> queer-centered
               <span className="marker" style={{ background: "var(--color-sodium)" }} /> everything else
@@ -559,6 +563,14 @@ export function App() {
         <ModerationSheet tz={city.timezone} onOpenEvent={openEvent} toast={toast} />
       </Sheet>
 
+      <SubscribeSheet
+        open={sheet === "subscribe"}
+        onClose={() => setSheet(null)}
+        citySlug={city.id}
+        cityName={city.name}
+        scene={scenes.length === 1 ? scenes[0] : null}
+        toast={toast}
+      />
       <InstallPrompt />
       <Toast message={toastMsg} />
     </div>
