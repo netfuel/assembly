@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#e9eaec" />
+    <meta name="theme-color" content="#0a0a0b" />
     <meta name="description" content="Underground music, DIY shows, raves, and queer nights on one live map." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -18,12 +18,12 @@
     <meta property="og:image" content="https://assembly.rsvp/icons/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <script>
-      // Set the theme before first paint so there's no flash. Light unless the visitor chose dark.
+      // Set the theme before first paint so there's no flash. Dark unless the visitor chose light.
       (function () {
-        var t = "light";
-        try { if (localStorage.getItem("assembly-theme") === "dark") t = "dark"; } catch (e) {}
+        var t = "dark";
+        try { if (localStorage.getItem("assembly-theme") === "light") t = "light"; } catch (e) {}
         document.documentElement.dataset.theme = t;
-        if (t === "dark") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#0a0a0b");
+        if (t === "light") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#e9eaec");
       })();
     </script>
   </head>

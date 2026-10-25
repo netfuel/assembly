@@ -5,12 +5,12 @@ export type Theme = "light" | "dark";
 const KEY = "assembly-theme";
 const THEME_COLOR: Record<Theme, string> = { light: "#e9eaec", dark: "#0a0a0b" };
 
-/** Light is the default. Only an explicit choice switches to dark; the OS setting doesn't. */
+/** Dark is the default. Only an explicit choice switches to light; the OS setting doesn't. */
 export function readTheme(): Theme {
   try {
-    return localStorage.getItem(KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(KEY) === "light" ? "light" : "dark";
   } catch {
-    return "light";
+    return "dark";
   }
 }
 
@@ -20,7 +20,7 @@ export function applyTheme(theme: Theme) {
 }
 
 export function useTheme(): [Theme, (t: Theme) => void] {
-  const [theme, setThemeState] = useState<Theme>(() => (document.documentElement.dataset.theme === "dark" ? "dark" : readTheme()));
+  const [theme, setThemeState] = useState<Theme>(() => (document.documentElement.dataset.theme === "light" ? "light" : readTheme()));
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
     applyTheme(t);

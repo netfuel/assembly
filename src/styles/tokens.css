@@ -2,8 +2,8 @@
   Assembly design tokens, v3.
   Structure after save.design: hairline frames with diamond corner nodes, one hot magenta accent,
   color carried by content (flyers, video, pins). Type after timeless.co/type: the Timeless family
-  set editorially. Light is the default theme (cool paper gray, like the Timeless specimen);
-  dark is the near-black night mode. The theme lives on <html data-theme>.
+  set editorially. Dark, the near-black night mode, is the default theme;
+  light (cool paper gray, like the Timeless specimen) is the alternative. The theme lives on <html data-theme>.
 */
 :root,
 :root[data-theme="light"] {

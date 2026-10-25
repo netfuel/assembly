@@ -27,8 +27,8 @@ export default defineConfig({
         scope: "/",
         display: "standalone",
         orientation: "portrait",
-        background_color: "#e9eaec",
-        theme_color: "#e9eaec",
+        background_color: "#0a0a0b",
+        theme_color: "#0a0a0b",
         categories: ["music", "entertainment", "social"],
         icons: [
           { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
