@@ -582,9 +582,13 @@ export function App() {
             <h2 className="rail-title">{heading}</h2>
             <span className="rail-count num">{loadState === "ready" ? `${pad(shown.length)} events` : "—"}</span>
             <span className="spacer" />
-            <button className="link rail-subscribe" onClick={() => setSheet("subscribe")}>
+            <Button size="sm" className="rail-subscribe" onClick={() => setSheet("subscribe")}>
+              <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                <rect x="2" y="3" width="12" height="11" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
               Subscribe
-            </button>
+            </Button>
           </div>
           <div className="rail" ref={railRef}>
             {loadState === "loading" && (

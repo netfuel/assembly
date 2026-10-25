@@ -384,7 +384,6 @@
 /* Share and subscribe menus */
 .share-options { display: grid; gap: var(--space-2); }
 .share-url { color: var(--color-faint); font-size: var(--text-2xs); overflow-wrap: anywhere; }
-.rail-subscribe { font-size: var(--text-2xs); color: var(--color-muted); }
 .share-sheet-panel { z-index: 41; }
 .scrim:has(+ .share-sheet-panel) { z-index: 40; }
 .share-qr-wrap { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-3); align-items: center; }
@@ -585,7 +584,15 @@
 .locate.is-recenter { color: var(--color-accent-text); }
 .locate-spin { animation: locate-spin var(--dur-loop) linear infinite; }
 @keyframes locate-spin { to { transform: rotate(360deg); } }
-.rail-head { padding-right: calc(max(var(--space-4), env(safe-area-inset-right)) + var(--tap) + var(--space-2)); }
+/* Subscribe sits right under the locate control, same glass treatment and right edge. */
+.rail-head { align-items: center; }
+.rail-subscribe {
+  gap: 6px; border-radius: 999px; border-color: var(--color-line-strong); background: var(--color-glass);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--color-muted); box-shadow: var(--shadow-float);
+  transition: color var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+}
+.rail-subscribe:hover { color: var(--color-fg); }
+.rail-subscribe:active { transform: scale(0.95); }
 
 /* Cards: a gradient line sweeps along the top edge when a card is highlighted or focused */
 .card-frame::after {
