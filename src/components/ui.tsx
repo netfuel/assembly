@@ -105,6 +105,54 @@ export function Label({ glyph, children }: { glyph?: string; children: ReactNode
 const openSheets: object[] = [];
 
 /**
+ * Phones: pull a sheet down to close it, like a native bottom sheet. Only starts when the sheet's
+ * content is scrolled to the top, so normal scrolling is untouched. Past 110 px (or a quick flick) it closes.
+ */
+function useSwipeToClose(ref: React.RefObject<HTMLDivElement | null>, close: () => void) {
+  const state = useRef<{ y: number; t: number; dy: number; active: boolean } | null>(null);
+  const isPhone = () => window.matchMedia("(max-width: 899px)").matches;
+  const body = () => ref.current?.querySelector<HTMLElement>(".sheet-body");
+  const set = (dy: number, animate: boolean) => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.transition = animate ? "transform 180ms ease-out" : "none";
+    el.style.transform = dy ? `translateY(${dy}px)` : "";
+  };
+  return {
+    start(e: React.TouchEvent) {
+      if (!isPhone() || (body()?.scrollTop ?? 0) > 0) return;
+      // Don't hijack sliders, maps, or text fields inside the sheet.
+      if ((e.target as HTMLElement).closest("input, textarea, select, .pin-picker, .maplibregl-map")) return;
+      state.current = { y: e.touches[0].clientY, t: Date.now(), dy: 0, active: false };
+    },
+    move(e: React.TouchEvent) {
+      const s = state.current;
+      if (!s) return;
+      const dy = e.touches[0].clientY - s.y;
+      if (!s.active) {
+        if (dy < 6) {
+          if (dy < -6) state.current = null; // scrolling up: let the content scroll
+          return;
+        }
+        s.active = true;
+      }
+      s.dy = Math.max(0, dy);
+      set(s.dy, false);
+    },
+    end() {
+      const s = state.current;
+      state.current = null;
+      if (!s?.active) return;
+      const fast = s.dy / Math.max(1, Date.now() - s.t) > 0.6;
+      if (s.dy > 110 || (fast && s.dy > 40)) {
+        set(window.innerHeight, true);
+        setTimeout(close, 170);
+      } else set(0, true);
+    },
+  };
+}
+
+/**
  * A panel that slides up from the bottom on phones and docks to the right on wide screens.
  * `modal` dims the map behind it; non-modal sheets leave the map usable.
  */
@@ -129,6 +177,7 @@ export function Sheet({
   // Held in a ref so a new onClose each render doesn't re-run the focus effect and steal focus from inputs.
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const drag = useSwipeToClose(ref, () => closeRef.current());
 
   useEffect(() => {
     if (!open) return;
@@ -150,7 +199,18 @@ export function Sheet({
   return (
     <>
       <div className={`scrim ${modal ? "" : "scrim-soft"}`} onClick={onClose} />
-      <div ref={ref} className={`sheet ${center ? "sheet-center" : ""} ${className}`} role="dialog" aria-modal={modal} aria-label={label} tabIndex={-1}>
+      <div
+        ref={ref}
+        className={`sheet ${center ? "sheet-center" : ""} ${className}`}
+        role="dialog"
+        aria-modal={modal}
+        aria-label={label}
+        tabIndex={-1}
+        onTouchStart={drag.start}
+        onTouchMove={drag.move}
+        onTouchEnd={drag.end}
+        onTouchCancel={drag.end}
+      >
         <button className="sheet-close" onClick={onClose} aria-label="Close">
           <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
             <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />

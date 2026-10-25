@@ -70,6 +70,20 @@ export function EventSheet({
   const [busy, setBusy] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const rsvpBtn = useRef<HTMLButtonElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  // Once the main buttons scroll out of view, a compact RSVP bar sticks to the bottom of the sheet.
+  const [stickyBar, setStickyBar] = useState(false);
+  useEffect(() => {
+    const el = actionsRef.current;
+    const scroller = el?.closest(".sheet-body");
+    if (!el || !scroller || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setStickyBar(!entry.isIntersecting && entry.boundingClientRect.top < (entry.rootBounds?.top ?? 0)),
+      { root: scroller, threshold: 0 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   const goingEl = useRef<HTMLSpanElement>(null);
   const now = new Date();
   const e = detail ?? summary;
@@ -242,7 +256,7 @@ export function EventSheet({
           </p>
         </header>
 
-        <div className="event-actions" data-reveal>
+        <div className="event-actions" data-reveal ref={actionsRef}>
           <Button
             ref={rsvpBtn}
             size="lg"
@@ -375,6 +389,20 @@ export function EventSheet({
             {detail?.host && detail.host.id !== me?.id && (
               <ReportBox target={{ kind: "user", id: detail.host.id, name: "the organizer" }} me={me} onNeedSignIn={onNeedSignIn} toast={toast} />
             )}
+          </div>
+        )}
+
+        {stickyBar && !cancelled && (
+          <div className="sticky-rsvp" aria-hidden={false}>
+            <span className="sticky-rsvp-title">{e.title}</span>
+            {e.ticketUrl && (
+              <LinkButton size="sm" href={e.ticketUrl} target="_blank" rel="noopener noreferrer">
+                Tickets ↗
+              </LinkButton>
+            )}
+            <Button size="sm" variant={rsvp === "going" ? "confirmed" : "primary"} onClick={() => choose("going")} disabled={busy} aria-pressed={rsvp === "going"}>
+              {rsvp === "going" ? "Going ✓" : "RSVP"}
+            </Button>
           </div>
         )}
       </div>
