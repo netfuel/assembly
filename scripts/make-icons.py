@@ -1,53 +1,193 @@
-"""Renders Assembly's app icons into public/icons. Run: python3 scripts/make-icons.py
+"""Renders Assembly's mark into public/icons: favicon.svg plus the PNG app icons.
+Run: python3 scripts/make-icons.py   (needs: pip install fonttools brotli pillow)
 
-The mark is a block "A" printed slightly off-register over sodium orange, with a UV pin dot.
-Keep this in step with public/icons/favicon.svg.
+The mark is the capital "A" from Timeless Serif, the site's own serif, at display style
+(STYL 0) and the wordmark's weight, printed slightly off-register over the accent magenta,
+with a UV pin dot. The glyph is converted to outlines, so the icons never depend on the
+font loading. Needs public/fonts/timeless/TimelessSerifVF.woff2 (gitignored; see README "Fonts").
 """
 from pathlib import Path
-from PIL import Image, ImageDraw
 
-GROUND = (10, 10, 11, 255)
-FG = (237, 237, 238, 255)
-SODIUM = (255, 61, 242, 255)  # offset print in the accent magenta
-UV = (169, 139, 255, 255)
+from fontTools.pens.basePen import BasePen
+from fontTools.pens.boundsPen import BoundsPen
+from fontTools.pens.recordingPen import RecordingPen
+from fontTools.pens.svgPathPen import SVGPathPen
+from fontTools.pens.transformPen import TransformPen
+from fontTools.ttLib import TTFont
+from fontTools.varLib.instancer import instantiateVariableFont
+from PIL import Image, ImageChops, ImageDraw
 
-OUTER = [(214, 96), (298, 96), (412, 420), (332, 420), (310, 352), (202, 352), (180, 420), (100, 420)]
-COUNTER = [(226, 286), (286, 286), (256, 192)]
+ROOT = Path(__file__).resolve().parent.parent
+FONT = ROOT / "public" / "fonts" / "timeless" / "TimelessSerifVF.woff2"
+OUT = ROOT / "public" / "icons"
 
-OUT = Path(__file__).resolve().parent.parent / "public" / "icons"
+AXES = {"wght": 540, "STYL": 0}  # display style; a step heavier than the wordmark (400) so it holds at 16px
+
+GROUND = "#0a0a0b"
+FG = "#ededee"
+ECHO = "#ff3df2"  # off-register print in the accent magenta
+UV = "#a98bff"
+
+BOX = 512
+CAP = 324  # cap height of the "A" inside the 512 box
+ECHO_OFFSET = (14, 12)
+DOT = (404, 118, 30)  # cx, cy, r
 
 
-def draw_mark(size: int, scale: float, rounded: bool) -> Image.Image:
+def glyph_contours():
+    """The "A" as contours in 512-box coordinates (y down), centered optically."""
+    font = instantiateVariableFont(TTFont(FONT), AXES)
+    gs = font.getGlyphSet()
+    name = font.getBestCmap()[ord("A")]
+    cap_h = font["OS/2"].sCapHeight
+
+    bp = BoundsPen(gs)
+    gs[name].draw(bp)
+    x0, y0, x1, y1 = bp.bounds
+    k = CAP / cap_h
+    w = (x1 - x0) * k
+    tx = (BOX - w) / 2 - x0 * k
+    # Sit the cap height in the middle, nudged down a touch so the apex clears the dot.
+    ty = (BOX + CAP) / 2 + 8
+
+    rec = RecordingPen()
+    gs[name].draw(TransformPen(rec, (k, 0, 0, -k, tx, ty)))
+
+    contours, cur = [], []
+    for op, args in rec.value:
+        cur.append((op, args))
+        if op in ("closePath", "endPath"):
+            contours.append(cur)
+            cur = []
+    return contours
+
+
+class FlattenPen(BasePen):
+    """Turns curves into polylines so Pillow can fill them."""
+
+    def __init__(self, steps=24):
+        super().__init__(None)
+        self.steps, self.polys, self.cur = steps, [], []
+
+    def _moveTo(self, p):
+        self.cur = [p]
+
+    def _lineTo(self, p):
+        self.cur.append(p)
+
+    def _curveToOne(self, p1, p2, p3):
+        p0 = self.cur[-1]
+        for i in range(1, self.steps + 1):
+            t = i / self.steps
+            mt = 1 - t
+            self.cur.append(tuple(mt**3 * a + 3 * mt * mt * t * b + 3 * mt * t * t * c + t**3 * d for a, b, c, d in zip(p0, p1, p2, p3)))
+
+    def _qCurveToOne(self, p1, p2):
+        p0 = self.cur[-1]
+        for i in range(1, self.steps + 1):
+            t = i / self.steps
+            mt = 1 - t
+            self.cur.append(tuple(mt * mt * a + 2 * mt * t * b + t * t * c for a, b, c in zip(p0, p1, p2)))
+
+    def _closePath(self):
+        self.polys.append(self.cur)
+        self.cur = []
+
+    _endPath = _closePath
+
+
+def replay(contour, pen):
+    for op, args in contour:
+        getattr(pen, op)(*args)
+
+
+def polygons(contours, dx=0, dy=0):
+    out = []
+    for c in contours:
+        fp = FlattenPen()
+        replay(c, TransformPen(fp, (1, 0, 0, 1, dx, dy)))
+        out.extend(fp.polys)
+    return out
+
+
+def area(poly):
+    return sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1])) / 2
+
+
+def split_outer(contours):
+    """Outer contours wind the same way as the largest one; the rest are counters."""
+    signed = [area(polygons([c])[0]) for c in contours]
+    sign = 1 if max(signed, key=abs) > 0 else -1
+    outer = [c for c, a in zip(contours, signed) if a * sign > 0]
+    return outer
+
+
+def svg_path(contours, dx=0, dy=0):
+    pen = SVGPathPen(None, ntos=lambda v: f"{v:.1f}".rstrip("0").rstrip("."))
+    for c in contours:
+        replay(c, TransformPen(pen, (1, 0, 0, 1, dx, dy)))
+    return pen.getCommands()
+
+
+def write_svg(contours):
+    outer = split_outer(contours)
+    dx, dy = ECHO_OFFSET
+    cx, cy, r = DOT
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {BOX} {BOX}">
+  <!-- "A" from Timeless Serif (wght {AXES['wght']}, STYL {AXES['STYL']}). Generated by scripts/make-icons.py: edit that, not this. -->
+  <rect width="{BOX}" height="{BOX}" rx="112" fill="{GROUND}"/>
+  <path d="{svg_path(contours, dx, dy)}" fill="{ECHO}"/>
+  <path d="{svg_path(outer)}" fill="{GROUND}"/>
+  <path d="{svg_path(contours)}" fill="{FG}"/>
+  <circle cx="{cx}" cy="{cy}" r="{r}" fill="{UV}"/>
+</svg>
+"""
+    (OUT / "favicon.svg").write_text(svg)
+
+
+def fill_glyph(size, contours, dx, dy, k, off):
+    """Glyph mask with counters cut out: each contour toggles coverage (even-odd)."""
+    mask = Image.new("1", (size, size), 0)
+    for poly in polygons(contours, dx, dy):
+        layer = Image.new("1", (size, size), 0)
+        ImageDraw.Draw(layer).polygon([(off + x * k, off + y * k) for x, y in poly], fill=1)
+        mask = ImageChops.logical_xor(mask, layer)
+    return mask.convert("L")
+
+
+def draw_mark(contours, size, scale, rounded):
     ss = 4  # supersample for smooth edges
     s = size * ss
+    k = s / BOX * scale
+    off = (s - BOX * k) / 2
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    radius = int(s * 0.22) if rounded else 0
-    d.rounded_rectangle([0, 0, s - 1, s - 1], radius=radius, fill=GROUND)
+    d.rounded_rectangle([0, 0, s - 1, s - 1], radius=int(s * 0.22) if rounded else 0, fill=GROUND)
 
-    def tx(pts, dx=0, dy=0):
-        k = s / 512 * scale
-        off = (s - 512 * k) / 2
-        return [(off + (x + dx) * k, off + (y + dy) * k) for x, y in pts]
+    dx, dy = ECHO_OFFSET
+    outer = split_outer(contours)
+    img.paste(ECHO, mask=fill_glyph(s, contours, dx, dy, k, off))
+    img.paste(GROUND, mask=fill_glyph(s, outer, 0, 0, k, off))
+    img.paste(FG, mask=fill_glyph(s, contours, 0, 0, k, off))
 
-    d.polygon(tx(OUTER, 16, 14), fill=SODIUM)
-    d.polygon(tx(COUNTER, 16, 14), fill=GROUND)
-    d.polygon(tx(OUTER), fill=FG)
-    d.polygon(tx(COUNTER), fill=GROUND)
-    cx, cy = tx([(392, 128)])[0]
-    r = 30 * s / 512 * scale
+    cx, cy, r = DOT
+    cx, cy, r = off + cx * k, off + cy * k, r * k
     d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=UV)
     return img.resize((size, size), Image.LANCZOS)
 
 
 def main():
+    if not FONT.exists():
+        raise SystemExit(f"Missing {FONT}. See README, Fonts.")
     OUT.mkdir(parents=True, exist_ok=True)
-    draw_mark(192, 1.0, True).save(OUT / "icon-192.png")
-    draw_mark(512, 1.0, True).save(OUT / "icon-512.png")
+    contours = glyph_contours()
+    write_svg(contours)
+    draw_mark(contours, 192, 1.0, True).save(OUT / "icon-192.png")
+    draw_mark(contours, 512, 1.0, True).save(OUT / "icon-512.png")
     # Maskable icons get cropped to a circle or squircle: full-bleed ground, mark inside the safe zone.
-    draw_mark(512, 0.72, False).save(OUT / "icon-maskable-512.png")
+    draw_mark(contours, 512, 0.72, False).save(OUT / "icon-maskable-512.png")
     # iOS adds its own rounding.
-    draw_mark(180, 0.9, False).save(OUT / "apple-touch-icon.png")
+    draw_mark(contours, 180, 0.9, False).save(OUT / "apple-touch-icon.png")
     print("wrote icons to", OUT)
 
 
