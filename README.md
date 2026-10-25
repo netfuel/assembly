@@ -54,6 +54,8 @@ People enter their email, get a 6-digit code, and they're in; the first time cre
 
 Locally, with `DEV_LOGIN=1`, the email option works without any of this: the code shows on screen and in the terminal.
 
+If sign-up says `E_SENDER_DOMAIN_NOT_AVAILABLE`, the sender's domain isn't enabled for sending. Onboarding a subdomain (like `mail.assembly.rsvp`) only allows addresses on that subdomain. Double-click `check-email.command` to see what's enabled and turn on assembly.rsvp itself.
+
 **Google**
 1. In Google Cloud Console, create an OAuth client of type "Web application".
 2. Add authorized redirect URIs: `https://assembly.rsvp/api/auth/google/callback`, `https://www.assembly.rsvp/api/auth/google/callback`, and `http://localhost:5173/api/auth/google/callback` for local work. The site root alone (`https://assembly.rsvp`) is not enough.
