@@ -93,6 +93,8 @@ export function MapView({
     });
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
+    // First full draw (style and visible tiles): the splash waits for this before revealing the app.
+    map.once("load", () => window.dispatchEvent(new Event("assembly:map-ready")));
 
     // Event layers are added on every style load, so they come back after a theme switch.
     map.on("style.load", () => {

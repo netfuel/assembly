@@ -8,7 +8,7 @@ import { App } from "./app/App";
 import { LegalPage } from "./legal/LegalPage";
 import { ErrorBoundary, reportError } from "./components/ErrorBoundary";
 import { captureInstallPrompt } from "./lib/install";
-import { hideSplash } from "./lib/splash";
+import { skipSplash } from "./lib/splash";
 
 registerSW({ immediate: true });
 captureInstallPrompt();
@@ -21,9 +21,8 @@ window.addEventListener("unhandledrejection", (e) => reportError(e.reason));
 const legalMatch = location.pathname.match(/^\/(terms|privacy|guidelines)\/?$/);
 const legal = legalMatch ? (legalMatch[1] as "terms" | "privacy" | "guidelines") : null;
 
-// Never hold anyone on the splash: the app has its own loading states after this.
-setTimeout(hideSplash, 4000);
-if (legal) hideSplash();
+// The splash caps itself at 6 seconds (src/lib/splash.ts); policy pages don't use it.
+if (legal) skipSplash();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

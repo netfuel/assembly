@@ -26,33 +26,101 @@
         try { if (localStorage.getItem("assembly-theme") === "light") t = "light"; } catch (e) {}
         document.documentElement.dataset.theme = t;
         if (t === "light") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#e9eaec");
+        // Shared links and policy pages go straight to their content: no splash.
+        if (/^\/(e|a|v|o|terms|privacy|guidelines)\//.test(location.pathname + "/") || /[?&]ref=/.test(location.search)) document.documentElement.dataset.splash = "skip";
       })();
     </script>
     <style>
-      /* First-load splash. Lives outside #root; App fades it out once events are in. */
-      #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #0a0a0b; color: #ededee; transition: opacity 320ms ease, visibility 320ms; }
-      [data-theme="light"] #splash { background: #e9eaec; color: #121315; }
-      #splash.is-done { opacity: 0; visibility: hidden; }
-      #splash .sp { display: grid; justify-items: center; gap: 18px; }
-      #splash .sp-mark { font: 400 34px/1 "Timeless Serif", "Iowan Old Style", Georgia, serif; letter-spacing: -0.01em; display: flex; align-items: center; gap: 12px; }
-      #splash .sp-mark img { width: 34px; height: 34px; }
-      #splash .sp-pins { display: flex; gap: 10px; }
-      #splash .sp-pins i { width: 8px; height: 8px; display: block; animation: sp-pulse 1.2s ease-in-out infinite; }
-      #splash .sp-pins i:nth-child(1) { background: #7b5cf0; }
-      #splash .sp-pins i:nth-child(2) { background: #ff3df2; animation-delay: 0.15s; }
-      #splash .sp-pins i:nth-child(3) { background: #f07f12; animation-delay: 0.3s; }
-      #splash .sp-line { font: 500 10px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.55; }
-      @keyframes sp-pulse { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
-      @media (prefers-reduced-motion: reduce) { #splash .sp-pins i { animation: none; opacity: 0.8; } #splash { transition: none; } }
+      /*
+        Cold-start splash (to-do: Preloader). Four beats, the first three in CSS so they start on the first paint:
+        1. 0–0.8s   thin accent lines shoot in from the screen edges toward the A
+        2. 0.5–1.5s they lock into the A: its outline draws, then the off-register echo prints
+        3. 1.5–2.0s the A turns into a window onto the live app underneath
+        4. ≥2.4s    src/lib/splash.ts zooms through the A's right stem once the map and events are ready
+                    (hard cap 6s, tap to skip), then a pin pulse marks the reveal
+        The A is the logo's Timeless Serif outline (public/icons/favicon.svg), in a 512 box.
+      */
+      #splash { --sp-ground: #0a0a0b; --sp-fg: #ededee; --sp-accent: #ff3df2; --sp-uv: #a98bff;
+        position: fixed; inset: 0; z-index: 100; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent;
+        animation: sp-failsafe 0.4s 9s forwards; }
+      [data-theme="light"] #splash { --sp-ground: #e9eaec; --sp-fg: #121315; }
+      [data-splash="skip"] #splash { display: none; }
+      #splash svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+      #splash .sp-ground, #splash .sp-cover { fill: var(--sp-ground); }
+      #splash .sp-cover { animation: sp-window 0.5s 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+      /* Strokes are in the 720-unit view box: about 1.5px on screen at each size (dashes need plain, scaling strokes). */
+      #splash .sp-outline, #splash .sp-echo, #splash .sp-lines line { fill: none; stroke: var(--sp-accent); stroke-width: 1.25; stroke-linecap: square; }
+      @media (max-width: 760px), (max-height: 760px) { #splash .sp-outline, #splash .sp-echo, #splash .sp-lines line { stroke-width: 1.8; } }
+      @media (max-width: 480px) { #splash .sp-outline, #splash .sp-echo, #splash .sp-lines line { stroke-width: 2.6; } }
+      #splash .sp-outline { stroke: var(--sp-fg); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: sp-draw 1s 0.5s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+      #splash .sp-echo { opacity: 0; animation: sp-print 0.5s 1.35s steps(1) forwards; }
+      #splash .sp-lines line { stroke-dasharray: 22 100; stroke-dashoffset: 22; animation: sp-shoot 0.75s cubic-bezier(0.55, 0, 0.2, 1) forwards; }
+      #splash .sp-lines line:nth-child(2) { animation-delay: 0.06s; } #splash .sp-lines line:nth-child(3) { animation-delay: 0.12s; }
+      #splash .sp-lines line:nth-child(4) { animation-delay: 0.18s; } #splash .sp-lines line:nth-child(5) { animation-delay: 0.24s; }
+      #splash .sp-lines line:nth-child(6) { animation-delay: 0.3s; } #splash .sp-lines line:nth-child(7) { animation-delay: 0.36s; }
+      #splash .sp-lines line:nth-child(8) { animation-delay: 0.42s; stroke: var(--sp-uv); }
+      #splash .sp-zoom { transform: translate(294px, 250px) scale(1) translate(-294px, -250px);
+        transition: transform 0.95s cubic-bezier(0.7, 0, 0.84, 0); }
+      #splash .sp-caption { position: absolute; left: 0; right: 0; top: calc(50% + min(22.5vw, 22.5vh) + 26px); text-align: center;
+        font: 500 10px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 0.24em; text-transform: uppercase; color: var(--sp-fg);
+        opacity: 0; animation: sp-fade-in 0.6s 1.2s ease forwards; transition: opacity 0.25s; }
+      #splash .sp-caption b { color: var(--sp-accent); font-weight: 500; }
+      #splash .sp-ring { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%;
+        border: 1.5px solid var(--sp-accent); opacity: 0; pointer-events: none; }
+      /* Beat 4, driven by splash.ts */
+      #splash.is-reveal { cursor: default; pointer-events: none; }
+      #splash.is-reveal .sp-zoom { transform: translate(294px, 250px) scale(70) translate(-294px, -250px); }
+      #splash .sp-marks, #splash .sp-lines { transition: opacity 0.3s; }
+      #splash.is-reveal .sp-marks, #splash.is-reveal .sp-lines { opacity: 0; }
+      #splash.is-reveal .sp-caption { animation: none; opacity: 0; }
+      #splash.is-reveal .sp-cover { animation: none; opacity: 0; }
+      #splash.is-done svg { opacity: 0; transition: opacity 0.15s; }
+      #splash.is-done .sp-ring { animation: sp-ring 0.7s cubic-bezier(0.2, 0.6, 0.3, 1) forwards; }
+      @keyframes sp-shoot { 0% { stroke-dashoffset: 22; opacity: 1; } 85% { stroke-dashoffset: -78; opacity: 1; } 100% { stroke-dashoffset: -78; opacity: 0; } }
+      @keyframes sp-draw { to { stroke-dashoffset: 0; } }
+      @keyframes sp-print { 0% { opacity: 0.9; } 20% { opacity: 0; } 40%, 100% { opacity: 0.85; } }
+      @keyframes sp-window { to { opacity: 0; } }
+      @keyframes sp-fade-in { to { opacity: 0.7; } }
+      @keyframes sp-ring { 0% { opacity: 0.9; transform: scale(0.4); } 100% { opacity: 0; transform: scale(9); } }
+      @keyframes sp-failsafe { to { opacity: 0; visibility: hidden; } }
+      /* Reduced motion: no flying lines or zoom; the logo appears, then fades out when the app is ready. */
+      @media (prefers-reduced-motion: reduce) {
+        #splash .sp-lines { display: none; }
+        #splash .sp-outline { animation: none; stroke-dashoffset: 0; }
+        #splash .sp-echo { animation: none; opacity: 0.85; }
+        #splash .sp-cover, #splash .sp-caption { animation: none; }
+        #splash .sp-caption { opacity: 0.7; }
+        #splash .sp-zoom, #splash.is-reveal .sp-zoom { transition: none; transform: none; }
+        #splash.is-reveal { opacity: 0; transition: opacity 0.3s; }
+        #splash.is-done .sp-ring { animation: none; }
+      }
     </style>
   </head>
   <body>
     <div id="splash" aria-hidden="true">
-      <div class="sp">
-        <div class="sp-mark"><img src="/icons/favicon.svg" alt="" />Assembly</div>
-        <div class="sp-pins"><i></i><i></i><i></i></div>
-        <div class="sp-line">Finding tonight</div>
-      </div>
+      <svg viewBox="-104 -96 720 720" preserveAspectRatio="xMidYMid meet" focusable="false">
+        <g class="sp-zoom">
+          <path class="sp-ground" fill-rule="evenodd" d="M-40000-40000H40000V40000H-40000ZM131.2 381.7 246.6 102H266.3L379.5 380Q385 393.4 390.8 399.8Q396.6 406.3 403.9 408.8Q411.3 411.4 425.9 413.3V426H283.7V413.3Q302.9 411.6 310.1 408.4Q317.4 405.1 317.7 399.1Q318 393.1 313.3 381L289.7 320.5H176.9L152.7 382.2Q148.3 393.4 150 399.3Q151.7 405.3 160.2 408.5Q168.8 411.6 188.7 413.3V426H86.1V413.3Q99.8 411.5 106.9 409.2Q114 406.9 120.1 400.8Q126.1 394.7 131.2 381.7ZM283 301.5 234.4 178.9 185 301.5Z" />
+          <path class="sp-cover" fill-rule="evenodd" d="M131.2 381.7 246.6 102H266.3L379.5 380Q385 393.4 390.8 399.8Q396.6 406.3 403.9 408.8Q411.3 411.4 425.9 413.3V426H283.7V413.3Q302.9 411.6 310.1 408.4Q317.4 405.1 317.7 399.1Q318 393.1 313.3 381L289.7 320.5H176.9L152.7 382.2Q148.3 393.4 150 399.3Q151.7 405.3 160.2 408.5Q168.8 411.6 188.7 413.3V426H86.1V413.3Q99.8 411.5 106.9 409.2Q114 406.9 120.1 400.8Q126.1 394.7 131.2 381.7ZM283 301.5 234.4 178.9 185 301.5Z" />
+          <g class="sp-marks">
+            <path class="sp-echo" d="M131.2 381.7 246.6 102H266.3L379.5 380Q385 393.4 390.8 399.8Q396.6 406.3 403.9 408.8Q411.3 411.4 425.9 413.3V426H283.7V413.3Q302.9 411.6 310.1 408.4Q317.4 405.1 317.7 399.1Q318 393.1 313.3 381L289.7 320.5H176.9L152.7 382.2Q148.3 393.4 150 399.3Q151.7 405.3 160.2 408.5Q168.8 411.6 188.7 413.3V426H86.1V413.3Q99.8 411.5 106.9 409.2Q114 406.9 120.1 400.8Q126.1 394.7 131.2 381.7ZM283 301.5 234.4 178.9 185 301.5Z" transform="translate(14 12)" />
+            <path class="sp-outline" d="M131.2 381.7 246.6 102H266.3L379.5 380Q385 393.4 390.8 399.8Q396.6 406.3 403.9 408.8Q411.3 411.4 425.9 413.3V426H283.7V413.3Q302.9 411.6 310.1 408.4Q317.4 405.1 317.7 399.1Q318 393.1 313.3 381L289.7 320.5H176.9L152.7 382.2Q148.3 393.4 150 399.3Q151.7 405.3 160.2 408.5Q168.8 411.6 188.7 413.3V426H86.1V413.3Q99.8 411.5 106.9 409.2Q114 406.9 120.1 400.8Q126.1 394.7 131.2 381.7Z" pathLength="1" />
+            <path class="sp-outline" d="M283 301.5 234.4 178.9 185 301.5Z" pathLength="1" />
+          </g>
+        </g>
+        <g class="sp-lines">
+          <line x1="256" y1="-1400" x2="256" y2="102" pathLength="100" />
+          <line x1="-1500" y1="-1100" x2="131" y2="381" pathLength="100" />
+          <line x1="1900" y1="-1000" x2="380" y2="380" pathLength="100" />
+          <line x1="-1700" y1="320" x2="177" y2="320" pathLength="100" />
+          <line x1="2200" y1="320" x2="290" y2="320" pathLength="100" />
+          <line x1="-1300" y1="1700" x2="86" y2="426" pathLength="100" />
+          <line x1="1800" y1="1700" x2="426" y2="426" pathLength="100" />
+          <line x1="2100" y1="-1600" x2="266" y2="102" pathLength="100" />
+        </g>
+      </svg>
+      <div class="sp-caption">Assembly <b>·</b> Memphis</div>
+      <div class="sp-ring"></div>
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
