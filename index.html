@@ -21,9 +21,10 @@
     <meta name="twitter:card" content="summary_large_image" />
     <script>
       // Set the theme before first paint so there's no flash. Dark unless the visitor chose light.
+      // The choice lives under a new key since dark became the default; the old key is ignored and cleared.
       (function () {
         var t = "dark";
-        try { if (localStorage.getItem("assembly-theme") === "light") t = "light"; } catch (e) {}
+        try { localStorage.removeItem("assembly-theme"); if (localStorage.getItem("assembly-theme-choice") === "light") t = "light"; } catch (e) {}
         document.documentElement.dataset.theme = t;
         if (t === "light") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#e9eaec");
         // Shared links and policy pages go straight to their content: no splash.
@@ -36,7 +37,7 @@
         1. 0–0.8s   thin accent lines shoot in from the screen edges toward the A
         2. 0.5–1.5s they lock into the A: its outline draws, then the off-register echo prints
         3. 1.5–2.0s the A turns into a window onto the live app underneath
-        4. ≥2.4s    src/lib/splash.ts zooms through the A's right stem once the map and events are ready
+        4. ≥2.1s    src/lib/splash.ts zooms through the A's right stem once the events are in (and the map, up to 0.4s more)
                     (hard cap 6s, tap to skip), then a pin pulse marks the reveal
         The A is the logo's Timeless Serif outline (public/icons/favicon.svg), in a 512 box.
       */

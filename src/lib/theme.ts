@@ -2,7 +2,9 @@ import { useCallback, useState } from "react";
 
 export type Theme = "light" | "dark";
 
-const KEY = "assembly-theme";
+// Only a tap on the theme toggle writes this. Renamed from "assembly-theme" when dark became the
+// default, so choices saved under the old light default don't carry over.
+const KEY = "assembly-theme-choice";
 const THEME_COLOR: Record<Theme, string> = { light: "#e9eaec", dark: "#0a0a0b" };
 
 /** Dark is the default. Only an explicit choice switches to light; the OS setting doesn't. */

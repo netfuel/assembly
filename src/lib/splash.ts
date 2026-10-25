@@ -1,10 +1,11 @@
 /**
  * Beat 4 of the cold-start splash in index.html: the zoom through the A and the pin pulse.
- * Beats 1–3 run in CSS from the first paint. This waits until the map has drawn and the events are in,
- * and until the CSS beats have played (MIN_MS from page start), then reveals. HARD_CAP_MS reveals
- * regardless, and a tap anywhere skips straight to the reveal.
+ * Beats 1–3 run in CSS from the first paint; the window opens at 2.0s. This reveals as soon as the
+ * events are in and MIN_MS has passed, waiting up to MAP_GRACE_MS more for the map's first full draw so
+ * the A doesn't linger. HARD_CAP_MS reveals regardless, and a tap anywhere skips straight to the reveal.
  */
-const MIN_MS = 2400;
+const MIN_MS = 2100;
+const MAP_GRACE_MS = 400;
 const HARD_CAP_MS = 6000;
 const ZOOM_MS = 850; // matches the .sp-zoom transition, minus the fade at its end
 const REMOVE_MS = 1700; // after the pin pulse finishes
@@ -27,9 +28,13 @@ function reveal() {
   window.setTimeout(() => splash.remove(), reduce ? 400 : REMOVE_MS);
 }
 
+let scheduled = false;
 function maybeReveal() {
-  if (!eventsReady || !mapReady) return;
-  window.setTimeout(reveal, Math.max(0, MIN_MS - performance.now()));
+  if (!eventsReady) return;
+  if (mapReady) return void window.setTimeout(reveal, Math.max(0, MIN_MS - performance.now()));
+  if (scheduled) return;
+  scheduled = true;
+  window.setTimeout(reveal, Math.max(0, MIN_MS + MAP_GRACE_MS - performance.now()));
 }
 
 /** The first events are in (or failed to load: the app shows its own message). */
