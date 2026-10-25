@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Map as MapLibre, setWorkerUrl, type MapLayerMouseEvent } from "maplibre-gl";
+import { Map as MapLibre, setWorkerUrl, type FilterSpecification, type MapLayerMouseEvent } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { mapPalette, mapStyle, type MapTheme } from "./mapStyle";
@@ -12,6 +12,18 @@ import "./map.css";
 setWorkerUrl(workerUrl);
 
 const SOURCE = "events";
+const SELECTED_SOURCE = "event-selected";
+/** Pins cluster up to this zoom; flyer pins start one level later. */
+const CLUSTER_MAX_ZOOM = 12;
+const UNCLUSTERED: FilterSpecification = ["!", ["has", "point_count"]];
+
+function selectedFeature(events: EventSummary[], id: string | null): GeoJSON.FeatureCollection {
+  const e = id ? events.find((x) => x.id === id) : null;
+  return {
+    type: "FeatureCollection",
+    features: e ? [{ type: "Feature", geometry: { type: "Point", coordinates: [e.lng, e.lat] }, properties: { id: e.id } }] : [],
+  };
+}
 
 function toGeoJSON(events: EventSummary[], now: Date): GeoJSON.FeatureCollection {
   return {
@@ -81,7 +93,21 @@ export function MapView({
     // Event layers are added on every style load, so they come back after a theme switch.
     map.on("style.load", () => {
       const MAP_COLORS = mapPalette(latest.current.theme);
-      map.addSource(SOURCE, { type: "geojson", data: toGeoJSON(latest.current.events, new Date()), promoteId: "id" });
+      // Clustered at city zoom so a busy night reads as a few counts, not a pile of pins.
+      map.addSource(SOURCE, {
+        type: "geojson",
+        data: toGeoJSON(latest.current.events, new Date()),
+        promoteId: "id",
+        cluster: true,
+        clusterMaxZoom: CLUSTER_MAX_ZOOM,
+        clusterRadius: 44,
+        clusterProperties: {
+          queer: ["+", ["case", ["get", "queer"], 1, 0]],
+          live: ["+", ["case", ["get", "live"], 1, 0]],
+        },
+      });
+      // The open event keeps its ring even when its pin is inside a cluster.
+      map.addSource(SELECTED_SOURCE, { type: "geojson", data: selectedFeature(latest.current.events, latest.current.selectedId) });
 
       const color: unknown = ["case", ["get", "queer"], MAP_COLORS.uv, MAP_COLORS.sodium];
       // Pin size grows with RSVPs, capped so a big party doesn't swallow the block.
@@ -91,6 +117,7 @@ export function MapView({
         id: "event-halo",
         type: "circle",
         source: SOURCE,
+        filter: UNCLUSTERED,
         paint: {
           "circle-radius": haloRadius as never,
           "circle-color": ["case", ["get", "live"], MAP_COLORS.live, color] as never,
@@ -101,14 +128,14 @@ export function MapView({
       map.addLayer({
         id: "event-selected",
         type: "circle",
-        source: SOURCE,
-        filter: ["==", ["get", "id"], ""],
+        source: SELECTED_SOURCE,
         paint: { "circle-radius": 14, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": MAP_COLORS.accent, "circle-stroke-width": 1.5 },
       });
       map.addLayer({
         id: "event-core",
         type: "circle",
         source: SOURCE,
+        filter: UNCLUSTERED,
         paint: {
           "circle-radius": 6,
           "circle-color": color as never,
@@ -118,13 +145,41 @@ export function MapView({
           "circle-stroke-width": 2,
         },
       });
+      // Clusters: size by count, UV when most are queer-centered, a magenta ring when any are live.
+      map.addLayer({
+        id: "cluster",
+        type: "circle",
+        source: SOURCE,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["get", "point_count"], 2, 15, 10, 20, 50, 28, 200, 36],
+          "circle-color": ["case", [">", ["/", ["get", "queer"], ["get", "point_count"]], 0.5], MAP_COLORS.uv, MAP_COLORS.sodium] as never,
+          "circle-opacity": 0.92,
+          "circle-stroke-color": ["case", [">", ["get", "live"], 0], MAP_COLORS.live, MAP_COLORS.halo] as never,
+          "circle-stroke-width": ["case", [">", ["get", "live"], 0], 3, 2],
+        },
+      });
+      map.addLayer({
+        id: "cluster-count",
+        type: "symbol",
+        source: SOURCE,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["Noto Sans Bold"],
+          "text-size": 13,
+          "text-allow-overlap": true,
+        },
+        paint: { "text-color": "#0a0a0b" },
+      });
+
       // Zoomed in, events with a flyer show it as the pin.
       map.addLayer({
         id: "event-thumb",
         type: "symbol",
         source: SOURCE,
         minzoom: 13,
-        filter: ["!=", ["get", "thumb"], ""],
+        filter: ["all", UNCLUSTERED, ["!=", ["get", "thumb"], ""]] as FilterSpecification,
         layout: {
           "icon-image": ["get", "thumb"],
           "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.75, 16, 1.15],
@@ -137,6 +192,7 @@ export function MapView({
         id: "event-label",
         type: "symbol",
         source: SOURCE,
+        filter: UNCLUSTERED,
         minzoom: 14,
         layout: {
           "text-field": ["get", "title"],
@@ -150,7 +206,7 @@ export function MapView({
       });
 
       ready.current = true;
-      applySelection(map, latest.current.selectedId);
+      applySelection(map, latest.current.selectedId, latest.current.events);
       loadThumbs();
     });
 
@@ -173,7 +229,18 @@ export function MapView({
     map.on("click", "event-halo", pick);
     map.on("click", "event-core", pick);
     map.on("click", "event-thumb", pick);
-    for (const layer of ["event-halo", "event-core", "event-thumb"]) {
+    map.on("click", "cluster", async (e) => {
+      const f = e.features?.[0];
+      if (!f) return;
+      const source = map.getSource(SOURCE) as unknown as { getClusterExpansionZoom(id: number): Promise<number> };
+      const zoom = await source.getClusterExpansionZoom(f.properties?.cluster_id as number);
+      map.easeTo({
+        center: (f.geometry as GeoJSON.Point).coordinates as [number, number],
+        zoom: zoom + 0.25,
+        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500,
+      });
+    });
+    for (const layer of ["event-halo", "event-core", "event-thumb", "cluster"]) {
       map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
     }
@@ -217,12 +284,13 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !ready.current) return;
     (map.getSource(SOURCE) as unknown as GeoSource | undefined)?.setData(toGeoJSON(events, new Date()));
+    applySelection(map, latest.current.selectedId, events);
     loadThumbsRef.current?.();
   }, [events]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (map && ready.current) applySelection(map, selectedId);
+    if (map && ready.current) applySelection(map, selectedId, latest.current.events);
   }, [selectedId]);
 
   useEffect(() => {
@@ -241,8 +309,8 @@ export function MapView({
   return <div ref={container} className="map" role="region" aria-label="Map of events" />;
 }
 
-function applySelection(map: MapLibre, id: string | null) {
-  if (map.getLayer("event-selected")) map.setFilter("event-selected", ["==", ["get", "id"], id ?? ""]);
+function applySelection(map: MapLibre, id: string | null, events: EventSummary[]) {
+  (map.getSource(SELECTED_SOURCE) as unknown as GeoSource | undefined)?.setData(selectedFeature(events, id));
   // The open event's flyer pin sits on top and a little larger.
   if (map.getLayer("event-thumb")) {
     map.setLayoutProperty("event-thumb", "symbol-sort-key", ["case", ["==", ["get", "id"], id ?? ""], 1, 0]);
