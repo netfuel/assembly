@@ -12,6 +12,7 @@ public/fonts/timeless/
 
 # Credentials downloaded from Google and Apple. Never commit these; go-live.command reads them.
 client_secret*.json
+old-client_secret*.json
 *.p8
 
 # Output of check-email.command

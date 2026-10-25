@@ -86,7 +86,7 @@ try {
   }
 
   step(6, "Google sign-in");
-  if (has("GOOGLE_CLIENT_ID") && has("GOOGLE_CLIENT_SECRET")) ok("Google is set");
+  if (has("GOOGLE_CLIENT_ID") && has("GOOGLE_CLIENT_SECRET") && !(await yes("Google is set. Replace it with a new client (for example a new client_secret_….json)?"))) ok("Keeping current Google client");
   else {
     console.log(`   In Google Cloud Console (console.cloud.google.com):
    - APIs & Services > OAuth consent screen: app name Assembly, support email, and these links:
@@ -119,6 +119,7 @@ try {
       if (json.installed) console.log("   \x1b[33m!\x1b[0m This is a Desktop client. Create a Web application client instead, or redirects will fail.");
       const uris = client.redirect_uris ?? [];
       const needed = ["https://assembly.rsvp/api/auth/google/callback", "https://www.assembly.rsvp/api/auth/google/callback"];
+      if (json.web?.project_id) console.log(`   Google Cloud project: ${json.web.project_id}`);
       const missing = needed.filter((u) => !uris.includes(u));
       if (missing.length) {
         console.log("   \x1b[33m!\x1b[0m This file doesn't list these redirect URIs:");
