@@ -108,6 +108,14 @@ Double-click `go-live.command` on your Mac (or run `node scripts/go-live.mjs`). 
 
 Run it again whenever you finish one of those.
 
+## Imported events (WYXR)
+
+Real listings come from WYXR 91.7 FM's [Memphis concert calendar](https://concert-calendar.wyxr.org/). Each imported event is credited to WYXR in its description and links to the venue or ticket page.
+
+- `db/import/wyxr-<date>.json`: the export (titles, dates, times, venues, ticket links).
+- `scripts/import-wyxr.py`: turns an export into `db/import/wyxr.sql`. It places each venue (addresses and coordinates are in the script), skips non-music listings (comedy, bingo, markets) and duplicate listings, converts times from Central, and tags scenes. Events with no listed start time default to 8 PM and say so.
+- `import-events.command`: double-click to load `db/import/wyxr.sql` into the live database. Safe to repeat: events update in place, RSVPs are kept, and future WYXR events missing from a newer export are removed unless someone RSVP'd.
+
 ## Deploy to Cloudflare
 
 The production site is **https://assembly.rsvp**. The app and API ship as one Worker named `assembly`, and Cloudflare Workers Builds deploys it from GitHub on every push to `main`.
