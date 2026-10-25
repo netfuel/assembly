@@ -502,8 +502,10 @@ function FlyerField({ value, onChange, error }: { value: { key: string; url: str
     setMsg(null);
     setBusy(true);
     try {
-      const { blob } = await prepareFlyer(file);
+      const { blob, thumb } = await prepareFlyer(file);
       const res = await api.uploadFlyer(blob);
+      // The thumbnail is a nice-to-have: the map falls back to a dot without it.
+      if (thumb) await api.uploadFlyerThumb(res.key, thumb).catch(() => undefined);
       onChange(res);
     } catch (err) {
       setMsg(err instanceof MediaError || err instanceof ApiError ? err.message : "Couldn't upload that flyer. Try again.");

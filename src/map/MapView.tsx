@@ -5,6 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { mapPalette, mapStyle, type MapTheme } from "./mapStyle";
 import { isLive } from "../lib/time";
 import type { EventSummary } from "../../shared/types";
+import { hasThumb, syncThumbs, thumbImageId } from "./thumbPins";
 import "./map.css";
 
 // MapLibre 6 computes its worker path at runtime, which bundlers can't follow. Point it at the emitted file.
@@ -26,6 +27,8 @@ function toGeoJSON(events: EventSummary[], now: Date): GeoJSON.FeatureCollection
         cancelled: e.status === "cancelled",
         live: e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now),
         going: e.goingCount,
+        // Empty until the thumbnail has loaded; the symbol layer only draws pins that have one.
+        thumb: hasThumb(e.id) ? thumbImageId(e.id) : "",
       },
     })),
   };
@@ -54,6 +57,7 @@ export function MapView({
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibre | null>(null);
   const ready = useRef(false);
+  const loadThumbsRef = useRef<(() => void) | null>(null);
   const latest = useRef({ events, selectedId, onSelect, theme });
   latest.current = { events, selectedId, onSelect, theme };
 
@@ -114,6 +118,21 @@ export function MapView({
           "circle-stroke-width": 2,
         },
       });
+      // Zoomed in, events with a flyer show it as the pin.
+      map.addLayer({
+        id: "event-thumb",
+        type: "symbol",
+        source: SOURCE,
+        minzoom: 13,
+        filter: ["!=", ["get", "thumb"], ""],
+        layout: {
+          "icon-image": ["get", "thumb"],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.75, 16, 1.15],
+          "icon-allow-overlap": true,
+          "icon-anchor": "center",
+        },
+        paint: { "icon-opacity": ["case", ["get", "cancelled"], 0.4, 1] },
+      });
       map.addLayer({
         id: "event-label",
         type: "symbol",
@@ -123,7 +142,7 @@ export function MapView({
           "text-field": ["get", "title"],
           "text-font": ["Noto Sans Regular"],
           "text-size": 12,
-          "text-offset": [0, -1.6],
+          "text-offset": ["case", ["!=", ["get", "thumb"], ""], ["literal", [0, -2.4]], ["literal", [0, -1.6]]],
           "text-anchor": "bottom",
           "text-allow-overlap": false,
         },
@@ -132,7 +151,19 @@ export function MapView({
 
       ready.current = true;
       applySelection(map, latest.current.selectedId);
+      loadThumbs();
     });
+
+    // Thumbnails load in the background; refresh the pins as each one arrives.
+    let refresh = 0;
+    const loadThumbs = () =>
+      syncThumbs(map, latest.current.events, mapPalette(latest.current.theme), () => {
+        cancelAnimationFrame(refresh);
+        refresh = requestAnimationFrame(() => {
+          (map.getSource(SOURCE) as unknown as GeoSource | undefined)?.setData(toGeoJSON(latest.current.events, new Date()));
+        });
+      });
+    loadThumbsRef.current = loadThumbs;
 
     // Layer-scoped listeners live on the map, so they survive style changes. Register once.
     const pick = (e: MapLayerMouseEvent) => {
@@ -141,7 +172,8 @@ export function MapView({
     };
     map.on("click", "event-halo", pick);
     map.on("click", "event-core", pick);
-    for (const layer of ["event-halo", "event-core"]) {
+    map.on("click", "event-thumb", pick);
+    for (const layer of ["event-halo", "event-core", "event-thumb"]) {
       map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
     }
@@ -185,6 +217,7 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !ready.current) return;
     (map.getSource(SOURCE) as unknown as GeoSource | undefined)?.setData(toGeoJSON(events, new Date()));
+    loadThumbsRef.current?.();
   }, [events]);
 
   useEffect(() => {
@@ -210,4 +243,13 @@ export function MapView({
 
 function applySelection(map: MapLibre, id: string | null) {
   if (map.getLayer("event-selected")) map.setFilter("event-selected", ["==", ["get", "id"], id ?? ""]);
+  // The open event's flyer pin sits on top and a little larger.
+  if (map.getLayer("event-thumb")) {
+    map.setLayoutProperty("event-thumb", "symbol-sort-key", ["case", ["==", ["get", "id"], id ?? ""], 1, 0]);
+    map.setLayoutProperty("event-thumb", "icon-size", [
+      "interpolate", ["linear"], ["zoom"],
+      13, ["case", ["==", ["get", "id"], id ?? ""], 0.95, 0.75],
+      16, ["case", ["==", ["get", "id"], id ?? ""], 1.4, 1.15],
+    ]);
+  }
 }

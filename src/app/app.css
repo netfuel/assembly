@@ -345,3 +345,7 @@
 .stat.is-met .stat-target { color: var(--color-accent-text); }
 @media (max-width: 480px) { .mod-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .sso .btn, .email-start .btn { white-space: normal; text-align: center; line-height: 1.25; padding-top: 6px; padding-bottom: 6px; }
+
+/* Flyer thumbnail on rail cards */
+.card-body { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.card-thumb { flex: none; width: 44px; height: 44px; object-fit: cover; border: 2px solid; background: #0a0a0b; }

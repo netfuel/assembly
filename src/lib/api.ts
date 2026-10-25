@@ -77,9 +77,11 @@ export interface EventDraft {
 
 export const api = {
   city: (slug: string) => request<City>(`/api/cities/${enc(slug)}`),
-  events: (city: string, range?: { from: Date; to: Date }) =>
+  /** `fresh` skips the browser's 30-second cache, for right after you post or edit. */
+  events: (city: string, range?: { from: Date; to: Date }, fresh = false) =>
     request<{ events: EventSummary[] }>(
       `/api/events?city=${enc(city)}${range ? `&from=${enc(range.from.toISOString())}&to=${enc(range.to.toISOString())}` : ""}`,
+      fresh ? { cache: "no-cache" } : undefined,
     ).then((r) => r.events),
   event: (id: string) => request<EventDetail>(`/api/events/${enc(id)}`),
   me: () => request<{ user: MeProfile | null }>("/api/me").then((r) => r.user),
@@ -125,6 +127,8 @@ export const api = {
   geocode: (q: string, signal?: AbortSignal) =>
     request<{ results: GeocodeResult[]; error?: string }>(`/api/geocode?q=${enc(q)}`, { signal }),
 
+  uploadFlyerThumb: (key: string, blob: Blob) =>
+    request<{ ok: true }>(`/api/uploads/flyer-thumb?key=${enc(key)}`, { method: "POST", body: blob, headers: { "Content-Type": blob.type } }),
   uploadFlyer: (blob: Blob) =>
     request<{ key: string; url: string }>("/api/uploads/flyer", { method: "POST", body: blob, headers: { "Content-Type": blob.type } }),
   videoUploadUrl: (seconds: number, bytes: number) =>

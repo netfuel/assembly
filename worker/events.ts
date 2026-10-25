@@ -66,6 +66,8 @@ function toSummary(row: EventRow): EventSummary {
     scenes: parseJson<SceneId[]>(row.scenes, []),
     policyTags: parseJson<string[]>(row.policy_tags, []),
     flyerUrl: row.flyer_key ? `/api/media/${encodeURIComponent(row.flyer_key)}` : null,
+    // Square thumbnail uploaded with the flyer (may be missing for older flyers; the map falls back to a dot).
+    thumbUrl: row.flyer_key ? `/api/media/${encodeURIComponent(`${row.flyer_key}.thumb`)}` : null,
     videoId: row.video_id,
     goingCount: row.going_count,
     isSample: row.is_sample === 1,

@@ -56,6 +56,7 @@ export interface EventSummary {
   scenes: SceneId[];
   policyTags: string[];
   flyerUrl: string | null;
+  thumbUrl: string | null;
   videoId: string | null;
   goingCount: number;
   isSample: boolean;

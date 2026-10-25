@@ -76,9 +76,9 @@ export function App() {
 
   // Initial load: city, events, session.
   const loadEvents = useCallback(
-    () =>
+    (fresh = false) =>
       api
-        .events("memphis")
+        .events("memphis", undefined, fresh)
         .then((list) => {
           setEvents(list);
           setLoadState("ready");
@@ -195,7 +195,7 @@ export function App() {
     setSheet(null);
     setEditing(null);
     setExtra(null);
-    const list = await loadEvents();
+    const list = await loadEvents(true);
     setDetailVersion((v) => v + 1);
     setSelectedId(id);
     const ev = list.find((e) => e.id === id);
@@ -374,7 +374,20 @@ export function App() {
                       </span>
                       {cancelled ? <Tag>Cancelled</Tag> : live ? <Tag tone="accent">Live</Tag> : <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} />}
                     </span>
-                    <span className="card-title">{e.title}</span>
+                    <span className="card-body">
+                      <span className="card-title">{e.title}</span>
+                      {e.thumbUrl && (
+                        <img
+                          className="card-thumb"
+                          src={e.thumbUrl}
+                          alt=""
+                          loading="lazy"
+                          style={{ borderColor: queer ? "var(--color-uv)" : "var(--color-sodium)" }}
+                          // Older flyers have no thumbnail.
+                          onError={(ev) => ev.currentTarget.remove()}
+                        />
+                      )}
+                    </span>
                     <span className="card-when num">
                       {dayLabel(e.startsAt, now, city.timezone)} / {clock(e.startsAt, city.timezone)}
                     </span>

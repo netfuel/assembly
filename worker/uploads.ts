@@ -5,6 +5,7 @@ import { sniffImage } from "./validate";
 
 export const FLYER_MAX_BYTES = 10 * 1024 * 1024;
 export const VIDEO_MAX_SECONDS = 90;
+const THUMB_MAX_BYTES = 300 * 1024;
 const VIDEO_MAX_BYTES = 200 * 1024 * 1024; // Stream's limit for basic (non-resumable) uploads
 const CONTENT_TYPES = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" } as const;
 
@@ -41,6 +42,21 @@ uploads.post("/flyer", async (c) => {
   const key = `flyers/${userId}/${crypto.randomUUID()}.${type}`;
   await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
   return c.json({ key, url: `/api/media/${key}` }, 201);
+});
+
+/** Square thumbnail for a flyer the same person just uploaded. Stored next to it as <flyer key>.thumb. */
+uploads.post("/flyer-thumb", async (c) => {
+  const userId = c.get("userId");
+  if (!userId) return c.json({ error: "Sign in first." }, 401);
+  const key = c.req.query("key") ?? "";
+  if (!key.startsWith(`flyers/${userId}/`) || key.includes("..") || key.endsWith(".thumb")) return c.json({ error: "Not your flyer." }, 403);
+  if (!(await c.env.MEDIA.head(key))) return c.json({ error: "Upload the flyer first." }, 404);
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  if (bytes.byteLength > THUMB_MAX_BYTES) return c.json({ error: "Thumbnail too large." }, 413);
+  const type = sniffImage(bytes);
+  if (!type) return c.json({ error: "Use a JPG, PNG, or WebP image." }, 415);
+  await c.env.MEDIA.put(`${key}.thumb`, bytes, { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
+  return c.json({ ok: true }, 201);
 });
 
 /** Returns a one-time Stream upload URL capped at 90 seconds. The browser uploads the file straight to Stream. */

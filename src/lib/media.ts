@@ -2,6 +2,7 @@
 
 export const FLYER_MAX_EDGE = 2000;
 export const FLYER_MAX_BYTES = 10 * 1024 * 1024;
+export const THUMB_SIZE = 160;
 export const VIDEO_MAX_SECONDS = 90;
 export const VIDEO_MAX_BYTES = 200 * 1024 * 1024;
 
@@ -15,7 +16,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
  * Resize a flyer so its long edge is at most 2000 px and re-encode it.
  * Re-encoding also drops the photo's metadata (GPS location, camera details) before it leaves the device.
  */
-export async function prepareFlyer(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+export async function prepareFlyer(file: File): Promise<{ blob: Blob; thumb: Blob | null; width: number; height: number }> {
   if (!/^image\/(jpeg|png|webp|heic|heif|avif|gif)$/.test(file.type) && !/\.(jpe?g|png|webp|heic|heif|avif)$/i.test(file.name)) {
     throw new MediaError("Use a JPG, PNG, or WebP image.");
   }
@@ -36,6 +37,22 @@ export async function prepareFlyer(file: File): Promise<{ blob: Blob; width: num
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new MediaError("Couldn't prepare that image.");
   ctx.drawImage(bitmap, 0, 0, width, height);
+
+  // Square thumbnail for map pins and cards: center crop, 160 px (sharp at 2x for a 72 px pin).
+  let thumb: Blob | null = null;
+  try {
+    const side = Math.min(bitmap.width, bitmap.height);
+    const t = document.createElement("canvas");
+    t.width = t.height = THUMB_SIZE;
+    const tctx = t.getContext("2d");
+    if (tctx) {
+      tctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, THUMB_SIZE, THUMB_SIZE);
+      thumb = await canvasToBlob(t, "image/webp", 0.8);
+      if (!thumb || thumb.type !== "image/webp") thumb = await canvasToBlob(t, "image/jpeg", 0.8);
+    }
+  } catch {
+    thumb = null; // The flyer still works without one.
+  }
   bitmap.close();
 
   // WebP where the browser can encode it (Safari can't), JPEG otherwise.
@@ -43,7 +60,7 @@ export async function prepareFlyer(file: File): Promise<{ blob: Blob; width: num
   if (!blob || blob.type !== "image/webp") blob = await canvasToBlob(canvas, "image/jpeg", 0.86);
   if (!blob) throw new MediaError("Couldn't prepare that image.");
   if (blob.size > FLYER_MAX_BYTES) throw new MediaError("That flyer is still over 10 MB after resizing.");
-  return { blob, width, height };
+  return { blob, thumb, width, height };
 }
 
 /** Reads a video's length from its metadata without uploading it. */

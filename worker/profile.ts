@@ -157,7 +157,8 @@ profile.delete("/", async (c) => {
         const keys: string[] = [];
         for (const o of page.objects) {
           // A flyer still used by an event that stays (one with other hosts) is kept.
-          const inUse = prefix.startsWith("flyers/") && (await db.prepare("SELECT 1 FROM events WHERE flyer_key = ?").bind(o.key).first());
+          const flyerKey = o.key.replace(/\.thumb$/, "");
+          const inUse = prefix.startsWith("flyers/") && (await db.prepare("SELECT 1 FROM events WHERE flyer_key = ?").bind(flyerKey).first());
           if (!inUse) keys.push(o.key);
         }
         if (keys.length) await c.env.MEDIA.delete(keys);
