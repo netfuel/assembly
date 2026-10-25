@@ -117,8 +117,6 @@
 }
 .rail-title { font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 300; letter-spacing: var(--tracking-display); font-size: var(--text-lg); line-height: 1; }
 .rail-count { font-size: var(--text-2xs); color: var(--color-muted); }
-.legend { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-2xs); color: var(--color-faint); }
-.legend .marker:last-of-type { margin-left: var(--space-2); }
 .rail {
   display: flex;
   gap: var(--space-3);

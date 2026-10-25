@@ -585,10 +585,6 @@ export function App() {
             <button className="link rail-subscribe" onClick={() => setSheet("subscribe")}>
               Subscribe
             </button>
-            <span className="legend">
-              <span className="marker" style={{ background: "var(--color-uv)" }} /> queer-centered
-              <span className="marker" style={{ background: "var(--color-sodium)" }} /> everything else
-            </span>
           </div>
           <div className="rail" ref={railRef}>
             {loadState === "loading" && (
