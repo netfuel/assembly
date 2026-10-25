@@ -99,6 +99,11 @@ app.route("/push", push);
 app.route("/events", events);
 
 app.notFound((c) => c.json({ error: "Not found." }, 404));
+// Log the real error (it shows in Workers Logs and wrangler tail) and answer in JSON like every other route.
+app.onError((err, c) => {
+  console.error("api error", c.req.method, c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
+  return c.json({ error: "Something went wrong on our end. Try again in a minute." }, 500);
+});
 app.onError((err, c) => {
   console.error(err);
   return c.json({ error: "Something went wrong on our side. Try again in a moment." }, 500);

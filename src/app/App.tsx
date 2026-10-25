@@ -44,6 +44,7 @@ export function App() {
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [me, setMe] = useState<MeProfile | null>(null);
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
+  const [providersFailed, setProvidersFailed] = useState(false);
   const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation">(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<ServerConfig>({ video: false, streamCustomerCode: null });
@@ -94,7 +95,7 @@ export function App() {
   useEffect(() => {
     api.city("memphis").then(setCity).catch(() => undefined);
     loadEvents();
-    api.providers().then(setProviders).catch(() => undefined);
+    api.providers().then(setProviders).catch(() => setProvidersFailed(true));
     api.config().then(setConfig).catch(() => undefined);
 
     const params = new URLSearchParams(location.search);
@@ -409,6 +410,7 @@ export function App() {
       <Sheet open={sheet === "signin"} onClose={() => setSheet(null)} label="Sign in" modal center>
         <SignInSheet
           providers={providers}
+          unreachable={providersFailed}
           returnTo={returnTo}
           onSignedIn={(user, isNew) => {
             setMe(user);

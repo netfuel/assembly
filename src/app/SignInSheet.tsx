@@ -11,10 +11,13 @@ type Step = { kind: "start" } | { kind: "code"; email: string; devCode?: string 
  */
 export function SignInSheet({
   providers,
+  unreachable = false,
   returnTo,
   onSignedIn,
 }: {
   providers: AuthProviders;
+  /** The server didn't answer, so we don't know which options exist. */
+  unreachable?: boolean;
   returnTo: string;
   onSignedIn: (me: MeProfile, isNew: boolean) => void;
 }) {
@@ -260,10 +263,18 @@ export function SignInSheet({
         By continuing, you confirm you're 18 or older and agree to the <a href="/terms">Terms</a>, <a href="/privacy">Privacy policy</a>, and{" "}
         <a href="/guidelines">Community guidelines</a>.
       </p>
-      {!sso && !providers.email && !providers.dev && (
-        <p className="note" data-reveal>
-          <Tag>Setup</Tag> Sign-in isn't configured on this server yet. See README, "Set up sign-in".
+      {unreachable ? (
+        <p className="note" data-reveal role="alert">
+          Sign-in isn't responding right now. Check your connection and try again in a minute.
         </p>
+      ) : (
+        !sso &&
+        !providers.email &&
+        !providers.dev && (
+          <p className="note" data-reveal>
+            <Tag>Setup</Tag> Sign-in isn't configured on this server yet. See README, "Set up sign-in".
+          </p>
+        )
       )}
     </div>
   );
