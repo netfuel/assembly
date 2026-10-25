@@ -89,7 +89,11 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
                 <div className="mod-head">
                   <Tag tone="strong">{it.type === "event" ? "Event" : "Person"}</Tag>
                   {it.type === "event" && it.status !== "live" && <Tag tone={it.status === "hidden" ? "accent" : "default"}>{it.status === "hidden" ? "Hidden" : it.status === "draft" ? "First post: needs review" : it.status === "cancelled" ? "Cancelled" : it.status}</Tag>}
-                  <span className="dim num">{it.reasons.length} report{it.reasons.length === 1 ? "" : "s"}</span>
+                  {it.reasons.length > 0 && (
+                    <span className="dim num">
+                      {it.reasons.length} report{it.reasons.length === 1 ? "" : "s"}
+                    </span>
+                  )}
                 </div>
                 <p className="mod-title">{it.title}</p>
                 <p className="note">

@@ -109,7 +109,8 @@ const root = new Hono<{ Bindings: Env }>();
 // Security headers on everything the Worker answers (static files get them from public/_headers).
 root.use("*", async (c, next) => {
   await next();
-  c.res = withSecurityHeaders(c.res);
+  // import.meta.env.DEV is true under `vite` (local dev) and false in builds, including `vite preview`.
+  c.res = withSecurityHeaders(c.res, import.meta.env.DEV);
 });
 root.route("/fonts", fonts);
 root.route("/e", og);

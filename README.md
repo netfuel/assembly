@@ -94,6 +94,18 @@ Moderators review reports, restore or remove hidden events, and give organizers 
 
 Moderators get a "Review reports" button on their profile, can open hidden events, and see Verify on the organizer line of any event.
 
+## Go live
+
+Double-click `go-live.command` on your Mac (or run `node scripts/go-live.mjs`). It signs in to Cloudflare, applies database changes to the live database, and walks through each secret: notification keys (generated for you), moderators, the email sender, Google and Apple sign-in, and Stream. It asks before each step, skips what's already set, and ends with a list of the dashboard steps it can't do:
+
+- Workers Paid plan and Email Sending for assembly.rsvp (email sign-in codes).
+- Google OAuth client and consent screen, using https://assembly.rsvp/privacy and /terms.
+- assembly.rsvp as a Custom domain on the Worker, if it isn't answering.
+- Email Routing for hello@assembly.rsvp, the contact address in the policies.
+- Web Analytics for cookieless visitor counts.
+
+Run it again whenever you finish one of those.
+
 ## Deploy to Cloudflare
 
 The production site is **https://assembly.rsvp**. The app and API ship as one Worker named `assembly`, and Cloudflare Workers Builds deploys it from GitHub on every push to `main`.
@@ -142,7 +154,13 @@ Tokens live in `src/styles/tokens.css`; components in `src/components/ui.tsx`.
 
 ## Status
 
-Core build: posting is live.
+Ready for live users once the go-live steps are done.
+
+- Policies at /terms, /privacy, and /guidelines (operator Matt Ladner, hello@assembly.rsvp). Accounts are 18+; sign-in shows the consent line.
+- A new organizer's first event waits for moderator approval; after one approval, or with a verified badge, posts go live right away.
+- Shared event links unfurl with the flyer, title, date, and place.
+- Security headers on everything (policy in worker/security.ts; `npm run headers` regenerates public/_headers), a crash screen, and browser errors in Workers Logs.
+- Moderators see launch numbers against the PRD targets in the review queue.
 
 - **Make an announcement**: flyer upload (resized in the browser, metadata such as GPS stripped, stored in R2), title and one-liner, date and times in Memphis time (an end before the start means the next morning), a listed venue or any address with a draggable pin, scenes and door policies, door price, ticket link, lineup builder with artist search and links per service, and promo video up to 1:30.
 - New posts keep a draft on the device until they're posted.

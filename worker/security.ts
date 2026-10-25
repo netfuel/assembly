@@ -35,9 +35,15 @@ export const SECURITY_HEADERS: Record<string, string> = {
   "Cross-Origin-Opener-Policy": "same-origin",
 };
 
-/** Adds the headers to a response, leaving ones it already set (like a narrower CSP) alone. */
-export function withSecurityHeaders(res: Response): Response {
+/**
+ * Adds the headers to a response, leaving ones it already set alone. `dev` skips the content policy:
+ * Vite's dev server injects inline scripts (hot reload) that the policy rightly blocks.
+ */
+export function withSecurityHeaders(res: Response, dev = false): Response {
   const out = new Response(res.body, res);
-  for (const [k, v] of Object.entries(SECURITY_HEADERS)) if (!out.headers.has(k)) out.headers.set(k, v);
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+    if (dev && k === "Content-Security-Policy") continue;
+    if (!out.headers.has(k)) out.headers.set(k, v);
+  }
   return out;
 }
