@@ -18,9 +18,11 @@ export interface Filters {
   policies: string[];
   price: PriceId;
   venueTypes: string[];
+  /** A search from the search sheet, applied to the map and feed. Not remembered between visits. */
+  q: string | null;
 }
 
-export const DEFAULT_FILTERS: Filters = { windowId: "tonight", date: null, scenes: [], policies: [], price: "any", venueTypes: [] };
+export const DEFAULT_FILTERS: Filters = { windowId: "tonight", date: null, scenes: [], policies: [], price: "any", venueTypes: [], q: null };
 
 const WINDOWS: WindowId[] = ["tonight", "weekend", "week", "all", "date"];
 const KEY = "assembly:filters";
@@ -35,6 +37,7 @@ interface Raw {
   policy?: string | null;
   price?: string | null;
   venue?: string | null;
+  q?: string | null;
 }
 
 function clean(raw: Raw): Filters | null {
@@ -43,21 +46,25 @@ function clean(raw: Raw): Filters | null {
   const policies = list(raw.policy, (s) => s in POLICY_TAGS);
   const venueTypes = list(raw.venue, (s) => s in VENUE_TYPES);
   const price = PRICES.some((p) => p.id === raw.price) ? (raw.price as PriceId) : "any";
-  if (!when && !scenes.length && !policies.length && !venueTypes.length && price === "any") return null;
+  const q = raw.q?.trim().slice(0, 80) || null;
+  if (!when && !scenes.length && !policies.length && !venueTypes.length && price === "any" && !q) return null;
   const date = isDate(raw.date) ? raw.date : null;
   // "date" without a valid date falls back to tonight.
-  return { windowId: when === "date" && !date ? "tonight" : (when ?? "tonight"), date, scenes, policies, price, venueTypes };
+  // A search link without a time window looks at everything coming up.
+  const fallback: WindowId = q ? "all" : "tonight";
+  return { windowId: when === "date" && !date ? fallback : (when ?? fallback), date, scenes, policies, price, venueTypes, q };
 }
 
 export function filtersFromUrl(search: string): Filters | null {
   const p = new URLSearchParams(search);
-  return clean({ when: p.get("when"), date: p.get("date"), scene: p.get("scene"), policy: p.get("policy"), price: p.get("price"), venue: p.get("venue") });
+  return clean({ when: p.get("when"), date: p.get("date"), scene: p.get("scene"), policy: p.get("policy"), price: p.get("price"), venue: p.get("venue"), q: p.get("q") });
 }
 
 /** The URL query for these filters, empty for the default (tonight, everything). */
 export function filtersQuery(f: Filters): string {
   const p = new URLSearchParams();
-  if (f.windowId !== "tonight") p.set("when", f.windowId);
+  if (f.q) p.set("q", f.q);
+  if (f.windowId !== (f.q ? "all" : "tonight")) p.set("when", f.windowId);
   if (f.windowId === "date" && f.date) p.set("date", f.date);
   if (f.scenes.length) p.set("scene", f.scenes.join(","));
   if (f.policies.length) p.set("policy", f.policies.join(","));
@@ -69,12 +76,13 @@ export function filtersQuery(f: Filters): string {
 
 /** How many filters are on, for the badge on the Filters button. The time window counts when it isn't Tonight. */
 export function activeCount(f: Filters) {
-  return (f.windowId !== "tonight" ? 1 : 0) + f.scenes.length + f.policies.length + (f.price !== "any" ? 1 : 0) + f.venueTypes.length;
+  return (f.q ? 1 : 0) + (f.windowId !== "tonight" ? 1 : 0) + f.scenes.length + f.policies.length + (f.price !== "any" ? 1 : 0) + f.venueTypes.length;
 }
 
 export function saveFilters(f: Filters, today: string) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...f, day: today }));
+    // A search is for now, not for next visit.
+    localStorage.setItem(KEY, JSON.stringify({ ...f, q: null, day: today }));
   } catch {
     // Private mode: filters just won't persist.
   }

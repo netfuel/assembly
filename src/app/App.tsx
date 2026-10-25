@@ -6,6 +6,7 @@ import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
 import { announceGoing } from "../lib/install";
 import { FeedView } from "./FeedView";
+import { SearchSheet } from "./SearchSheet";
 import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilters, saveFilters, type Filters } from "../lib/filters";
 import { FilterSheet, FilterChips } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
@@ -216,15 +217,50 @@ export function App() {
     };
   }, [windowId, pickedDate, city.timezone]);
 
+  // A search applied to the map and feed: the server says which events match; events beyond the loaded
+  // two weeks come back with it and join the list.
+  const [searchHits, setSearchHits] = useState<{ q: string; ids: Set<string> } | null>(null);
+  const fitNext = useRef(false);
+  useEffect(() => {
+    const q = filters.q;
+    if (!q) return setSearchHits(null);
+    const ctl = new AbortController();
+    api
+      .search(q, ctl.signal)
+      .then((r) => {
+        setSearchHits({ q, ids: new Set(r.eventIds) });
+        const extra = [...r.events];
+        setEvents((cur) => {
+          const have = new Set(cur.map((e) => e.id));
+          const add = extra.filter((e) => !have.has(e.id));
+          return add.length ? [...cur, ...add] : cur;
+        });
+      })
+      .catch(() => !ctl.signal.aborted && setSearchHits({ q, ids: new Set() }));
+    return () => ctl.abort();
+  }, [filters.q]);
+
   const matching = useCallback(
     (f: Filters) => {
       const range = windowRange(f.windowId, now, city.timezone, f.date ?? undefined);
-      return events.filter((e) => overlaps(e.startsAt, e.endsAt, range) && matchesFilters(e, f));
+      // "All" means two weeks for browsing; for a search it means everything coming up.
+      if (f.q && f.windowId === "all") range.to = new Date(now.getTime() + 400 * 86400e3);
+      // While a search is loading, show nothing rather than everything.
+      const ids = f.q ? (searchHits?.q === f.q ? searchHits.ids : new Set<string>()) : null;
+      return events.filter((e) => (!ids || ids.has(e.id)) && overlaps(e.startsAt, e.endsAt, range) && matchesFilters(e, f));
     },
-    [events, now, city.timezone],
+    [events, now, city.timezone, searchHits],
   );
   const shown = useMemo(() => matching(filters), [matching, filters]);
+  // Frame the results on the map once a search lands.
+  useEffect(() => {
+    if (!fitNext.current || !filters.q || searchHits?.q !== filters.q) return;
+    fitNext.current = false;
+    if (shown.length) setFit({ key: Date.now(), points: shown.map((e) => [e.lng, e.lat]) });
+  }, [shown, searchHits, filters.q]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [fit, setFit] = useState<{ key: number; points: [number, number][] } | null>(null);
 
   const selected = events.find((e) => e.id === selectedId) ?? (extra && extra.id === selectedId ? extra : null);
 
@@ -388,7 +424,7 @@ export function App() {
 
   return (
     <div className="app">
-      <MapView highlight={selectedId ? null : highlight} events={mapEvents} center={city.center} zoom={city.zoom} selectedId={selectedId} onSelect={select} focus={focus} theme={theme} />
+      <MapView fit={fit} highlight={selectedId ? null : highlight} events={mapEvents} center={city.center} zoom={city.zoom} selectedId={selectedId} onSelect={select} focus={focus} theme={theme} />
       <div className="map-dots" aria-hidden="true" />
 
       <header className="topbar">
@@ -404,6 +440,13 @@ export function App() {
             </span>
           )}
           <span className="spacer" />
+          <button className="search-button" onClick={() => setSearchOpen(true)} aria-label="Search events, artists, and venues">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+            </svg>
+            <span className="hide-narrow">Search</span>
+          </button>
           <button
             className="theme-toggle"
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
@@ -656,6 +699,22 @@ export function App() {
         <ModerationSheet tz={city.timezone} onOpenEvent={openEvent} toast={toast} />
       </Sheet>
 
+      <SearchSheet
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        initial={filters.q ?? ""}
+        tz={city.timezone}
+        onOpenEvent={(id) => {
+          setSearchOpen(false);
+          select(id);
+        }}
+        onApply={(q) => {
+          setSearchOpen(false);
+          // Results can be weeks out: look across all dates, keep the other filters.
+          setFilters((f) => ({ ...f, q, windowId: f.windowId === "date" ? "date" : "all" }));
+          fitNext.current = true;
+        }}
+      />
       <FilterSheet
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}

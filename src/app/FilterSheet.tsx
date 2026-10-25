@@ -150,6 +150,7 @@ export function FilterSheet({
 /** The filters that are on, as chips under the Filters button. Tap one to remove it. Nothing shows by default. */
 export function FilterChips({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
   const chips: { key: string; label: string; remove: Partial<Filters> }[] = [];
+  if (filters.q) chips.push({ key: "q", label: `“${filters.q}”`, remove: { q: null } });
   if (filters.windowId !== "tonight") {
     const label = filters.windowId === "date" && filters.date ? dateHeading(filters.date) : WHEN.find((w) => w.id === filters.windowId)!.label;
     chips.push({ key: "when", label, remove: { windowId: "tonight" } });

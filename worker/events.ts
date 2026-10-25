@@ -3,7 +3,7 @@ import type { AppContext } from "./env";
 import { isModerator } from "./moderation";
 import type { EventDetail, EventSummary, LineupSlot, RsvpStatus, SceneId } from "../shared/types";
 
-interface EventRow {
+export interface EventRow {
   id: string;
   title: string;
   pitch: string | null;
@@ -31,7 +31,7 @@ interface EventRow {
   going_count: number;
 }
 
-const EVENT_SELECT = `
+export const EVENT_SELECT = `
   SELECT e.id, e.title, e.pitch, e.description, e.starts_at, e.ends_at, e.address, e.neighborhood,
          e.lat, e.lng, e.getting_there, e.door_price, e.ticket_url, e.policy_tags, e.scenes,
          e.flyer_key, e.video_id, e.is_sample, e.status, e.venue_id, e.created_at, e.updated_at,
@@ -48,7 +48,7 @@ function parseJson<T>(raw: string | null, fallback: T): T {
   }
 }
 
-function toSummary(row: EventRow): EventSummary {
+export function toSummary(row: EventRow): EventSummary {
   return {
     id: row.id,
     title: row.title,

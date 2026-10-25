@@ -58,7 +58,10 @@ export function MapView({
   focus,
   theme,
   highlight = null,
+  fit = null,
 }: {
+  /** When this changes, the map frames all these points (search results). */
+  fit?: { key: number; points: [number, number][] } | null;
   events: EventSummary[];
   /** A card the person is looking at in the rail: its pin gets a ring. `follow` pans the map to it if it's off screen. */
   highlight?: { id: string; follow: boolean } | null;
@@ -361,6 +364,26 @@ export function MapView({
       duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
     });
   }, [focus]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !fit || !fit.points.length) return;
+    const wide = window.matchMedia("(min-width: 900px)").matches;
+    const lngs = fit.points.map((p) => p[0]);
+    const lats = fit.points.map((p) => p[1]);
+    map.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      {
+        maxZoom: 15,
+        // Clear of the top bar and the rail of cards.
+        padding: wide ? { top: 140, bottom: 260, left: 80, right: 80 } : { top: 200, bottom: window.innerHeight * 0.4, left: 40, right: 40 },
+        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
+      },
+    );
+  }, [fit?.key]);
 
   return <div ref={container} className="map" role="region" aria-label="Map of events" />;
 }

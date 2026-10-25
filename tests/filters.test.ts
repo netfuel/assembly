@@ -4,9 +4,9 @@ import type { EventSummary } from "../shared/types";
 
 describe("filters in the URL", () => {
   it("round-trips a filtered view", () => {
-    const f = { ...DEFAULT_FILTERS, windowId: "date" as const, date: "2026-10-31", scenes: ["queer" as const, "rave" as const], policies: ["all-ages", "21+"], price: "10" as const, venueTypes: ["diy"] };
+    const f = { ...DEFAULT_FILTERS, windowId: "date" as const, date: "2026-10-31", scenes: ["queer" as const, "rave" as const], policies: ["all-ages", "21+"], price: "10" as const, venueTypes: ["diy"], q: "juno ray" };
     const q = filtersQuery(f);
-    expect(q).toBe("?when=date&date=2026-10-31&scene=queer,rave&policy=all-ages,21%2B&price=10&venue=diy");
+    expect(q).toBe("?q=juno+ray&when=date&date=2026-10-31&scene=queer,rave&policy=all-ages,21%2B&price=10&venue=diy");
     expect(filtersFromUrl(q)).toEqual(f);
   });
   it("defaults stay out of the URL", () => {

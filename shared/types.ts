@@ -188,3 +188,25 @@ export interface AuthProviders {
   /** Sign in with a code sent by email. */
   email?: boolean;
 }
+
+/** An artist or venue in search results, with what they have coming up. */
+export interface SearchPlace {
+  id: string;
+  name: string;
+  /** Venues: address and type. Artists: null. */
+  address: string | null;
+  neighborhood: string | null;
+  type: string | null;
+  upcoming: number;
+  next: { id: string; title: string; startsAt: string } | null;
+}
+
+export interface SearchResults {
+  q: string;
+  /** Upcoming and live events that match, best first. */
+  events: EventSummary[];
+  artists: SearchPlace[];
+  venues: SearchPlace[];
+  /** Ids of every upcoming event that matches, including ones by a matching artist or at a matching venue. */
+  eventIds: string[];
+}

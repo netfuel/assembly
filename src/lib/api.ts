@@ -9,6 +9,7 @@ import type {
   MeProfile,
   MyEvent,
   RsvpStatus,
+  SearchResults,
   ServerConfig,
   Venue,
 } from "../../shared/types";
@@ -121,6 +122,7 @@ export const api = {
     request<{ ok: true; host: { id: string; displayName: string } }>(`/api/mod/events/${enc(id)}/host`, { method: "POST", body: JSON.stringify({ email }) }),
   setVerified: (id: string, verified: boolean) =>
     request<{ ok: true; verified: boolean }>(`/api/mod/users/${enc(id)}/verified`, { method: "PUT", body: JSON.stringify({ verified }) }),
+  search: (q: string, signal?: AbortSignal) => request<SearchResults>(`/api/search?q=${enc(q)}&city=memphis`, { signal }),
   myEvents: () => request<{ hosting: MyEvent[]; going: MyEvent[] }>("/api/me/events"),
 
   venues: () => request<{ venues: Venue[] }>("/api/venues").then((r) => r.venues),

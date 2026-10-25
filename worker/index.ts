@@ -11,6 +11,7 @@ import { events } from "./events";
 import { fonts } from "./fonts";
 import { og } from "./og";
 import { feeds, sitemap } from "./feeds";
+import { searchRoute } from "./search";
 import { withSecurityHeaders } from "./security";
 import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
@@ -98,6 +99,7 @@ app.route("/", posting);
 app.route("/", moderation);
 app.route("/push", push);
 app.route("/events", events);
+app.route("/search", searchRoute);
 
 app.notFound((c) => c.json({ error: "Not found." }, 404));
 // Log the real error (it shows in Workers Logs and wrangler tail) and answer in JSON like every other route.
