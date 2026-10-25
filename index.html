@@ -26,8 +26,32 @@
         if (t === "light") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#e9eaec");
       })();
     </script>
+    <style>
+      /* First-load splash. Lives outside #root; App fades it out once events are in. */
+      #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #0a0a0b; color: #ededee; transition: opacity 320ms ease, visibility 320ms; }
+      [data-theme="light"] #splash { background: #e9eaec; color: #121315; }
+      #splash.is-done { opacity: 0; visibility: hidden; }
+      #splash .sp { display: grid; justify-items: center; gap: 18px; }
+      #splash .sp-mark { font: 400 34px/1 "Timeless Serif", "Iowan Old Style", Georgia, serif; letter-spacing: -0.01em; display: flex; align-items: center; gap: 12px; }
+      #splash .sp-mark img { width: 34px; height: 34px; }
+      #splash .sp-pins { display: flex; gap: 10px; }
+      #splash .sp-pins i { width: 8px; height: 8px; display: block; animation: sp-pulse 1.2s ease-in-out infinite; }
+      #splash .sp-pins i:nth-child(1) { background: #7b5cf0; }
+      #splash .sp-pins i:nth-child(2) { background: #ff3df2; animation-delay: 0.15s; }
+      #splash .sp-pins i:nth-child(3) { background: #f07f12; animation-delay: 0.3s; }
+      #splash .sp-line { font: 500 10px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.55; }
+      @keyframes sp-pulse { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+      @media (prefers-reduced-motion: reduce) { #splash .sp-pins i { animation: none; opacity: 0.8; } #splash { transition: none; } }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <div class="sp">
+        <div class="sp-mark"><img src="/icons/favicon.svg" alt="" />Assembly</div>
+        <div class="sp-pins"><i></i><i></i><i></i></div>
+        <div class="sp-line">Finding tonight</div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

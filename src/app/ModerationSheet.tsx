@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Label, Tag } from "../components/ui";
+import { Button, Label, Tag, Skeleton } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { clock, dayLabel } from "../lib/time";
 import { VarsityMark } from "./EventSheet";
@@ -72,6 +72,20 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
         </section>
       )}
       {error && <p className="note">{error}</p>}
+      {!items && !error && (
+        <div className="skel-list" role="status" aria-label="Loading the queue">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="mod-skel">
+              <Skeleton w={`${65 - i * 10}%`} h={16} />
+              <Skeleton w="40%" h={10} />
+              <span className="mod-skel-actions">
+                <Skeleton w={72} h={28} />
+                <Skeleton w={72} h={28} />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       {items && items.length === 0 && <p className="note">Nothing to review. The queue is clear.</p>}
       {items && items.length > 0 && (
         <ul className="mod-list">

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Button, Frame, Label, LinkButton, Sheet, Tag } from "../components/ui";
+import { Button, Frame, Label, LinkButton, Sheet, Tag, Skeleton } from "../components/ui";
 import { announceGoing } from "../lib/install";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
@@ -216,7 +216,7 @@ export function EventSheet({
     <Sheet open onClose={onClose} label={e.title}>
       <div ref={root} className={`event ${queer ? "is-queer" : ""}`}>
         <div data-reveal>
-          {e.flyerUrl ? <img className="flyer" src={e.flyerUrl} alt={`Flyer for ${e.title}`} /> : <GeneratedFlyer event={e} />}
+          {e.flyerUrl ? <FlyerImage src={e.flyerUrl} alt={`Flyer for ${e.title}`} /> : <GeneratedFlyer event={e} />}
         </div>
 
         {cancelled && (
@@ -329,7 +329,20 @@ export function EventSheet({
         <section aria-label="Lineup" data-reveal>
           <Label glyph="♫">Lineup</Label>
           {loadError && <p className="note">{loadError}</p>}
-          {!detail && !loadError && <p className="note">Loading the lineup…</p>}
+          {!detail && !loadError && (
+            <div className="skel-list" role="status" aria-label="Loading the lineup">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="skel-row">
+                  <Skeleton w={30} h={10} />
+                  <span className="skel-stack">
+                    <Skeleton w={`${70 - i * 12}%`} h={20} />
+                    <Skeleton w="40%" h={10} />
+                  </span>
+                  <Skeleton w={60} h={10} />
+                </div>
+              ))}
+            </div>
+          )}
           {detail && detail.lineup.length === 0 && <p className="note">Lineup to be announced.</p>}
           {detail && detail.lineup.length > 0 && (
             <ol className="lineup">
@@ -602,6 +615,28 @@ function ModBar({ detail, onEdit, onHanded, toast }: { detail: EventDetail; onEd
           <p className="note">They need an account first. They'll get a notification and can edit and cancel it.{imported ? " Future WYXR imports won't overwrite it once it has a host." : ""}</p>
         </form>
       )}
+    </div>
+  );
+}
+
+/** The flyer fades in once it's decoded, over a shimmer sized to a square flyer, so the sheet doesn't jump. */
+function FlyerImage({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className={`flyer-wrap ${loaded ? "is-loaded" : ""}`}>
+      {!loaded && <Skeleton className="flyer-skel" w="100%" h="100%" />}
+      <img
+        className={`flyer fade-in ${loaded ? "is-loaded" : ""}`}
+        src={src}
+        alt={alt}
+        decoding="async"
+        ref={(el) => {
+          // Already in the cache: complete before React attaches onLoad.
+          if (el?.complete && el.naturalWidth && !loaded) setLoaded(true);
+        }}
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+      />
     </div>
   );
 }

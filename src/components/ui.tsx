@@ -230,3 +230,8 @@ export function Toast({ message }: { message: string | null }) {
     </div>
   );
 }
+
+/** A placeholder block that shimmers while content loads. Hidden from screen readers; pair with a status label. */
+export function Skeleton({ w = "100%", h = 12, className = "" }: { w?: number | string; h?: number | string; className?: string }) {
+  return <span className={`skel ${className}`} style={{ width: w, height: h }} aria-hidden="true" />;
+}

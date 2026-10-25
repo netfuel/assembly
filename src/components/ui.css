@@ -213,3 +213,22 @@
 .install-actions { grid-column: 2; display: flex; gap: var(--space-2); }
 @keyframes install-in { from { opacity: 0; transform: translate(-50%, 12px); } }
 @media (prefers-reduced-motion: reduce) { .install-card { animation: none; } }
+
+/* Loading placeholders */
+.skel {
+  display: block;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--color-line) 0%, var(--color-line-strong) 45%, var(--color-line) 90%) 0 0 / 300% 100%;
+  opacity: 0.55;
+  animation: skel-shimmer 1.4s linear infinite;
+}
+@keyframes skel-shimmer { from { background-position: 100% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+.skel-list { display: grid; gap: var(--space-3); }
+.skel-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 64px; gap: var(--space-3); align-items: start; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); }
+.skel-stack { display: grid; gap: 8px; }
+
+/* Images fade in once decoded instead of popping */
+img.fade-in { opacity: 0; transition: opacity 280ms ease; }
+img.fade-in.is-loaded { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { img.fade-in { transition: none; } }

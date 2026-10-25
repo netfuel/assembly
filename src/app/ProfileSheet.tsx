@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Chip, Label, Tag } from "../components/ui";
+import { Button, Chip, Label, Tag, Skeleton } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { MediaError, prepareAvatar } from "../lib/media";
 import { clock, dayLabel } from "../lib/time";
@@ -127,12 +127,23 @@ export function ProfileSheet({
 
       <section className="stack" data-reveal aria-label="Going">
         <Label glyph="✓">Going</Label>
-        {!mine && <p className="note">Loading…</p>}
+        {!mine && (
+          <div className="skel-list" role="status" aria-label="Loading">
+            <Skeleton w="70%" h={14} />
+            <Skeleton w="50%" h={14} />
+          </div>
+        )}
         {mine && mine.going.length === 0 && <p className="note">Nothing yet. RSVP to a night and it shows up here.</p>}
         {mine && mine.going.length > 0 && <MyList items={mine.going} tz={tz} onOpen={onOpenEvent} />}
       </section>
       <section className="stack" data-reveal aria-label="Hosting">
         <Label glyph="▶">Hosting</Label>
+        {!mine && (
+          <div className="skel-list" role="status" aria-label="Loading">
+            <Skeleton w="70%" h={14} />
+            <Skeleton w="50%" h={14} />
+          </div>
+        )}
         {mine && mine.hosting.length === 0 && (
           <p className="note">
             You haven't posted anything.{" "}

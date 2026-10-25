@@ -376,3 +376,16 @@
 .sticky-rsvp-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-size: 1.0625rem; }
 @keyframes sticky-in { from { transform: translateY(100%); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sticky-rsvp { animation: none; } }
+
+/* Preloaders */
+.card-skeleton { pointer-events: none; animation: skel-card-in 300ms ease both; }
+.card-skeleton .card-top, .card-skeleton .card-meta { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+@keyframes skel-card-in { from { opacity: 0; transform: translateY(6px); } }
+.flyer-wrap { position: relative; }
+.flyer-wrap:not(.is-loaded) { aspect-ratio: 1; max-height: 60vh; }
+.flyer-wrap:not(.is-loaded) .flyer { position: absolute; inset: 0; height: 100%; }
+.flyer-skel { position: absolute; inset: 0; }
+.mod-skel { display: grid; gap: 8px; padding: var(--space-3); border: 1px solid var(--color-line); }
+.mod-skel-actions { display: flex; gap: var(--space-2); margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { .card-skeleton { animation: none; } }
+.card-skeleton .card-body { display: grid; gap: 8px; }

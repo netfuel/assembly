@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
-import { Button, Chip, Frame, Segmented, Sheet, Tag, Toast } from "../components/ui";
+import { Button, Chip, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
+import { hideSplash } from "../lib/splash";
 import { api, ApiError } from "../lib/api";
 import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
@@ -36,6 +37,9 @@ export function App() {
   const [city, setCity] = useState<City>(FALLBACK_CITY);
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  useEffect(() => {
+    if (loadState !== "loading") hideSplash();
+  }, [loadState]);
   const [loadError, setLoadError] = useState("");
   const [windowId, setWindowId] = useState<WindowId>("tonight");
   const [pickedDate, setPickedDate] = useState(() => tonightDate(new Date(), "America/Chicago"));
@@ -375,7 +379,32 @@ export function App() {
             </span>
           </div>
           <div className="rail" ref={railRef}>
-            {loadState === "loading" && <div className="rail-empty">Loading the map…</div>}
+            {loadState === "loading" && (
+              <>
+                <span className="sr-only" role="status">
+                  Loading events…
+                </span>
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="card card-skeleton" aria-hidden="true" style={{ animationDelay: `${i * 80}ms` }}>
+                    <Frame className="card-frame">
+                      <span className="card-top">
+                        <Skeleton w={44} h={9} />
+                        <Skeleton w={8} h={8} />
+                      </span>
+                      <span className="card-body skel-stack">
+                        <Skeleton w="85%" h={18} />
+                        <Skeleton w="55%" h={18} />
+                      </span>
+                      <Skeleton w="60%" h={9} />
+                      <span className="card-meta">
+                        <Skeleton w="45%" h={9} />
+                        <Skeleton w={48} h={9} />
+                      </span>
+                    </Frame>
+                  </div>
+                ))}
+              </>
+            )}
             {loadState === "error" && <div className="rail-empty">{loadError}</div>}
             {loadState === "ready" && shown.length === 0 && (
               <div className="rail-empty">
