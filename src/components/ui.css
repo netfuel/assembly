@@ -232,3 +232,5 @@
 img.fade-in { opacity: 0; transition: opacity 280ms ease; }
 img.fade-in.is-loaded { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { img.fade-in { transition: none; } }
+/* Queer-centered markers carry a ring as well as the violet, matching the ringed pins on the map. */
+.marker[style*="--color-uv"] { outline: 1px solid var(--color-uv); outline-offset: 2px; }

@@ -4,6 +4,7 @@ import { Button, Chip, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../
 import { InstallPrompt } from "../components/InstallPrompt";
 import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
+import { filtersQuery, initialFilters, saveFilters } from "../lib/filters";
 import { api, ApiError } from "../lib/api";
 import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
@@ -42,10 +43,11 @@ export function App() {
     if (loadState !== "loading") hideSplash();
   }, [loadState]);
   const [loadError, setLoadError] = useState("");
-  const [windowId, setWindowId] = useState<WindowId>("tonight");
-  const [pickedDate, setPickedDate] = useState(() => tonightDate(new Date(), "America/Chicago"));
+  const [initial] = useState(() => initialFilters(tonightDate(new Date(), "America/Chicago")));
+  const [windowId, setWindowId] = useState<WindowId>(initial.windowId);
+  const [pickedDate, setPickedDate] = useState(() => initial.date ?? tonightDate(new Date(), "America/Chicago"));
   const dateInput = useRef<HTMLInputElement>(null);
-  const [scenes, setScenes] = useState<SceneId[]>([]);
+  const [scenes, setScenes] = useState<SceneId[]>(initial.scenes);
   const [selectedId, setSelectedId] = useState<string | null>(eventIdFromPath());
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [me, setMe] = useState<MeProfile | null>(null);
@@ -125,10 +127,19 @@ export function App() {
   }, [loadEvents]);
 
   // Keep the address bar in step with the open event so links can be shared.
+  // On the map, the filters ride along in the query so a filtered view can be shared too.
+  const filterQuery = filtersQuery({ windowId, date: windowId === "date" ? pickedDate : null, scenes });
   useEffect(() => {
     const path = selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
-    if (location.pathname !== path) history.pushState(null, "", path);
-  }, [selectedId]);
+    if (location.pathname !== path) history.pushState(null, "", path + (selectedId ? "" : filterQuery));
+    else if (!selectedId && location.search !== filterQuery) {
+      // Keep one-off params (sign-in results) out of the way: they're cleared on load.
+      history.replaceState(null, "", path + filterQuery);
+    }
+  }, [selectedId, filterQuery]);
+  useEffect(() => {
+    saveFilters({ windowId, date: windowId === "date" ? pickedDate : null, scenes }, tonightDate(new Date(), "America/Chicago"));
+  }, [windowId, pickedDate, scenes]);
   useEffect(() => {
     const onPop = () => setSelectedId(eventIdFromPath());
     window.addEventListener("popstate", onPop);

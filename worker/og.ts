@@ -64,8 +64,7 @@ og.get("/:id", async (c) => {
   if (!page.ok || !(page.headers.get("Content-Type") ?? "").includes("text/html")) return page;
   // Unknown, hidden, or in-review events get the plain app page (the app shows its own message), kept out of search.
   if (!e) {
-    const plain = new HTMLRewriter().on("head", { element: (el) => void el.append(`<meta name="robots" content="noindex">`, { html: true }) }).transform(page);
-    const res = new Response(plain.body, plain);
+    const res = new Response(page.body, page);
     res.headers.set("X-Robots-Tag", "noindex");
     res.headers.set("Cache-Control", "public, max-age=60");
     return res;

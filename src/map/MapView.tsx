@@ -150,6 +150,20 @@ export function MapView({
           "circle-stroke-width": 2,
         },
       });
+      // Queer-centered pins also get an outer ring, so they don't rely on violet vs orange alone (color-blind safe).
+      map.addLayer({
+        id: "event-queer-ring",
+        type: "circle",
+        source: SOURCE,
+        filter: ["all", UNCLUSTERED, ["get", "queer"]] as FilterSpecification,
+        paint: {
+          "circle-radius": 10,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-color": MAP_COLORS.uv,
+          "circle-stroke-width": 1.5,
+          "circle-stroke-opacity": ["case", ["get", "cancelled"], 0.35, 1],
+        },
+      });
       // Clusters: size by count, UV when most are queer-centered, a magenta ring when any are live.
       map.addLayer({
         id: "cluster",

@@ -65,7 +65,7 @@ export const PRIVACY: LegalDoc = {
     {
       heading: "Cookies and storage",
       body: [
-        "One cookie keeps you signed in. We store a few preferences on your device, such as light or dark mode and a draft of an announcement you haven't posted. Events you RSVP to are saved on your device so they open offline at the door. Signing out clears your personal data from the device. If we turn on Cloudflare Web Analytics, it counts visits without cookies.",
+        "One cookie keeps you signed in. We store a few preferences on your device, such as light or dark mode, your last map filters, whether you've dismissed the home screen tip, and a draft of an announcement you haven't posted. Events you RSVP to are saved on your device so they open offline at the door. Signing out clears your personal data from the device. If we turn on Cloudflare Web Analytics, it counts visits without cookies.",
       ],
     },
     {

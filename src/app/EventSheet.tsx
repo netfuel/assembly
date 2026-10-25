@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button, Frame, Label, LinkButton, Sheet, Tag, Skeleton } from "../components/ui";
 import { announceGoing } from "../lib/install";
 import { ShareSheet } from "../components/ShareSheet";
+import { FlyerViewer } from "../components/FlyerViewer";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
@@ -145,6 +146,7 @@ export function EventSheet({
   }
 
   const [sharing, setSharing] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const shareTarget = {
     title: e.title,
     text: `${e.title}: ${dayLabel(e.startsAt, now, tz)}, ${timeRange(e.startsAt, e.endsAt, tz)}${e.venueName ? ` at ${e.venueName}` : ""}`,
@@ -209,7 +211,13 @@ export function EventSheet({
     <Sheet open onClose={onClose} label={e.title}>
       <div ref={root} className={`event ${queer ? "is-queer" : ""}`}>
         <div data-reveal>
-          {e.flyerUrl ? <FlyerImage src={e.flyerUrl} alt={`Flyer for ${e.title}`} /> : <GeneratedFlyer event={e} />}
+          {e.flyerUrl ? (
+            <button className="flyer-open" onClick={() => setViewing(true)} aria-label={`Open the flyer for ${e.title} full screen`}>
+              <FlyerImage src={e.flyerUrl} alt={`Flyer for ${e.title}`} />
+            </button>
+          ) : (
+            <GeneratedFlyer event={e} />
+          )}
         </div>
 
         {cancelled && (
@@ -418,6 +426,9 @@ export function EventSheet({
       </div>
     </Sheet>
     <ShareSheet target={shareTarget} open={sharing} onClose={() => setSharing(false)} toast={toast} />
+    {viewing && e.flyerUrl && (
+      <FlyerViewer src={e.flyerUrl} title={e.title} url={eventUrl(e.id)} credit={detail?.host?.displayName ?? null} onClose={() => setViewing(false)} toast={toast} />
+    )}
     </>
   );
 }

@@ -12,7 +12,7 @@ const cache = new Map<string, Entry>();
 
 export const thumbImageId = (eventId: string) => `thumb-${eventId}`;
 
-async function draw(url: string, border: string): Promise<ImageData> {
+async function draw(url: string, border: string, queer: boolean): Promise<ImageData> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(String(res.status));
   const bitmap = await createImageBitmap(await res.blob());
@@ -25,6 +25,16 @@ async function draw(url: string, border: string): Promise<ImageData> {
   ctx.fillStyle = "#0a0a0b";
   ctx.fillRect(PAD - 1, PAD - 1, SIZE - (PAD - 1) * 2, SIZE - (PAD - 1) * 2);
   ctx.drawImage(bitmap, PAD, PAD, SIZE - PAD * 2, SIZE - PAD * 2);
+  // Queer-centered: a corner notch in the frame color, a shape cue that doesn't depend on seeing violet.
+  if (queer) {
+    ctx.fillStyle = border;
+    ctx.beginPath();
+    ctx.moveTo(SIZE, 0);
+    ctx.lineTo(SIZE - 22, 0);
+    ctx.lineTo(SIZE, 22);
+    ctx.closePath();
+    ctx.fill();
+  }
   bitmap.close();
   return ctx.getImageData(0, 0, SIZE, SIZE);
 }
@@ -41,7 +51,7 @@ export function syncThumbs(map: MapLibre, events: EventSummary[], colors: { uv: 
     }
     if (entry) continue; // loading or failed
     cache.set(id, { state: "loading" });
-    draw(e.thumbUrl, e.scenes.includes("queer") ? colors.uv : colors.sodium)
+    draw(e.thumbUrl, e.scenes.includes("queer") ? colors.uv : colors.sodium, e.scenes.includes("queer"))
       .then((data) => {
         cache.set(id, { state: "ready", data });
         if (!map.hasImage(id)) map.addImage(id, data, { pixelRatio: 2 });
