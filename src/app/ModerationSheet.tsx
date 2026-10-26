@@ -3,7 +3,7 @@ import { Button, Label, Tag, Skeleton } from "../components/ui";
 import { api, ApiError, type ModWallItem } from "../lib/api";
 import { clock, dayLabel } from "../lib/time";
 import { VarsityMark } from "./EventSheet";
-import type { ModItem } from "../../shared/types";
+import type { ModItem, PageClaim } from "../../shared/types";
 
 const REASON_LABELS: Record<string, string> = {
   unsafe: "Unsafe",
@@ -11,6 +11,7 @@ const REASON_LABELS: Record<string, string> = {
   spam: "Spam",
   "wrong-info": "Wrong info",
   impersonation: "Impersonation",
+  wrong: "Wrong details",
   other: "Other",
 };
 
@@ -20,7 +21,17 @@ function splitReason(r: string) {
   return i === -1 ? { reason: r, note: null } : { reason: r.slice(0, i), note: r.slice(i + 2) };
 }
 
-export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpenEvent: (id: string) => void; toast: (m: string) => void }) {
+export function ModerationSheet({
+  tz,
+  onOpenEvent,
+  onOpenPage,
+  toast,
+}: {
+  tz: string;
+  onOpenEvent: (id: string) => void;
+  onOpenPage: (kind: "artist" | "venue", slug: string) => void;
+  toast: (m: string) => void;
+}) {
   const [items, setItems] = useState<ModItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -101,7 +112,7 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
             return (
               <li key={key} className="mod-item">
                 <div className="mod-head">
-                  <Tag tone="strong">{it.type === "event" ? "Event" : "Person"}</Tag>
+                  <Tag tone="strong">{it.type === "event" ? "Event" : it.type === "page" ? (it.kind === "artist" ? "Artist page" : "Venue page") : "Person"}</Tag>
                   {it.type === "event" && it.status !== "live" && <Tag tone={it.status === "hidden" ? "accent" : "default"}>{it.status === "hidden" ? "Hidden" : it.status === "draft" ? "First post: needs review" : it.status === "cancelled" ? "Cancelled" : it.status}</Tag>}
                   {it.reasons.length > 0 && (
                     <span className="dim num">
@@ -121,6 +132,8 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
                         </>
                       )}
                     </>
+                  ) : it.type === "page" ? (
+                    <>{it.claimed ? "Claimed by its owner" : "Not claimed"}</>
                   ) : (
                     <>
                       Hosts {it.hosted} event{it.hosted === 1 ? "" : "s"} {it.verified && <VarsityMark />}
@@ -176,6 +189,18 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
                         </Button>
                       )}
                     </>
+                  ) : it.type === "page" ? (
+                    <>
+                      <Button size="sm" onClick={() => onOpenPage(it.kind, it.slug)}>
+                        Open
+                      </Button>
+                      <Button size="sm" disabled={busy === key} onClick={() => act(key, () => api.modPage(it.kind, it.id, "clear"), "Cleared: bio, photo, links and owner.")}>
+                        Clear page
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={busy === key} onClick={() => act(key, () => api.modPage(it.kind, it.id, "dismiss"), "Reports dismissed.")}>
+                        Dismiss
+                      </Button>
+                    </>
                   ) : (
                     <>
                       <Button size="sm" disabled={busy === key} onClick={() => act(key, () => api.modUser(it.id, "hide-events"), "Their events are off the map.")}>
@@ -192,6 +217,7 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
           })}
         </ul>
       )}
+      <ClaimQueue onOpenPage={onOpenPage} toast={toast} />
       <WallQueue onOpenEvent={onOpenEvent} toast={toast} />
     </div>
   );
@@ -206,6 +232,63 @@ function Stat({ label, value, target }: { label: string; value: number; target?:
       <span className="stat-label">{label}</span>
       {target !== undefined && <span className="stat-target num">{met ? "Target met" : `Target ${target}+`}</span>}
     </div>
+  );
+}
+
+/** Artists and venues asking to own their page. Approve makes them the owner; their message says how to check. */
+function ClaimQueue({ onOpenPage, toast }: { onOpenPage: (kind: "artist" | "venue", slug: string) => void; toast: (m: string) => void }) {
+  const [claims, setClaims] = useState<PageClaim[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(() => {
+    api.modClaims().then(setClaims).catch(() => setClaims(null));
+  }, []);
+  useEffect(load, [load]);
+  if (!claims) return null;
+  const decide = async (id: string, action: "approve" | "decline") => {
+    setBusy(id);
+    try {
+      await api.decideClaim(id, action);
+      toast(action === "approve" ? "Approved. They can edit the page now." : "Declined.");
+      load();
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "That didn't go through.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <section className="stack" aria-label="Page claims">
+      <Label glyph="◇">Page claims</Label>
+      {claims.length === 0 && <p className="note">No one is waiting to claim a page.</p>}
+      <ul className="mod-list">
+        {claims.map((cl) => (
+          <li key={cl.id} className="mod-item">
+            <div className="mod-head">
+              <Tag tone="strong">{cl.kind === "artist" ? "Artist" : "Venue"}</Tag>
+            </div>
+            <p className="mod-title">{cl.name}</p>
+            <p className="note">
+              {cl.user.displayName}
+              {cl.user.email && <span className="dim"> · {cl.user.email}</span>}
+            </p>
+            <ul className="mod-notes">
+              <li>"{cl.message}"</li>
+            </ul>
+            <div className="inline-actions">
+              <Button size="sm" onClick={() => onOpenPage(cl.kind, cl.slug)}>
+                Open page
+              </Button>
+              <Button size="sm" variant="primary" disabled={busy === cl.id} onClick={() => decide(cl.id, "approve")}>
+                Approve
+              </Button>
+              <Button size="sm" disabled={busy === cl.id} onClick={() => decide(cl.id, "decline")}>
+                Decline
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

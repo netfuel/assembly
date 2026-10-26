@@ -4,6 +4,7 @@
 import { Hono, type Context } from "hono";
 import type { Env } from "./env";
 import { SCENES } from "../shared/types";
+import { findPage } from "./pages";
 
 export interface FeedEvent {
   id: string;
@@ -72,6 +73,28 @@ export async function upcoming(env: Env, cityId: string, scene: string | null, l
      ORDER BY e.starts_at LIMIT ?4`,
   )
     .bind(cityId, new Date().toISOString(), scene, limit)
+    .all<FeedEvent>();
+  return rows.results ?? [];
+}
+
+/** Upcoming public events on an artist, venue or organizer page (/feeds/a|v|o/<slug>.xml). */
+export async function upcomingFor(env: Env, kind: "artist" | "venue" | "organizer", id: string, limit = 200) {
+  const scope =
+    kind === "artist"
+      ? "EXISTS (SELECT 1 FROM lineup_slots s WHERE s.event_id = e.id AND s.artist_id = ?1)"
+      : kind === "venue"
+        ? "e.venue_id = ?1"
+        : "EXISTS (SELECT 1 FROM event_hosts h WHERE h.event_id = e.id AND h.user_id = ?1)";
+  const rows = await env.DB.prepare(
+    `SELECT e.id, e.title, e.pitch, e.description, e.starts_at, e.ends_at, e.status, e.address, e.neighborhood, e.lat, e.lng,
+            e.door_price, e.ticket_url, e.scenes, e.flyer_key, e.created_at, e.updated_at, v.name AS venue_name,
+            (SELECT group_concat(a.name, ', ') FROM (SELECT ar.name FROM lineup_slots ls JOIN artists ar ON ar.id = ls.artist_id
+               WHERE ls.event_id = e.id ORDER BY ls.position) a) AS lineup
+     FROM events e LEFT JOIN venues v ON v.id = e.venue_id
+     WHERE ${scope} AND e.status IN ('live', 'cancelled') AND e.is_sample = 0 AND e.ends_at > ?2
+     ORDER BY e.starts_at LIMIT ?3`,
+  )
+    .bind(id, new Date().toISOString(), limit)
     .all<FeedEvent>();
   return rows.results ?? [];
 }
@@ -217,6 +240,22 @@ feeds.get("/:a/:b?", async (c) => {
   const m = last.match(/^([a-z0-9-]+)\.(xml|json|ics)$/);
   if (!m) return c.notFound();
   const format = m[2] as "xml" | "json" | "ics";
+  // Page feeds: /feeds/a/<artist>.xml, /feeds/v/<venue>.xml, /feeds/o/<organizer>.xml
+  const pageKind = b ? ({ a: "artist", v: "venue", o: "organizer" } as const)[a as "a" | "v" | "o"] : undefined;
+  if (pageKind) {
+    const page = await findPage(c.env, pageKind, m[1]).catch(() => null);
+    if (!page) return c.notFound();
+    const city = page.cityId ? await c.env.DB.prepare("SELECT id, name, slug, timezone FROM cities WHERE id = ?").bind(page.cityId).first<CityRow>() : null;
+    const tz = city?.timezone ?? "America/Chicago";
+    const origin = new URL(c.req.url).origin;
+    const events = await upcomingFor(c.env, pageKind, page.id);
+    const home = `${origin}/${a}/${encodeURIComponent(page.slug)}`;
+    const o = { origin, self: `${origin}${c.req.path}`, title: `Assembly: ${page.name}`, tz, home };
+    const etag = etagFor(events, `${format}-${a}-${page.id}-${(page.updatedAt ?? "").replace(/\D/g, "")}`);
+    if (format === "xml") return respond(c, atom(events, o), "application/atom+xml; charset=utf-8", etag);
+    if (format === "json") return respond(c, JSON.stringify(jsonFeed(events, o)), "application/feed+json; charset=utf-8", etag);
+    return respond(c, calendar(events, o), "text/calendar; charset=utf-8", etag);
+  }
   const citySlug = b ? a : m[1];
   const scene = b ? m[1] : null;
   if (scene && !SCENES.some((s) => s.id === scene)) return c.notFound();
@@ -242,12 +281,27 @@ export async function sitemap(c: Context<{ Bindings: Env }>) {
   )
     .bind(new Date().toISOString())
     .all<{ id: string; updated_at: string }>();
+  // Artist and venue pages with something coming up (an empty page isn't worth a crawl).
+  const pagesUp = await c.env.DB.prepare(
+    `SELECT 'a' AS k, a.slug AS slug, a.updated_at AS updated_at FROM artists a
+       WHERE EXISTS (SELECT 1 FROM lineup_slots s JOIN events e ON e.id = s.event_id WHERE s.artist_id = a.id AND e.status = 'live' AND e.is_sample = 0 AND e.ends_at > ?1)
+     UNION ALL
+     SELECT 'v', COALESCE(v.slug, v.id), v.updated_at FROM venues v
+       WHERE EXISTS (SELECT 1 FROM events e WHERE e.venue_id = v.id AND e.status = 'live' AND e.is_sample = 0 AND e.ends_at > ?1)
+     LIMIT 5000`,
+  )
+    .bind(new Date().toISOString())
+    .all<{ k: string; slug: string; updated_at: string | null }>()
+    .catch(() => ({ results: [] as { k: string; slug: string; updated_at: string | null }[] }));
   const urls = [
     `<url><loc>${origin}/</loc><changefreq>hourly</changefreq></url>`,
     `<url><loc>${origin}/feed</loc><changefreq>hourly</changefreq></url>`,
     ...["terms", "privacy", "guidelines"].map((p) => `<url><loc>${origin}/${p}</loc><changefreq>monthly</changefreq></url>`),
     ...(rows.results ?? []).map(
       (r) => `<url><loc>${origin}/e/${xml(encodeURIComponent(r.id))}</loc><lastmod>${new Date(r.updated_at).toISOString()}</lastmod></url>`,
+    ),
+    ...(pagesUp.results ?? []).map(
+      (r) => `<url><loc>${origin}/${r.k}/${xml(encodeURIComponent(r.slug))}</loc>${r.updated_at ? `<lastmod>${new Date(r.updated_at).toISOString()}</lastmod>` : ""}</url>`,
     ),
   ];
   return c.body(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`, 200, {

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppContext } from "./env";
 import { isModerator } from "./moderation";
 import { hereNowCounts } from "./checkins";
+import { organizerSlug, venueSlug } from "./pages";
 import type { EventDetail, EventSummary, LineupSlot, RsvpStatus, SceneId } from "../shared/types";
 
 export interface EventRow {
@@ -165,8 +166,11 @@ events.get("/:id", async (c) => {
     viewerRsvp,
     viewerIsHost,
     viewerCanEdit: viewerIsHost || (!!userId && (await isModerator(c.env, userId))),
-    host: hostRow ? { id: hostRow.id, displayName: hostRow.display_name, avatarUrl: hostRow.avatar_url, verified: hostRow.is_verified_organizer === 1 } : null,
+    host: hostRow
+      ? { id: hostRow.id, displayName: hostRow.display_name, avatarUrl: hostRow.avatar_url, verified: hostRow.is_verified_organizer === 1, slug: await organizerSlug(c.env, hostRow.id) }
+      : null,
     venueId: row.venue_id,
+    venueSlug: await venueSlug(c.env, row.venue_id),
     flyerKey: row.flyer_key,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

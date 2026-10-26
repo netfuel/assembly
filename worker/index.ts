@@ -10,6 +10,7 @@ import { emailAuth } from "./emailAuth";
 import { events } from "./events";
 import { fonts } from "./fonts";
 import { og } from "./og";
+import { ogPages } from "./ogPages";
 import { ogImages } from "./ogImage";
 import { feeds, sitemap } from "./feeds";
 import { searchRoute } from "./search";
@@ -21,6 +22,7 @@ import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
 import { featureGate, features } from "./features";
+import { pageModeration, pages } from "./pages";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -90,7 +92,7 @@ app.get("/config", (c) => {
 // Flyers and profile photos stored in R2. Only those prefixes are public; fonts and anything else in the bucket are not.
 app.get("/media/:key{.+}", async (c) => {
   const key = c.req.param("key");
-  if (!(key.startsWith("flyers/") || key.startsWith("avatars/")) || key.includes("..")) return c.notFound();
+  if (!(key.startsWith("flyers/") || key.startsWith("avatars/") || key.startsWith("pages/")) || key.includes("..")) return c.notFound();
   const obj = await c.env.MEDIA.get(key);
   if (!obj) return c.notFound();
   const headers = new Headers();
@@ -115,6 +117,8 @@ app.route("/wall", wallPosts);
 app.route("/", wallModeration);
 app.route("/events", events);
 app.route("/search", searchRoute);
+app.route("/pages", pages);
+app.route("/", pageModeration);
 app.route("/og", ogImages);
 
 app.notFound((c) => c.json({ error: "Not found." }, 404));
@@ -148,6 +152,7 @@ root.onError((err, c) => {
 });
 root.route("/fonts", fonts);
 root.route("/e", og);
+root.route("/", ogPages);
 root.route("/feeds", feeds);
 root.get("/sitemap.xml", sitemap);
 root.route("/", app);

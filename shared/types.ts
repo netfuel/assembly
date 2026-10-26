@@ -86,6 +86,8 @@ export interface EventDetail extends EventSummary {
   /** The organizer who posted it. */
   host: HostSummary | null;
   venueId: string | null;
+  /** For the link to /v/<slug>. */
+  venueSlug?: string | null;
   flyerKey: string | null;
   createdAt: string;
   updatedAt: string;
@@ -174,6 +176,8 @@ export interface HostSummary {
   displayName: string;
   avatarUrl: string | null;
   verified: boolean;
+  /** For the link to /o/<slug>. */
+  slug?: string;
 }
 
 /** One entry in the moderators' review queue. */
@@ -188,7 +192,8 @@ export type ModItem =
       reasons: string[];
       latest: string;
     }
-  | { type: "user"; id: string; title: string; verified: boolean; hosted: number; reasons: string[]; latest: string };
+  | { type: "user"; id: string; title: string; verified: boolean; hosted: number; reasons: string[]; latest: string }
+  | { type: "page"; kind: "artist" | "venue"; id: string; slug: string; title: string; claimed: boolean; reasons: string[]; latest: string };
 
 export interface AuthProviders {
   google: boolean;
@@ -203,6 +208,8 @@ export interface AuthProviders {
 export interface SearchPlace {
   id: string;
   name: string;
+  /** For the link to /a/<slug> or /v/<slug>. */
+  slug: string;
   /** Venues: address and type. Artists: null. */
   address: string | null;
   neighborhood: string | null;
@@ -319,4 +326,70 @@ export interface HerePerson {
   displayName: string;
   avatarUrl: string | null;
   friend: boolean;
+}
+
+/* ---------- Artist, venue and organizer pages (/a/<slug>, /v/<slug>, /o/<slug>) ---------- */
+export type PageKind = "artist" | "venue" | "organizer";
+
+export interface PageProfile {
+  kind: PageKind;
+  id: string;
+  /** What goes in the URL. Venues without one fall back to their id. */
+  slug: string;
+  name: string;
+  bio: string | null;
+  photoUrl: string | null;
+  city: string | null;
+  /** The scenes of their shows, most common first. */
+  scenes: SceneId[];
+  links: ArtistLinks;
+  /** Someone owns the page (an approved claim, or the organizer themself). */
+  claimed: boolean;
+  verified: boolean;
+  /** The owner or a moderator. */
+  viewerCanEdit: boolean;
+  /** Has the viewer asked to claim it, or do they own it? */
+  viewerClaim: "none" | "pending" | "owner";
+  upcomingCount: number;
+  pastCount: number;
+  updatedAt: string | null;
+  venue?: {
+    type: string;
+    address: string;
+    neighborhood: string | null;
+    lat: number;
+    lng: number;
+    accessNotes: string | null;
+    housePolicy: string[];
+  };
+}
+
+/** An event on a page: the summary plus, on artist pages, their set time. */
+export interface PageEvent extends EventSummary {
+  setStart?: string | null;
+  room?: string | null;
+}
+
+export interface PageEvents {
+  events: PageEvent[];
+  /** Pass back as ?cursor= for the next page; null at the end. */
+  next: string | null;
+}
+
+export interface PageEdit {
+  bio?: string | null;
+  links?: ArtistLinks;
+  accessNotes?: string | null;
+  housePolicy?: string[];
+}
+
+export interface PageClaim {
+  id: string;
+  kind: "artist" | "venue";
+  targetId: string;
+  slug: string;
+  name: string;
+  user: { id: string; displayName: string; email: string | null };
+  message: string;
+  createdAt: string;
 }

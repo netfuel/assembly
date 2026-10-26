@@ -20,7 +20,7 @@ import { countTo, flipIn, hasFlipOrigin, reducedMotion, revealChildren, stamp, u
 import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type FriendPerson, type HerePerson, type PresenceVisibility, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 
-const LINK_LABELS: Record<string, string> = {
+export const LINK_LABELS: Record<string, string> = {
   instagram: "Instagram",
   soundcloud: "SoundCloud",
   bandcamp: "Bandcamp",
@@ -64,9 +64,12 @@ export function EventSheet({
   onNeedSignIn,
   onEdit,
   onChanged,
+  onOpenPage,
   config,
   toast,
 }: {
+  /** Open an artist, venue or organizer page (lineup names, the venue, "Posted by"). */
+  onOpenPage?: (p: { kind: "artist" | "venue" | "organizer"; slug: string }) => void;
   summary: EventSummary;
   /** Friends going to or at this event (only when your friends are on). */
   friends?: FriendAt[];
@@ -315,7 +318,13 @@ export function EventSheet({
             {dayLabel(e.startsAt, now, tz)} <span className="dim">/</span> {timeRange(e.startsAt, e.endsAt, tz)}
           </p>
           <p className="event-where">
-            <span className="event-where-venue">{e.venueName ?? e.neighborhood ?? "Location"}</span>
+            {e.venueName && detail?.venueSlug && onOpenPage ? (
+              <button className="event-where-venue link-plain page-link" onClick={() => onOpenPage({ kind: "venue", slug: detail.venueSlug! })}>
+                {e.venueName}
+              </button>
+            ) : (
+              <span className="event-where-venue">{e.venueName ?? e.neighborhood ?? "Location"}</span>
+            )}
             {e.venueName && e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
             <span className="event-where-address">{e.address}</span>
           </p>
@@ -422,7 +431,13 @@ export function EventSheet({
                 <li key={slot.artistId}>
                   <span className="lineup-index num">N.{String(i + 1).padStart(2, "0")}</span>
                   <span className="lineup-artist">
-                    <span className="lineup-name">{slot.name}</span>
+                    {onOpenPage ? (
+                      <button className="lineup-name link-plain page-link" onClick={() => onOpenPage({ kind: "artist", slug: slot.slug })}>
+                        {slot.name}
+                      </button>
+                    ) : (
+                      <span className="lineup-name">{slot.name}</span>
+                    )}
                     {(slot.note || slot.room) && <span className="lineup-note">{[slot.room, slot.note].filter(Boolean).join(" / ")}</span>}
                     <span className="artist-links">
                       {Object.entries(slot.links).map(([k, href]) =>
@@ -490,7 +505,7 @@ export function EventSheet({
         <div className="ev-quiet">
         {detail?.host && (
           <div data-reveal>
-            <HostLine host={detail.host} me={me} toast={toast} />
+            <HostLine host={detail.host} me={me} toast={toast} onOpen={onOpenPage && detail.host.slug ? () => onOpenPage({ kind: "organizer", slug: detail.host!.slug! }) : undefined} />
           </div>
         )}
 
@@ -628,14 +643,22 @@ const USER_REASONS = [
   { id: "spam", label: "Spam or scam" },
   { id: "other", label: "Something else" },
 ];
+const PAGE_REASONS = [
+  { id: "wrong", label: "Wrong details" },
+  { id: "impersonation", label: "Someone posing as them" },
+  { id: "hateful", label: "Hateful or harassing" },
+  { id: "spam", label: "Spam or scam" },
+  { id: "other", label: "Something else" },
+];
 
-function ReportBox({
+export function ReportBox({
   target,
   me,
   onNeedSignIn,
   toast,
 }: {
-  target: { kind: "event" | "user"; id: string; name: string };
+  /** For artist and venue pages, id is the page's slug. */
+  target: { kind: "event" | "user" | "artist" | "venue"; id: string; name: string; label?: string };
   me: Me | null;
   onNeedSignIn: () => void;
   toast: (m: string) => void;
@@ -645,8 +668,8 @@ function ReportBox({
   const [note, setNote] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
-  const reasons = target.kind === "event" ? EVENT_REASONS : USER_REASONS;
-  const label = target.kind === "event" ? "Report this event" : `Report ${target.name}`;
+  const reasons = target.kind === "event" ? EVENT_REASONS : target.kind === "user" ? USER_REASONS : PAGE_REASONS;
+  const label = target.label ?? (target.kind === "event" ? "Report this event" : `Report ${target.name}`);
 
   if (sent) return <p className="note">Thanks. We'll take a look.</p>;
   if (!open) {
@@ -694,7 +717,8 @@ function ReportBox({
             setBusy(true);
             try {
               if (target.kind === "event") await api.report(target.id, reason!, note);
-              else await api.reportUser(target.id, reason!, note);
+              else if (target.kind === "user") await api.reportUser(target.id, reason!, note);
+              else await api.reportPage(target.kind, target.id, reason!, note);
               setSent(true);
             } catch (err) {
               toast(err instanceof ApiError ? err.message : "Couldn't send the report. Try again.");
@@ -712,13 +736,20 @@ function ReportBox({
 }
 
 /** Who posted it, with the verified badge. Moderators can verify from here. */
-function HostLine({ host, me, toast }: { host: HostSummary; me: MeProfile | null; toast: (m: string) => void }) {
+function HostLine({ host, me, toast, onOpen }: { host: HostSummary; me: MeProfile | null; toast: (m: string) => void; onOpen?: () => void }) {
   const [verified, setVerified] = useState(host.verified);
   return (
     <div className="host-line">
       <Avatar user={host} size={32} />
       <span className="host-line-text">
-        <span className="dim">Posted by</span> {host.displayName}
+        <span className="dim">Posted by</span>{" "}
+        {onOpen ? (
+          <button className="link-plain page-link" onClick={onOpen}>
+            {host.displayName}
+          </button>
+        ) : (
+          host.displayName
+        )}
         {verified && (
           <span className="verified" title="Verified organizer: vetted by the Assembly team">
             <VarsityMark /> Verified

@@ -4,6 +4,7 @@ import { Button, LiveBadge, Sheet, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { LocateButton } from "../components/LocateButton";
 import { Logo } from "../components/Logo";
+import { PageSheet, pageFromPath, pagePath, type PageRef } from "./PageSheet";
 import { GeneratedArt } from "../components/GeneratedArt";
 import { formatMiles, milesBetween, useMyLocation } from "../lib/location";
 import { useMinute } from "../lib/clock";
@@ -79,6 +80,14 @@ export function App() {
   const scenes = filters.scenes;
   const setWindowId = (windowId: WindowId) => setFilters((f) => ({ ...f, windowId }));
   const [selectedId, setSelectedId] = useState<string | null>(eventIdFromPath());
+  // An artist, venue or organizer page (/a, /v, /o). An event can open on top of it; closing the event returns here.
+  const [page, setPage] = useState<PageRef | null>(pageFromPath());
+  const openPage = useCallback((p: PageRef) => {
+    setSheet(null);
+    setSearchOpen(false);
+    setSelectedId(null);
+    setPage(p);
+  }, []);
   const [view, setViewState] = useState<View>(initialView);
   const wide = useWide();
   // The home sheet's height. Full is the feed; peek and half show the map with cards.
@@ -255,20 +264,22 @@ export function App() {
   // On the map, the filters ride along in the query so a filtered view can be shared too.
   const filterQuery = filtersQuery(filters);
   useEffect(() => {
-    const path = selectedId ? `/e/${encodeURIComponent(selectedId)}` : view === "feed" ? "/feed" : "/";
-    if (location.pathname !== path) history.pushState(null, "", path + (selectedId ? "" : filterQuery));
-    else if (!selectedId && location.search !== filterQuery) {
+    const path = selectedId ? `/e/${encodeURIComponent(selectedId)}` : page ? pagePath(page) : view === "feed" ? "/feed" : "/";
+    if (location.pathname !== path) history.pushState(null, "", path + (selectedId || page ? "" : filterQuery));
+    else if (!selectedId && !page && location.search !== filterQuery) {
       // Keep one-off params (sign-in results) out of the way: they're cleared on load.
       history.replaceState(null, "", path + filterQuery);
     }
-  }, [selectedId, filterQuery, view]);
+  }, [selectedId, page, filterQuery, view]);
   useEffect(() => {
     saveFilters({ ...filters, date: filters.windowId === "date" ? filters.date : null }, tonightDate(new Date(), "America/Chicago"));
   }, [filters]);
   useEffect(() => {
     const onPop = () => {
       setSelectedId(eventIdFromPath());
-      if (!eventIdFromPath()) setViewState(location.pathname.startsWith("/feed") ? "feed" : "map");
+      // Back from an event opened on a page keeps the page; back from the page closes it.
+      if (!eventIdFromPath()) setPage(pageFromPath());
+      if (!eventIdFromPath() && !pageFromPath()) setViewState(location.pathname.startsWith("/feed") ? "feed" : "map");
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -611,7 +622,7 @@ export function App() {
       <HomeSheet
         detent={detent}
         onDetent={changeDetent}
-        hidden={!!selected && !wide}
+        hidden={(!!selected || !!page) && !wide}
         floating={<LocateButton status={loc.status} following={followMe} onTap={tapLocate} />}
         header={
           <SheetHeader
@@ -753,6 +764,37 @@ export function App() {
         }
       />
 
+      {page && (
+        <PageSheet
+          key={`${page.kind}:${page.slug}`}
+          page={page}
+          me={me}
+          config={config}
+          tz={city.timezone}
+          theme={theme}
+          rsvps={rsvps}
+          friendsAt={friendsAt}
+          onClose={() => setPage(null)}
+          onOpenEvent={(id) => select(id)}
+          onShowOnMap={(id) => {
+            setPage(null);
+            showOnMap(id);
+          }}
+          onShowPlace={(lng, lat) => {
+            setPage(null);
+            setView("map");
+            setFocus({ lng, lat, key: Date.now() });
+          }}
+          onRsvp={feedRsvp}
+          onNeedSignIn={() => openSignIn()}
+          onEditProfile={() => {
+            setPage(null);
+            setSheet("profile");
+          }}
+          toast={toast}
+        />
+      )}
+
       {selected && (
         <EventSheet
           key={`${selected.id}:${detailVersion}`}
@@ -773,6 +815,11 @@ export function App() {
             setSheet("announce");
           }}
           onChanged={() => setDetailVersion((v) => v + 1)}
+          onOpenPage={(p) => {
+            flipOut(selected.id, document.querySelector<HTMLElement>(".event-hero"));
+            setSelectedId(null);
+            setPage(p);
+          }}
           toast={toast}
         />
       )}
@@ -871,11 +918,12 @@ export function App() {
       </Sheet>
 
       <Sheet open={sheet === "moderation" && !!me?.moderator} onClose={() => setSheet("profile")} label="Review reports" modal center className="sheet-compose">
-        <ModerationSheet tz={city.timezone} onOpenEvent={openEvent} toast={toast} />
+        <ModerationSheet tz={city.timezone} onOpenEvent={openEvent} onOpenPage={(kind, slug) => openPage({ kind, slug })} toast={toast} />
       </Sheet>
 
       <SearchSheet
         open={searchOpen}
+        onOpenPage={(p) => openPage(p)}
         onClose={() => setSearchOpen(false)}
         initial={filters.q ?? ""}
         tz={city.timezone}

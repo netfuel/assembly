@@ -20,7 +20,15 @@ import type {
   PresenceVisibility,
   ServerConfig,
   Venue,
+  PageClaim,
+  PageEdit,
+  PageEvents,
+  PageKind,
+  PageProfile,
 } from "../../shared/types";
+
+const PAGE_PATH: Record<PageKind, string> = { artist: "artists", venue: "venues", organizer: "organizers" };
+const pagePath = (kind: PageKind, slug: string) => `/api/pages/${PAGE_PATH[kind]}/${encodeURIComponent(slug)}`;
 
 export class ApiError extends Error {
   constructor(
@@ -120,6 +128,20 @@ export const api = {
     request<{ ok: true }>(`/api/events/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   reportUser: (id: string, reason: string, note: string) =>
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  page: (kind: PageKind, slug: string) => request<PageProfile>(pagePath(kind, slug)),
+  pageEvents: (kind: PageKind, slug: string, when: "upcoming" | "past", cursor?: string | null) =>
+    request<PageEvents>(`${pagePath(kind, slug)}/events?when=${when}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
+  editPage: (kind: "artist" | "venue", slug: string, edit: PageEdit) => request<PageProfile>(pagePath(kind, slug), { method: "PUT", body: JSON.stringify(edit) }),
+  pagePhoto: (kind: "artist" | "venue", slug: string, blob: Blob) =>
+    request<PageProfile>(`${pagePath(kind, slug)}/photo`, { method: "POST", body: blob, headers: { "Content-Type": blob.type } }),
+  claimPage: (kind: "artist" | "venue", slug: string, message: string) =>
+    request<PageProfile>(`${pagePath(kind, slug)}/claim`, { method: "POST", body: JSON.stringify({ message }) }),
+  reportPage: (kind: "artist" | "venue", slug: string, reason: string, note: string) =>
+    request<{ ok: true }>(`${pagePath(kind, slug)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  modPage: (kind: "artist" | "venue", id: string, action: "dismiss" | "clear") =>
+    request<{ ok: true }>(`/api/mod/pages/${kind}/${encodeURIComponent(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
+  modClaims: () => request<{ claims: PageClaim[] }>("/api/mod/claims").then((r) => r.claims),
+  decideClaim: (id: string, action: "approve" | "decline") => request<{ ok: true }>(`/api/mod/claims/${encodeURIComponent(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
   modStats: () => request<{ stats: Record<string, number> }>("/api/mod/stats").then((r) => r.stats),
   modQueue: () => request<{ items: ModItem[] }>("/api/mod/queue").then((r) => r.items),
   modEvent: (id: string, action: "restore" | "remove" | "dismiss" | "approve" | "reject") =>

@@ -79,9 +79,9 @@ moderation.get("/mod/queue", async (c) => {
       `SELECT r.target_type, r.target_id, r.reason, r.created_at
        FROM reports r WHERE r.status = 'open' ORDER BY r.created_at DESC LIMIT 500`,
     )
-    .all<{ target_type: "event" | "user"; target_id: string; reason: string; created_at: string }>();
+    .all<{ target_type: "event" | "user" | "artist" | "venue"; target_id: string; reason: string; created_at: string }>();
 
-  const groups = new Map<string, { type: "event" | "user"; id: string; reasons: string[]; latest: string }>();
+  const groups = new Map<string, { type: "event" | "user" | "artist" | "venue"; id: string; reasons: string[]; latest: string }>();
   for (const r of rows) {
     const key = `${r.target_type}:${r.target_id}`;
     const g = groups.get(key) ?? { type: r.target_type, id: r.target_id, reasons: [], latest: r.created_at };
@@ -113,6 +113,13 @@ moderation.get("/mod/queue", async (c) => {
         reasons: g.reasons,
         latest: g.latest,
       });
+    } else if (g.type === "artist" || g.type === "venue") {
+      const p = await db
+        .prepare(g.type === "artist" ? "SELECT name, slug, claimed_by FROM artists WHERE id = ?" : "SELECT name, COALESCE(slug, id) AS slug, claimed_by FROM venues WHERE id = ?")
+        .bind(g.id)
+        .first<{ name: string; slug: string; claimed_by: string | null }>();
+      if (!p) continue;
+      items.push({ type: "page", kind: g.type, id: g.id, slug: p.slug, title: p.name, claimed: !!p.claimed_by, reasons: g.reasons, latest: g.latest });
     } else {
       const u = await db
         .prepare(
@@ -190,6 +197,25 @@ moderation.post("/mod/users/:id", async (c) => {
       db.prepare("UPDATE events SET status = 'hidden' WHERE status = 'live' AND id IN (SELECT event_id FROM event_hosts WHERE user_id = ?)").bind(id),
       db.prepare("UPDATE users SET is_verified_organizer = 0 WHERE id = ?").bind(id),
       db.prepare("UPDATE reports SET status = 'actioned' WHERE target_type = 'user' AND target_id = ? AND status = 'open'").bind(id),
+    ]);
+  } else return c.json({ error: "Unknown action." }, 400);
+  return c.json({ ok: true });
+});
+
+/** dismiss: close the reports. clear: wipe the page's bio, photo and links (and its owner) and close them. */
+moderation.post("/mod/pages/:kind/:id", async (c) => {
+  const kind = c.req.param("kind");
+  if (kind !== "artist" && kind !== "venue") return c.json({ error: "Unknown page type." }, 400);
+  const id = c.req.param("id");
+  const { action } = (await c.req.json().catch(() => ({}))) as { action?: string };
+  const db = c.env.DB;
+  const close = (status: string) => db.prepare(`UPDATE reports SET status = '${status}' WHERE target_type = ? AND target_id = ? AND status = 'open'`).bind(kind, id);
+  if (action === "dismiss") await close("dismissed").run();
+  else if (action === "clear") {
+    const table = kind === "artist" ? "artists" : "venues";
+    await db.batch([
+      db.prepare(`UPDATE ${table} SET bio = NULL, photo_key = NULL, links = '{}', claimed_by = NULL, updated_at = ? WHERE id = ?`).bind(new Date().toISOString(), id),
+      close("actioned"),
     ]);
   } else return c.json({ error: "Unknown action." }, 400);
   return c.json({ ok: true });

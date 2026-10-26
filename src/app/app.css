@@ -953,3 +953,37 @@
 .flip-ghost { position: fixed; z-index: 45; overflow: hidden; pointer-events: none; will-change: transform; background: var(--color-surface); }
 .flip-ghost img, .flip-ghost canvas { width: 100%; height: 100%; object-fit: cover; display: block; image-rendering: pixelated; }
 .sheet.is-flip { animation: none; }
+
+/* Artist, venue and organizer pages (PageSheet.tsx) */
+.page { display: grid; gap: var(--space-6); }
+.page-head { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: var(--space-4); align-items: end; padding-right: 36px; }
+.page-photo { width: 88px; height: 88px; border-radius: var(--radius-sm); object-fit: cover; overflow: hidden; background: var(--color-surface-raised); }
+.page-photo.is-initial { display: grid; place-items: center; font-family: var(--font-serif); font-size: var(--text-xl); color: var(--color-muted); }
+.page-id { display: grid; gap: var(--space-1); min-width: 0; }
+.page-kind { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-muted); }
+.page-name { margin: 0; font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 300; font-size: clamp(var(--text-lg), 9vw, var(--text-xl)); line-height: var(--leading-display); letter-spacing: var(--tracking-display); text-wrap: balance; overflow-wrap: anywhere; }
+.page-meta { margin: 0; font-size: var(--text-xs); color: var(--color-muted); }
+.page-bio { margin: 0; font-size: var(--text-sm); line-height: var(--leading-body); text-wrap: pretty; white-space: pre-line; }
+.page-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+.page-links a { display: inline-flex; align-items: center; min-height: var(--tap); font-size: var(--text-xs); color: var(--color-fg); text-decoration: underline; text-decoration-color: var(--color-line-strong); text-underline-offset: 3px; }
+.page-links a:hover { text-decoration-color: var(--color-fg); }
+.page-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.page-editor { display: grid; gap: var(--space-5); padding: var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-sm); background: var(--color-surface); }
+.page-link-fields { display: grid; gap: var(--space-3); }
+.page-venue { display: grid; gap: var(--space-3); }
+.map-snippet-wrap { all: unset; display: block; cursor: pointer; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--color-line); }
+.map-snippet-wrap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.map-snippet { width: 100%; height: 160px; pointer-events: none; }
+.snippet-pin { width: 16px; height: 16px; border-radius: 50%; background: var(--color-fg); border: 3px solid var(--color-ground); box-shadow: 0 0 0 1px var(--color-fg); }
+.page-address { margin: 0; font-size: var(--text-sm); }
+.page-notes { margin: 0; font-size: var(--text-sm); color: var(--color-muted); white-space: pre-line; }
+.page-shows { display: grid; gap: var(--space-4); }
+.page-shows .segmented { justify-self: start; }
+.page-feed { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); }
+.page-foot { display: grid; gap: var(--space-3); justify-items: start; padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
+.feed-set { margin: 0; font-size: var(--text-xs); color: var(--color-fg); }
+.feed-card.is-past { opacity: 0.62; }
+.feed-card.is-past:hover, .feed-card.is-past:focus-within { opacity: 1; }
+/* Names that open a page: plain until you aim at them. */
+.page-link { cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color var(--dur-fast); }
+.page-link:hover, .page-link:focus-visible { text-decoration-color: currentColor; }

@@ -33,11 +33,13 @@ const env = {
 };
 const ctx = { waitUntil() {}, passThroughOnException() {} };
 let failed = false;
-for (const path of ["/api/health", "/api/auth/providers", "/api/config", "/e/example", "/api/og/e/example.png"]) {
+for (const path of ["/api/health", "/api/auth/providers", "/api/config", "/e/example", "/api/og/e/example.png", "/a/example", "/v/example", "/api/pages/artists/example"]) {
   const res = await mod.default.fetch(new Request(`https://assembly.rsvp${path}`), env, ctx);
   const csp = res.headers.has("content-security-policy");
-  const ok = res.status < 500 && csp;
+  // API routes must answer JSON: a page route that swallows /api/* would hand back the app's HTML instead.
+  const json = !path.startsWith("/api/") || path.endsWith(".png") || (res.headers.get("content-type") ?? "").includes("json");
+  const ok = res.status < 500 && csp && json;
   if (!ok) failed = true;
-  console.log(`${ok ? "ok  " : "FAIL"} ${path} ${res.status}${csp ? "" : " (no security headers)"}`);
+  console.log(`${ok ? "ok  " : "FAIL"} ${path} ${res.status}${csp ? "" : " (no security headers)"}${json ? "" : " (not JSON)"}`);
 }
 process.exit(failed ? 1 : 0);

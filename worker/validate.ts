@@ -1,5 +1,5 @@
 // Validation for posting and editing events. Pure functions so they're unit-testable.
-import { POLICY_TAGS, SCENES, type ArtistLinks, type SceneId } from "../shared/types";
+import { POLICY_TAGS, SCENES, type ArtistLinks, type PageEdit, type SceneId } from "../shared/types";
 
 export const LIMITS = {
   title: 80,
@@ -267,4 +267,33 @@ export function validateProfile(raw: unknown): { ok: true; value: ProfileInput }
       showAttendance: r.showAttendance === true,
     },
   };
+}
+
+export const PAGE_LIMITS = { bio: 600, accessNotes: 400, claim: 400 } as const;
+
+/** An owner's edit to an artist or venue page. Only the fields present change. */
+export function validatePageEdit(raw: unknown, kind: "artist" | "venue"): { ok: true; value: PageEdit } | { ok: false; errors: FieldErrors } {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const errors: FieldErrors = {};
+  const value: PageEdit = {};
+  if ("bio" in r) value.bio = longText(r.bio, PAGE_LIMITS.bio);
+  if ("links" in r) {
+    const links: ArtistLinks = {};
+    const rawLinks = (r.links ?? {}) as Record<string, unknown>;
+    for (const key of ARTIST_LINK_KEYS) {
+      const v = rawLinks[key];
+      if (typeof v === "string" && v.trim()) {
+        const url = normalizeUrl(v);
+        if (url) links[key] = url;
+        else errors[`links.${key}`] = "Use a full web address.";
+      }
+    }
+    value.links = links;
+  }
+  if (kind === "venue") {
+    if ("accessNotes" in r) value.accessNotes = longText(r.accessNotes, PAGE_LIMITS.accessNotes);
+    if ("housePolicy" in r) value.housePolicy = (Array.isArray(r.housePolicy) ? r.housePolicy : []).filter((t): t is string => typeof t === "string" && t in POLICY_TAGS);
+  }
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return { ok: true, value };
 }

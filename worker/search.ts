@@ -114,11 +114,17 @@ export async function search(env: Env, q: string, city: string): Promise<SearchR
     if (!list.length) return [];
     const sql =
       kind === "artist"
-        ? `SELECT a.id, a.name, NULL AS address, NULL AS neighborhood, NULL AS type FROM artists a WHERE a.id IN (${inList(list.length)})`
-        : `SELECT v.id, v.name, v.address, v.neighborhood, v.type FROM venues v WHERE v.id IN (${inList(list.length)})`;
+        ? `SELECT a.id, a.name, a.slug, NULL AS address, NULL AS neighborhood, NULL AS type FROM artists a WHERE a.id IN (${inList(list.length)})`
+        : `SELECT v.id, v.name, COALESCE(v.slug, v.id) AS slug, v.address, v.neighborhood, v.type FROM venues v WHERE v.id IN (${inList(list.length)})`;
+    // Before migration 0008 venues have no slug column: fall back to the id, which /v/<id> also finds.
     const { results } = await env.DB.prepare(sql)
       .bind(...list)
-      .all<Pick<SearchPlace, "id" | "name" | "address" | "neighborhood" | "type">>();
+      .all<Pick<SearchPlace, "id" | "name" | "slug" | "address" | "neighborhood" | "type">>()
+      .catch(() =>
+        env.DB.prepare(sql.replace("COALESCE(v.slug, v.id) AS slug", "v.id AS slug"))
+          .bind(...list)
+          .all<Pick<SearchPlace, "id" | "name" | "slug" | "address" | "neighborhood" | "type">>(),
+      );
     // Which upcoming events belong to each: lineup slots for artists, the venue column for venues.
     const belongs = new Map<string, Set<string>>();
     if (kind === "artist") {

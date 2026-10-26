@@ -171,8 +171,10 @@ export function FeedView({
   );
 }
 
-function FeedCard({
+export function FeedCard({
   e,
+  past = false,
+  setLine,
   now,
   tz,
   config,
@@ -184,6 +186,10 @@ function FeedCard({
   onShare,
   distance,
 }: {
+  /** On a page's Past tab: dimmed and read-only (no RSVP). */
+  past?: boolean;
+  /** On an artist page: their set time and room. */
+  setLine?: string | null;
   distance: string | null;
   e: EventSummary;
   now: Date;
@@ -203,7 +209,7 @@ function FeedCard({
   const labels = e.scenes.map((s) => SCENES.find((x) => x.id === s)?.label).filter(Boolean) as string[];
   const age = e.policyTags.includes("all-ages") ? "All ages" : e.policyTags.includes("21+") ? "21+" : e.policyTags.includes("18+") ? "18+" : null;
   return (
-    <article data-id={e.id} className={`feed-card ${queer ? "is-queer" : ""} ${cancelled ? "is-cancelled" : ""} ${live ? "is-live" : ""}`}>
+    <article data-id={e.id} className={`feed-card ${queer ? "is-queer" : ""} ${cancelled ? "is-cancelled" : ""} ${live ? "is-live" : ""} ${past ? "is-past" : ""}`}>
       {config.video && e.videoId && !cancelled ? (
         <PromoVideo uid={e.videoId} customerCode={config.streamCustomerCode} title={e.title} />
       ) : (
@@ -235,6 +241,7 @@ function FeedCard({
           {dayLabel(e.startsAt, now, tz)} <span className="dim">/</span> {timeRange(e.startsAt, e.endsAt, tz)}
           {cancelled ? <Tag tone="danger">Cancelled</Tag> : live ? <LiveBadge /> : null}
         </p>
+        {setLine && <p className="feed-set num">{setLine}</p>}
         <h3 className="feed-title">
           <button className="link-plain" onClick={onOpen}>
             {e.title}
@@ -253,10 +260,12 @@ function FeedCard({
           </p>
         )}
         <div className="feed-actions">
-          <Button size="sm" variant={rsvp === "going" ? "confirmed" : "primary"} onClick={onRsvp} disabled={cancelled} aria-pressed={rsvp === "going"}>
-            {rsvp === "going" ? "Going ✓" : "RSVP"}
-          </Button>
-          {friends.length > 0 ? <Faces people={friends} size={22} /> : <span className="feed-going num">{e.goingCount > 0 ? `${e.goingCount} going` : ""}</span>}
+          {!past && (
+            <Button size="sm" variant={rsvp === "going" ? "confirmed" : "primary"} onClick={onRsvp} disabled={cancelled} aria-pressed={rsvp === "going"}>
+              {rsvp === "going" ? "Going ✓" : "RSVP"}
+            </Button>
+          )}
+          {past ? null : friends.length > 0 ? <Faces people={friends} size={22} /> : <span className="feed-going num">{e.goingCount > 0 ? `${e.goingCount} going` : ""}</span>}
           <span className="spacer" />
           <details className="card-more">
             <summary aria-label={`More for ${e.title}`}>
