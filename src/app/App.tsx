@@ -663,7 +663,7 @@ export function App() {
                     </span>
                     <span className="card-meta">
                       <span className="card-venue">{e.venueName ?? e.neighborhood}</span>
-                      <span className="num">{e.goingCount} going</span>
+                      <span className="num">{e.hereNow ? `${e.hereNow} here · ` : ""}{e.goingCount} going</span>
                     </span>
                   </Frame>
                 </button>

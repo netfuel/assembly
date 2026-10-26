@@ -40,7 +40,7 @@ async function copy(text: string) {
 }
 
 /** A QR code as an SVG path, so it stays crisp and follows the theme colors. */
-function QrCode({ url, label }: { url: string; label: string }) {
+export function QrCode({ url, label }: { url: string; label: string }) {
   const { d, n } = useMemo(() => {
     const qr = qrcode(0, "M");
     qr.addData(url);

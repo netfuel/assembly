@@ -127,3 +127,44 @@ export async function prepareAvatar(file: File): Promise<Blob> {
   if (!blob) throw new MediaError("Couldn't prepare that image.");
   return blob;
 }
+
+/**
+ * A photo for an event wall: long edge up to 1600 px, re-encoded on the phone (which drops location and camera
+ * details), plus a 360 px square thumbnail for the grid.
+ */
+export async function preparePhoto(file: File): Promise<{ blob: Blob; thumb: Blob | null; width: number; height: number }> {
+  if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|heif|avif)$/i.test(file.name)) throw new MediaError("Choose a photo.");
+  if (file.size > 40 * 1024 * 1024) throw new MediaError("That photo is over 40 MB.");
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    throw new MediaError("This browser can't read that photo. Try a JPG or PNG.");
+  }
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new MediaError("Couldn't prepare that photo.");
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  let thumb: Blob | null = null;
+  try {
+    const side = Math.min(bitmap.width, bitmap.height);
+    const t = document.createElement("canvas");
+    t.width = t.height = 360;
+    t.getContext("2d")?.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 360, 360);
+    thumb = await canvasToBlob(t, "image/webp", 0.78);
+    if (!thumb || thumb.type !== "image/webp") thumb = await canvasToBlob(t, "image/jpeg", 0.8);
+  } catch {
+    thumb = null;
+  }
+  bitmap.close();
+  let blob = await canvasToBlob(canvas, "image/webp", 0.84);
+  if (!blob || blob.type !== "image/webp") blob = await canvasToBlob(canvas, "image/jpeg", 0.85);
+  if (!blob) throw new MediaError("Couldn't prepare that photo.");
+  if (blob.size > 8 * 1024 * 1024) throw new MediaError("That photo is still over 8 MB after resizing.");
+  return { blob, thumb, width, height };
+}

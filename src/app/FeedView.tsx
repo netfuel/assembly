@@ -250,7 +250,7 @@ function FeedCard({
             Show on map
           </Button>
           <span className="spacer" />
-          <span className="feed-going num">{e.goingCount} going</span>
+          <span className="feed-going num">{e.hereNow ? `${e.hereNow} here · ` : ""}{e.goingCount} going</span>
         </div>
       </div>
     </article>

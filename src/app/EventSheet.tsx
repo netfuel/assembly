@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GeneratedArt } from "../components/GeneratedArt";
 import { Button, Frame, Label, LinkButton, Sheet, Tag, Skeleton } from "../components/ui";
 import { announceGoing } from "../lib/install";
 import { ShareSheet } from "../components/ShareSheet";
 import { FlyerViewer } from "../components/FlyerViewer";
+import { CheckIn } from "./CheckIn";
+import { EventWall } from "./EventWall";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
@@ -12,7 +14,7 @@ import { PushPrompt } from "../components/PushControl";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
-import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type HostSummary, type Me, type MeProfile, type RsvpStatus, type ServerConfig } from "../../shared/types";
+import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 
 const LINK_LABELS: Record<string, string> = {
@@ -131,6 +133,8 @@ export function EventSheet({
 
   const [sharing, setSharing] = useState(false);
   const [viewing, setViewing] = useState(false);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const onPresence = useCallback((p: Presence) => setCheckedIn(!!p.viewer?.checkedIn), []);
   const shareTarget = {
     title: e.title,
     text: `${e.title}: ${dayLabel(e.startsAt, now, tz)}, ${timeRange(e.startsAt, e.endsAt, tz)}${e.venueName ? ` at ${e.venueName}` : ""}`,
@@ -287,6 +291,8 @@ export function EventSheet({
           )}
         </div>
 
+        {!cancelled && <CheckIn event={e} me={me} onNeedSignIn={onNeedSignIn} onChange={onPresence} toast={toast} />}
+
         {e.videoId && (
           <section aria-label="Promo video" data-reveal>
             <Label glyph="▷">Promo</Label>
@@ -359,6 +365,8 @@ export function EventSheet({
             </ol>
           )}
         </section>
+
+        <EventWall event={e} me={me} checkedIn={checkedIn} onNeedSignIn={onNeedSignIn} toast={toast} />
 
         {detail?.host && (
           <div data-reveal>

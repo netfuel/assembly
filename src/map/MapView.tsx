@@ -42,6 +42,7 @@ function toGeoJSON(events: EventSummary[], now: Date): GeoJSON.FeatureCollection
         cancelled: e.status === "cancelled",
         live: e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now),
         going: e.goingCount,
+        here: e.hereNow ?? 0,
         // Empty until the thumbnail has loaded; the symbol layer only draws pins that have one.
         thumb: hasThumb(e.id) ? thumbImageId(e.id) : "",
       },
@@ -139,7 +140,8 @@ export function MapView({
 
       const color: unknown = ["case", ["get", "queer"], MAP_COLORS.uv, MAP_COLORS.sodium];
       // Pin size grows with RSVPs, capped so a big party doesn't swallow the block.
-      const haloRadius: unknown = ["interpolate", ["linear"], ["get", "going"], 0, 12, 100, 18, 400, 26];
+      // A filling room (people checked in) makes the halo bigger still, up to 10 px more.
+      const haloRadius: unknown = ["+", ["interpolate", ["linear"], ["get", "going"], 0, 12, 100, 18, 400, 26], ["min", ["*", ["get", "here"], 0.25], 10]];
 
       map.addLayer({
         id: "event-halo",

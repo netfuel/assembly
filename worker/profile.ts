@@ -139,6 +139,20 @@ profile.delete("/", async (c) => {
     .bind(userId, userId)
     .all<{ id: string; video_id: string | null }>();
 
+  // Wall photos on events that go away with this account (anyone's), cleaned up below.
+  let soloWallKeys: string[] = [];
+  if (solo.length) {
+    try {
+      const { results } = await db
+        .prepare(`SELECT media_key, thumb_key FROM wall_posts WHERE event_id IN (${solo.map(() => "?").join(",")})`)
+        .bind(...solo.map((e) => e.id))
+        .all<{ media_key: string; thumb_key: string | null }>();
+      soloWallKeys = results.flatMap((r) => [r.media_key, ...(r.thumb_key ? [r.thumb_key] : [])]);
+    } catch {
+      // No wall table yet.
+    }
+  }
+
   await db.batch([
     ...solo.map((e) => db.prepare("DELETE FROM events WHERE id = ?").bind(e.id)),
     db.prepare("DELETE FROM reports WHERE reporter_id = ? OR (target_type = 'user' AND target_id = ?)").bind(userId, userId),
@@ -150,7 +164,8 @@ profile.delete("/", async (c) => {
 
   // Media cleanup is best-effort; the account is already gone.
   const cleanup = async () => {
-    for (const prefix of [`avatars/${userId}/`, `flyers/${userId}/`]) {
+    for (let i = 0; i < soloWallKeys.length; i += 500) await c.env.MEDIA.delete(soloWallKeys.slice(i, i + 500));
+    for (const prefix of [`avatars/${userId}/`, `flyers/${userId}/`, `wall/${userId}/`]) {
       let cursor: string | undefined;
       do {
         const page = await c.env.MEDIA.list({ prefix, cursor });

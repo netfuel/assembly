@@ -71,6 +71,8 @@ export interface EventSummary {
   /** Edited meaningfully after posting (more than 10 minutes later). */
   updated: boolean;
   status: "live" | "cancelled" | "hidden" | "draft";
+  /** People checked in right now (counted only while the event is on). */
+  hereNow?: number;
 }
 
 export interface EventDetail extends EventSummary {
@@ -209,4 +211,48 @@ export interface SearchResults {
   venues: SearchPlace[];
   /** Ids of every upcoming event that matches, including ones by a matching artist or at a matching venue. */
   eventIds: string[];
+}
+
+/** Check-in state for one event, for the person looking. */
+export interface Presence {
+  hereNow: number;
+  /** Check-in is open: from 30 minutes before the start until 30 minutes after the end. */
+  open: boolean;
+  opensAt: string;
+  closesAt: string;
+  viewerIsHost: boolean;
+  viewer: { checkedIn: boolean; method: "gps" | "code" | "host"; checkedOut: boolean } | null;
+}
+
+export interface WallPost {
+  id: string;
+  url: string;
+  thumbUrl: string;
+  width: number | null;
+  height: number | null;
+  caption: string | null;
+  /** Null when posted anonymously (unless you're the host or a moderator looking at your own event). */
+  author: { id: string; displayName: string; avatarUrl: string | null } | null;
+  anonymous: boolean;
+  mine: boolean;
+  highlight: boolean;
+  /** Hosts and moderators also see hidden posts, marked. */
+  status: "live" | "hidden";
+  createdAt: string;
+}
+
+export interface WallState {
+  enabled: boolean;
+  /** The event is tagged "No photos on the floor": no wall. */
+  photoFree: boolean;
+  /** "all" for people who RSVP'd, checked in, or host; "highlights" for everyone else. */
+  view: "all" | "highlights";
+  canPost: boolean;
+  /** Why you can't post right now, in plain words. Null when you can. */
+  postNote: string | null;
+  closesAt: string;
+  viewerIsHost: boolean;
+  posts: WallPost[];
+  /** Posts you can't see until you RSVP. */
+  hiddenCount: number;
 }

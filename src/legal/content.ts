@@ -1,7 +1,7 @@
 // Terms, privacy policy, and community guidelines. Plain language, specific to how Assembly works.
 // Update EFFECTIVE when anything material changes, and say what changed at the top of the page.
 
-export const EFFECTIVE = "October 25, 2026";
+export const EFFECTIVE = "October 26, 2026";
 export const OPERATOR = "Matt Ladner";
 export const CONTACT = "hello@assembly.rsvp";
 
@@ -29,6 +29,8 @@ export const PRIVACY: LegalDoc = {
           "Profile details you choose to add: pronouns, bio, scenes, and links.",
           "Events you post: everything in the announcement, including flyers, promo videos, the address, and the lineup.",
           "RSVPs: which events you marked going or interested.",
+          "Check-ins: which events you checked in to, when, how (location or door code), and when you checked out. Never where you were.",
+          "Wall photos you post, their captions, and whether you posted without your name.",
           "Notifications: if you turn them on, the push address your browser gives us for this device.",
           "Reports you send, and reports others send about events or accounts.",
           "Basic technical logs (time, page requested, IP address, browser) kept by our host for security and debugging.",
@@ -41,6 +43,8 @@ export const PRIVACY: LegalDoc = {
         "Public: everything in an event you post (including its full address), and the name and photo of the organizer who posted it. Anyone can see these without signing in. The posting form says so before you post.",
         "Private by default: your RSVPs, your email, and everything else on your profile. Your RSVPs only count toward an event's total unless you turn on \"Show me on who's going lists\" in your profile.",
         "Reports are private. The person or organizer reported doesn't see who sent them.",
+        "Event walls: photos are visible to the host and to people who RSVP'd or checked in to that event. The host can pick a few as highlights, which anyone with the event link can see. If you post without your name, other people (the host included) don't see who posted it; moderators can, to handle abuse.",
+        "Check-ins: others see only how many people are checked in, not who.",
       ],
     },
     {
@@ -48,6 +52,8 @@ export const PRIVACY: LegalDoc = {
       body: [
         "We don't track or store your device's location. The map shows events where organizers placed them.",
         "If you tap the locate button, your browser asks for permission, then the map shows your position as a dot and cards show how far away each event is. That position stays on your device: it's never sent to Assembly, never saved, and never logged. Your device only remembers that you turned location on, so it doesn't ask again. Tap the button again to turn it off and clear the dot.",
+        "Check-in by location works the same way: your phone compares its position with the event's and sends only whether you're close. Your coordinates never leave your device. You can always check in with the door code instead.",
+        "Wall photos are re-saved on your phone before upload, which removes location and camera details from the file.",
         "Address search in the posting form sends what you type to Photon, an OpenStreetMap search service run by Komoot, to find matching addresses.",
       ],
     },
@@ -73,7 +79,7 @@ export const PRIVACY: LegalDoc = {
     {
       heading: "How long we keep it",
       body: [
-        "Your account and content stay until you delete them. Sign-in codes expire after 10 minutes. Server logs are kept for a short time by our host. Promo videos may be removed some time after an event to keep storage costs down.",
+        "Removed wall photos are deleted from storage right away. Your account and content stay until you delete them. Sign-in codes expire after 10 minutes. Server logs are kept for a short time by our host. Promo videos may be removed some time after an event to keep storage costs down.",
       ],
     },
     {
@@ -136,6 +142,14 @@ export const TERMS: LegalDoc = {
       heading: "Your content",
       body: [
         "You keep ownership of what you post. You give us a non-exclusive, worldwide, royalty-free license to host, display, resize, and share it in Assembly and in links and share cards that promote the event, for as long as it's on Assembly. Deleting the event or your account ends the license, except for copies already shared by others.",
+      ],
+    },
+    {
+      heading: "Event walls",
+      body: [
+        "You can post photos to an event's wall after checking in, or as its host, from doors until a week after the event. Only post photos you took. Ask before you post someone's face, and take it down if they ask.",
+        "Anyone shown in a photo can ask for it to come down: it's hidden right away while we review it. The host can remove any photo on their event's wall or turn the wall off. Events tagged \"No photos on the floor\" have no wall.",
+        "No nudity, drug use, private areas (bathrooms, backstage, green rooms), or anyone under age, and no photos at all of anyone under 21 at a 21+ event. We remove these and may suspend the account.",
       ],
     },
     {
@@ -223,6 +237,7 @@ export const GUIDELINES: LegalDoc = {
           "Fake events, bait-and-switch lineups, scams, and spam.",
           "Pretending to be another organizer, artist, or venue.",
           "Sharing someone's private information.",
+          "Wall photos of people who didn't agree to be posted, of anyone under age, of nudity or drug use, or taken in private areas like bathrooms and backstage.",
         ],
       ],
     },
@@ -236,6 +251,7 @@ export const GUIDELINES: LegalDoc = {
       heading: "Reporting",
       body: [
         "Use \"Report this event\" or \"Report the organizer\" on any event page. Reports are private. An event reported by three different people is hidden until a moderator reviews it, and we aim to respond within 12 hours on weekends.",
+        "On a wall photo, tap Report. If you're in the photo and want it gone, choose \"I'm in this photo\": it comes down right away.",
         "If someone is in danger, call 911 first.",
       ],
     },

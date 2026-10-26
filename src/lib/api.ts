@@ -10,6 +10,8 @@ import type {
   MyEvent,
   RsvpStatus,
   SearchResults,
+  Presence,
+  WallState,
   ServerConfig,
   Venue,
 } from "../../shared/types";
@@ -122,6 +124,19 @@ export const api = {
     request<{ ok: true; host: { id: string; displayName: string } }>(`/api/mod/events/${enc(id)}/host`, { method: "POST", body: JSON.stringify({ email }) }),
   setVerified: (id: string, verified: boolean) =>
     request<{ ok: true; verified: boolean }>(`/api/mod/users/${enc(id)}/verified`, { method: "PUT", body: JSON.stringify({ verified }) }),
+  presence: (id: string) => request<Presence>(`/api/events/${enc(id)}/presence`),
+  checkIn: (id: string, body: { method: "gps"; near: true } | { method: "code"; code: string } | { method: "host" }) =>
+    request<Presence>(`/api/events/${enc(id)}/checkin`, { method: "POST", body: JSON.stringify(body) }),
+  checkOut: (id: string) => request<Presence>(`/api/events/${enc(id)}/checkin`, { method: "DELETE" }),
+  doorCode: (id: string, rotate = false) => request<{ code: string }>(`/api/events/${enc(id)}/door-code`, { method: rotate ? "POST" : "GET" }),
+  wall: (id: string) => request<WallState>(`/api/events/${enc(id)}/wall`),
+  setWallEnabled: (id: string, enabled: boolean) => request<WallState>(`/api/events/${enc(id)}/wall`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
+  setHighlight: (postId: string, highlight: boolean) => request<{ ok: true }>(`/api/wall/${enc(postId)}`, { method: "PATCH", body: JSON.stringify({ highlight }) }),
+  removeWallPost: (postId: string) => request<{ ok: true }>(`/api/wall/${enc(postId)}`, { method: "DELETE" }),
+  reportWallPost: (postId: string, reason: string, note = "") =>
+    request<{ ok: true; hidden: boolean }>(`/api/wall/${enc(postId)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  modWall: () => request<{ items: ModWallItem[] }>("/api/mod/wall").then((r) => r.items),
+  modWallAction: (postId: string, action: "restore" | "remove") => request<{ ok: true }>(`/api/mod/wall/${enc(postId)}`, { method: "POST", body: JSON.stringify({ action }) }),
   search: (q: string, signal?: AbortSignal) => request<SearchResults>(`/api/search?q=${enc(q)}&city=memphis`, { signal }),
   myEvents: () => request<{ hosting: MyEvent[]; going: MyEvent[] }>("/api/me/events"),
 
@@ -170,4 +185,53 @@ export function videoPlayerUrl(uid: string, customerCode: string | null, opts: {
 
 export function videoThumbnailUrl(uid: string, customerCode: string | null) {
   return `${streamBase(uid, customerCode)}/thumbnails/thumbnail.jpg?time=2s&height=720`;
+}
+
+export interface ModWallItem {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  status: string;
+  caption: string | null;
+  author: string;
+  anonymous: boolean;
+  createdAt: string;
+  thumbUrl: string;
+  reasons: string[];
+}
+
+/** Posts a photo to an event's wall with upload progress (fetch can't report it). Resolves with the new wall. */
+export function postWallPhoto(
+  eventId: string,
+  photo: { blob: Blob; thumb: Blob | null; width: number; height: number },
+  caption: string,
+  anonymous: boolean,
+  onProgress: (p: number) => void,
+): Promise<WallState> {
+  const form = new FormData();
+  const ext = (b: Blob) => (b.type === "image/webp" ? "webp" : b.type === "image/png" ? "png" : "jpg");
+  form.append("photo", photo.blob, `photo.${ext(photo.blob)}`);
+  if (photo.thumb) form.append("thumb", photo.thumb, `thumb.${ext(photo.thumb)}`);
+  form.append("caption", caption);
+  form.append("anonymous", anonymous ? "1" : "0");
+  form.append("width", String(photo.width));
+  form.append("height", String(photo.height));
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/events/${enc(eventId)}/wall`);
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => {
+      let body: unknown = null;
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        // fall through
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body as WallState);
+      else reject(new ApiError((body as { error?: string } | null)?.error ?? "Couldn't post that photo. Try again.", xhr.status));
+    };
+    xhr.onerror = () => reject(new ApiError("You look offline. Try again when you have signal.", 0));
+    xhr.send(form);
+  });
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Label, Tag, Skeleton } from "../components/ui";
-import { api, ApiError } from "../lib/api";
+import { api, ApiError, type ModWallItem } from "../lib/api";
 import { clock, dayLabel } from "../lib/time";
 import { VarsityMark } from "./EventSheet";
 import type { ModItem } from "../../shared/types";
@@ -192,6 +192,7 @@ export function ModerationSheet({ tz, onOpenEvent, toast }: { tz: string; onOpen
           })}
         </ul>
       )}
+      <WallQueue onOpenEvent={onOpenEvent} toast={toast} />
     </div>
   );
 }
@@ -205,5 +206,90 @@ function Stat({ label, value, target }: { label: string; value: number; target?:
       <span className="stat-label">{label}</span>
       {target !== undefined && <span className="stat-target num">{met ? "Target met" : `Target ${target}+`}</span>}
     </div>
+  );
+}
+
+const WALL_REASONS: Record<string, string> = {
+  "remove-me": "Someone in it asked",
+  minor: "Under age",
+  nudity: "Nudity",
+  drugs: "Drug use",
+  "private-area": "Private area",
+  harassment: "Harassment",
+  other: "Other",
+};
+
+/** Wall photos that were reported or hidden. Restore puts one back; Remove deletes the image. */
+function WallQueue({ onOpenEvent, toast }: { onOpenEvent: (id: string) => void; toast: (m: string) => void }) {
+  const [items, setItems] = useState<ModWallItem[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const load = useCallback(() => {
+    api
+      .modWall()
+      .then(setItems)
+      .catch(() => setFailed(true));
+  }, []);
+  useEffect(load, [load]);
+  if (failed || !items) return null;
+  return (
+    <section className="stack" aria-label="Wall photos">
+      <Label glyph="▦">Wall photos</Label>
+      {items.length === 0 && <p className="note">No reported photos.</p>}
+      <ul className="mod-wall">
+        {items.map((it) => (
+          <li key={it.id} className="mod-wall-item">
+            <img src={it.thumbUrl} alt="" loading="lazy" />
+            <div className="stack">
+              <button className="link" onClick={() => onOpenEvent(it.eventId)}>
+                {it.eventTitle}
+              </button>
+              <span className="note">
+                {it.author}
+                {it.anonymous && " (posted without name)"}
+                {it.caption && ` · “${it.caption}”`}
+              </span>
+              <span className="tags">
+                {it.status === "hidden" && <Tag>Hidden</Tag>}
+                {it.reasons.map((r, i) => (
+                  <Tag key={i} tone={r === "remove-me" || r === "minor" ? "accent" : "default"}>
+                    {WALL_REASONS[r] ?? r}
+                  </Tag>
+                ))}
+              </span>
+              <span className="inline-actions">
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await api.modWallAction(it.id, "restore");
+                      toast("Restored to the wall.");
+                      load();
+                    } catch (err) {
+                      toast(err instanceof ApiError ? err.message : "That didn't go through.");
+                    }
+                  }}
+                >
+                  Restore
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await api.modWallAction(it.id, "remove");
+                      toast("Removed and deleted.");
+                      load();
+                    } catch (err) {
+                      toast(err instanceof ApiError ? err.message : "That didn't go through.");
+                    }
+                  }}
+                >
+                  Remove
+                </Button>
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
