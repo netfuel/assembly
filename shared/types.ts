@@ -96,6 +96,7 @@ export interface EventDetail extends EventSummary {
   reactions?: Reactions;
   /** Live comments, replies included. Absent when comments are switched off. */
   commentCount?: number;
+  commentsMode?: CommentMode;
   flyerKey: string | null;
   createdAt: string;
   updatedAt: string;
@@ -464,8 +465,13 @@ export interface EventComment {
   parentId: string | null;
   /** Empty when removed. */
   body: string;
-  /** live; hidden after reports (only the author and staff see it); removed (a placeholder kept for its replies). */
-  status: "live" | "hidden" | "removed";
+  /**
+   * live; hidden after reports (only the author and staff see it); removed, or muted (from someone you muted or
+   * blocked): placeholders kept above their replies.
+   */
+  status: "live" | "hidden" | "removed" | "muted";
+  /** The author changed it after posting. */
+  edited: boolean;
   createdAt: string;
   author: { id: string; displayName: string; avatarUrl: string | null } | null;
   /** The author hosts this event. */
@@ -482,6 +488,32 @@ export interface CommentThread {
   canComment: boolean;
   /** Why not, when canComment is false. */
   note: string | null;
-  /** Host or moderator: can pin and remove. */
+  /** Host or moderator: can pin, remove, and switch comments on, to read only, or off. */
   canModerate: boolean;
+  mode: CommentMode;
+}
+
+/** on: open. locked: read only. off: hidden from everyone but the host and moderators. */
+export type CommentMode = "on" | "locked" | "off";
+
+export interface ModCommentItem {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  body: string;
+  status: "live" | "hidden";
+  createdAt: string;
+  author: { id: string; displayName: string };
+  reasons: string[];
+  notes: string | null;
+  firstReportAt: string | null;
+  /** How many of this person's comments have been hidden or removed, this one included. */
+  strikes: number;
+}
+
+export interface BlockedPerson {
+  id: string;
+  kind: "mute" | "block";
+  displayName: string;
+  avatarUrl: string | null;
 }

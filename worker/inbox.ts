@@ -95,6 +95,7 @@ export async function buildInbox(env: Env, userId: string): Promise<Inbox> {
           `SELECT r.id, r.created_at, r.body, e.id AS event_id, e.title, u.display_name, u.avatar_url
            FROM comments r JOIN comments p ON p.id = r.parent_id JOIN events e ON e.id = r.event_id JOIN users u ON u.id = r.user_id
            WHERE p.user_id = ?1 AND r.user_id <> ?1 AND r.status = 'live' AND r.created_at > ?2
+             AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.user_id = ?1 AND b.blocked_id = r.user_id)
            ORDER BY r.created_at DESC LIMIT 20`,
         )
         .bind(userId, iso(now - 14 * DAY))
@@ -110,6 +111,7 @@ export async function buildInbox(env: Env, userId: string): Promise<Inbox> {
               WHERE c2.event_id = e.id AND c2.parent_id IS NULL AND c2.user_id <> ?1 AND c2.status = 'live' ORDER BY c2.created_at DESC LIMIT 1) AS display_name
            FROM event_hosts h JOIN events e ON e.id = h.event_id
            JOIN comments c ON c.event_id = e.id AND c.parent_id IS NULL AND c.user_id <> ?1 AND c.status = 'live' AND c.created_at > ?2
+             AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.user_id = ?1 AND b.blocked_id = c.user_id)
            WHERE h.user_id = ?1 GROUP BY e.id ORDER BY at DESC LIMIT 10`,
         )
         .bind(userId, iso(now - 14 * DAY))

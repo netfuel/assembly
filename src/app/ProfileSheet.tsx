@@ -3,7 +3,7 @@ import { Button, Chip, Label, Segmented, Tag, Skeleton } from "../components/ui"
 import { api, ApiError } from "../lib/api";
 import { MediaError, prepareAvatar } from "../lib/media";
 import { clock, dayLabel } from "../lib/time";
-import { SCENES, type FriendsState, type Inbox, type InboxItem, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
+import { SCENES, type BlockedPerson, type FriendsState, type Inbox, type InboxItem, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
 import { PushControl } from "../components/PushControl";
 import { VarsityMark } from "./EventSheet";
 import "./announce.css";
@@ -217,6 +217,8 @@ export function ProfileSheet({
         )}
         <span className="note">{me.showAttendance ? "You show up on who's going lists." : "Your RSVPs are private."}</span>
       </div>
+
+      <MutedList toast={toast} />
 
       <p className="note policy-links" data-reveal>
         <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/guidelines">Community guidelines</a> ·{" "}
@@ -530,5 +532,56 @@ function EditProfile({
         </div>
       </footer>
     </form>
+  );
+}
+
+/** People you muted or blocked from comments, folded until you open it. Unmute or unblock from here. */
+function MutedList({ toast }: { toast: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [people, setPeople] = useState<BlockedPerson[] | null>(null);
+  useEffect(() => {
+    if (!open || people) return;
+    api
+      .blocks()
+      .then(setPeople)
+      .catch(() => setPeople([]));
+  }, [open, people]);
+  return (
+    <section className="muted-list" aria-label="Muted and blocked" data-reveal>
+      <button className="muted-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span>Muted and blocked</span>
+        <span className="dim">{open ? "Hide" : "Show"}</span>
+      </button>
+      {open && !people && <ListSkeleton />}
+      {open && people && people.length === 0 && <p className="note">Nobody. Mute or block someone from the ⋯ on their comment.</p>}
+      {open && people && people.length > 0 && (
+        <ul className="muted-people">
+          {people.map((p) => (
+            <li key={p.id}>
+              <Avatar user={p} size={32} />
+              <span className="muted-name">
+                {p.displayName}
+                <span className="dim"> · {p.kind === "mute" ? "muted" : "blocked"}</span>
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    await api.unblock(p.id);
+                    setPeople((list) => (list ?? []).filter((x) => x.id !== p.id));
+                    toast(p.kind === "mute" ? `Unmuted ${p.displayName}.` : `Unblocked ${p.displayName}.`);
+                  } catch (err) {
+                    toast(err instanceof ApiError ? err.message : "That didn't go through.");
+                  }
+                }}
+              >
+                {p.kind === "mute" ? "Unmute" : "Unblock"}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

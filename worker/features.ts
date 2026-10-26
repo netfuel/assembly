@@ -14,7 +14,7 @@ export function moduleFor(path: string): keyof Features | null {
   if (path.startsWith("/friends") || /^\/events\/[^/]+\/(friend-visibility|invite|invites|here)(\/|$)/.test(path)) return "friends";
   if (/^\/events\/[^/]+\/(checkin|presence|door-code)(\/|$)/.test(path)) return "checkin";
   if (/^\/events\/[^/]+\/react$/.test(path)) return "reactions";
-  if (/^\/events\/[^/]+\/comments$/.test(path) || /^\/comments(\/|$)/.test(path)) return "comments";
+  if (/^\/events\/[^/]+\/comments(-mode)?$/.test(path) || /^\/mod\/comments(\/|$)/.test(path) || /^\/comments(\/|$)/.test(path)) return "comments";
   return null;
 }
 

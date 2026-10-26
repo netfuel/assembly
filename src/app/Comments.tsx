@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Skeleton, Tag } from "../components/ui";
+import { Button, Segmented, Skeleton, Tag } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { ago } from "../lib/time";
 import { Avatar } from "./ProfileSheet";
-import { COMMENT_MAX, COMMENT_REPORT_REASONS, type CommentThread, type EventComment, type MeProfile } from "../../shared/types";
+import { COMMENT_MAX, COMMENT_REPORT_REASONS, type CommentMode, type CommentThread, type EventComment, type MeProfile } from "../../shared/types";
 
 /**
  * Comments on the event page: pinned first, then oldest to newest, replies one level deep under their comment.
@@ -74,14 +74,52 @@ export function Comments({
       toast(err instanceof ApiError ? err.message : "That didn't go through. Try again.");
     }
   };
-  const actions = {
-    reply: (c: EventComment) => (me ? setReplyTo(c) : onNeedSignIn()),
-    remove: (c: EventComment) => run(api.removeComment(c.id), "Comment removed."),
-    pin: (c: EventComment) => run(api.pinComment(c.id, !c.pinned), c.pinned ? "Unpinned." : "Pinned to the top."),
+  const actions: Actions = {
+    reply: (c) => (me ? setReplyTo(c) : onNeedSignIn()),
+    remove: (c) => run(api.removeComment(c.id), "Comment removed."),
+    pin: (c) => run(api.pinComment(c.id, !c.pinned), c.pinned ? "Unpinned." : "Pinned to the top."),
+    edit: (c, body) => guarded(api.editComment(c.id, body)),
+    quiet: async (c, kind) => {
+      if (!c.author) return;
+      try {
+        await api.blockPerson(c.author.id, kind);
+        apply(await api.comments(eventId));
+        toast(kind === "mute" ? `Muted ${c.author.displayName}. Undo in your profile.` : `Blocked ${c.author.displayName}. Undo in your profile.`);
+      } catch (err) {
+        toast(err instanceof ApiError ? err.message : "That didn't go through. Try again.");
+      }
+    },
   };
+  /** Throws after showing the error, so the box keeps what was written. */
+  const guarded = async (p: Promise<CommentThread>) => {
+    try {
+      apply(await p);
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "That didn't go through. Try again.");
+      throw err;
+    }
+  };
+  const post = (body: string, parentId: string | null) => guarded(api.comment(eventId, body, parentId).then((r) => r.thread));
+  const setMode = (mode: CommentMode) =>
+    run(api.commentsMode(eventId, mode), mode === "on" ? "Comments are open." : mode === "locked" ? "Comments are read only." : "Comments are off. Only you and moderators see them.");
 
   return (
     <div className="comments">
+      {thread.canModerate && (
+        <div className="comment-mode">
+          <Segmented<CommentMode>
+            label="Comments on this event"
+            value={thread.mode}
+            onChange={setMode}
+            options={[
+              { id: "on", label: "Open" },
+              { id: "locked", label: "Read only" },
+              { id: "off", label: "Off" },
+            ]}
+          />
+          <p className="note">{thread.mode === "on" ? "Anyone signed in can comment." : thread.mode === "locked" ? "People can read but not post." : "Hidden from everyone but you and moderators."}</p>
+        </div>
+      )}
       {ordered.length === 0 && <p className="note">No comments yet. Ask the host a question, or say you're coming.</p>}
       {ordered.length > 0 && (
         <ol className="comment-list" aria-label="Comments">
@@ -99,14 +137,15 @@ export function Comments({
               )}
               {replyTo?.id === c.id && (
                 <Composer
-                  eventId={eventId}
-                  parent={c}
+                  isReply
+                  label={`Reply to ${c.author?.displayName ?? "this comment"}`}
+                  placeholder="Write a reply"
+                  submitLabel="Reply"
                   onCancel={() => setReplyTo(null)}
-                  onPosted={(t) => {
-                    apply(t);
+                  onSubmit={async (body) => {
+                    await post(body, c.id);
                     setReplyTo(null);
                   }}
-                  toast={toast}
                 />
               )}
             </li>
@@ -114,7 +153,7 @@ export function Comments({
         </ol>
       )}
       {thread.canComment ? (
-        <Composer eventId={eventId} parent={null} onPosted={apply} toast={toast} />
+        <Composer label="Add a comment" placeholder="Ask a question, or say you're coming" submitLabel="Post" onSubmit={(body) => post(body, null)} />
       ) : !me ? (
         <Button className="comment-signin" onClick={onNeedSignIn}>
           Sign in to comment
@@ -126,7 +165,13 @@ export function Comments({
   );
 }
 
-type Actions = { reply: (c: EventComment) => void; remove: (c: EventComment) => void; pin: (c: EventComment) => void };
+type Actions = {
+  reply: (c: EventComment) => void;
+  remove: (c: EventComment) => void;
+  pin: (c: EventComment) => void;
+  edit: (c: EventComment, body: string) => Promise<void>;
+  quiet: (c: EventComment, kind: "mute" | "block") => void;
+};
 
 function CommentItem({
   c,
@@ -150,14 +195,23 @@ function CommentItem({
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  if (c.status === "removed")
+  const [editing, setEditing] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+
+  if (c.status === "removed" || c.status === "muted")
     return (
       <article className="comment is-removed">
-        <p className="comment-body dim">Comment removed.</p>
+        <p className="comment-body dim">{c.status === "removed" ? "Comment removed." : "Hidden: from someone you muted or blocked."}</p>
       </article>
     );
   const a = c.author!;
-  const hasMore = (canModerate && !c.parentId && c.status === "live") || c.canDelete || (!c.mine && !reported);
+  const hasMore = (canModerate && !c.parentId && c.status === "live") || c.canDelete || !c.mine;
+  const block = () => {
+    if (confirmBlock) return actions.quiet(c, "block");
+    setConfirmBlock(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setConfirmBlock(false), 3000);
+  };
   // Two taps to remove, so a stray thumb doesn't delete anything (and no browser dialog).
   const remove = () => {
     if (confirm) return actions.remove(c);
@@ -173,14 +227,31 @@ function CommentItem({
           <span className="comment-name">{a.displayName}</span>
           {c.host && <Tag tone="strong">Host</Tag>}
           {c.verified && !c.host && <Tag>Verified</Tag>}
-          <span className="comment-time num">{ago(c.createdAt)}</span>
+          <span className="comment-time num">
+            {ago(c.createdAt)}
+            {c.edited && " · edited"}
+          </span>
         </p>
         {c.pinned && <p className="comment-flag">Pinned by the host</p>}
         {c.status === "hidden" && <p className="comment-flag is-warn">Hidden after reports. Only you{canModerate ? " and staff" : ""} can see it while we review.</p>}
-        <p className="comment-body">{c.body}</p>
+        {editing ? (
+          <Composer
+            initial={c.body}
+            label="Edit your comment"
+            submitLabel="Save"
+            onSubmit={async (body) => {
+              await actions.edit(c, body);
+              setEditing(false);
+              setMore(false);
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <p className="comment-body">{c.body}</p>
+        )}
         {/* Reply stays in view; pin, remove and report sit behind More so each comment carries one action. */}
         <div className="comment-actions">
-          {c.status === "live" && (
+          {c.status === "live" && !editing && (
             <button className="comment-action" onClick={() => actions.reply(c)}>
               Reply
             </button>
@@ -188,6 +259,11 @@ function CommentItem({
           {more && canModerate && !c.parentId && c.status === "live" && (
             <button className="comment-action" onClick={() => actions.pin(c)}>
               {c.pinned ? "Unpin" : "Pin to top"}
+            </button>
+          )}
+          {more && c.mine && c.status === "live" && !editing && (
+            <button className="comment-action" onClick={() => setEditing(true)}>
+              Edit
             </button>
           )}
           {more && c.canDelete && (
@@ -198,6 +274,16 @@ function CommentItem({
           {more && !c.mine && !reported && (
             <button className="comment-action" onClick={() => (me ? setReporting((r) => !r) : onNeedSignIn())} aria-expanded={reporting}>
               Report
+            </button>
+          )}
+          {more && !c.mine && me && (
+            <button className="comment-action" onClick={() => actions.quiet(c, "mute")}>
+              Mute
+            </button>
+          )}
+          {more && !c.mine && me && (
+            <button className={`comment-action ${confirmBlock ? "is-danger" : ""}`} onClick={block}>
+              {confirmBlock ? "Tap again to block" : "Block"}
             </button>
           )}
           {reported && <span className="comment-action-note">Reported. Thanks.</span>}
@@ -262,44 +348,49 @@ function ReportComment({ id, onDone, onCancel, toast }: { id: string; onDone: ()
   );
 }
 
+/** The text box for a new comment, a reply, or an edit. onSubmit throws to keep the words in the box. */
 function Composer({
-  eventId,
-  parent,
-  onPosted,
+  initial = "",
+  label,
+  placeholder,
+  submitLabel,
+  isReply = false,
+  onSubmit,
   onCancel,
-  toast,
 }: {
-  eventId: string;
-  parent: EventComment | null;
-  onPosted: (t: CommentThread) => void;
+  initial?: string;
+  label: string;
+  placeholder?: string;
+  submitLabel: string;
+  isReply?: boolean;
+  onSubmit: (body: string) => Promise<void>;
   onCancel?: () => void;
-  toast: (m: string) => void;
 }) {
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initial);
   const [busy, setBusy] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
-    if (parent) field.current?.focus();
-  }, [parent]);
+    if (onCancel) field.current?.focus();
+    // Focus once, when a reply or edit box opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const left = COMMENT_MAX - body.length;
   const send = async () => {
     const v = body.trim();
     if (!v || busy) return;
     setBusy(true);
     try {
-      const r = await api.comment(eventId, v, parent?.id ?? null);
+      await onSubmit(v);
       setBody("");
-      onPosted(r.thread);
-    } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Your comment didn't post. Try again.");
+    } catch {
+      // The caller showed the error; keep what they wrote.
     } finally {
       setBusy(false);
     }
   };
-  const label = parent ? `Reply to ${parent.author?.displayName ?? "this comment"}` : "Add a comment";
   return (
     <form
-      className={`comment-compose ${parent ? "is-reply" : ""}`}
+      className={`comment-compose ${isReply ? "is-reply" : ""}`}
       onSubmit={(e) => {
         e.preventDefault();
         send();
@@ -315,7 +406,7 @@ function Composer({
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
           if (e.key === "Escape" && onCancel) onCancel();
         }}
-        placeholder={parent ? "Write a reply" : "Ask a question, or say you're coming"}
+        placeholder={placeholder}
         aria-label={label}
       />
       <div className="comment-compose-row">
@@ -326,8 +417,8 @@ function Composer({
               Cancel
             </Button>
           )}
-          <Button size="sm" type="submit" disabled={!body.trim() || busy}>
-            {parent ? "Reply" : "Post"}
+          <Button size="sm" type="submit" disabled={!body.trim() || busy || body.trim() === initial.trim()}>
+            {submitLabel}
           </Button>
         </span>
       </div>

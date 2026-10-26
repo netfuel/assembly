@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Label, Tag, Skeleton } from "../components/ui";
 import { api, ApiError, type ModWallItem } from "../lib/api";
+import { COMMENT_REPORT_REASONS, type ModCommentItem } from "../../shared/types";
 import { clock, dayLabel } from "../lib/time";
 import { VarsityMark } from "./EventSheet";
 import type { ModItem, PageClaim } from "../../shared/types";
@@ -218,6 +219,7 @@ export function ModerationSheet({
         </ul>
       )}
       <ClaimQueue onOpenPage={onOpenPage} toast={toast} />
+      <CommentQueue onOpenEvent={onOpenEvent} toast={toast} />
       <WallQueue onOpenEvent={onOpenEvent} toast={toast} />
     </div>
   );
@@ -370,6 +372,81 @@ function WallQueue({ onOpenEvent, toast }: { onOpenEvent: (id: string) => void; 
                 </Button>
               </span>
             </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** ["spam", "spam", "hate"] → [["spam", 2], ["hate", 1]], most common first. */
+const tally = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1]);
+
+const COMMENT_REASON_LABEL: Record<string, string> = Object.fromEntries(COMMENT_REPORT_REASONS.map((r) => [r.id, r.label]));
+
+/**
+ * Reported or hidden comments, the longest-waiting first (the target is 12 hours, weekends included).
+ * Restore puts one back and dismisses its reports; Remove takes it down for everyone.
+ */
+function CommentQueue({ onOpenEvent, toast }: { onOpenEvent: (id: string) => void; toast: (m: string) => void }) {
+  const [items, setItems] = useState<ModCommentItem[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(() => {
+    api
+      .modComments()
+      .then(setItems)
+      .catch(() => setFailed(true));
+  }, []);
+  useEffect(load, [load]);
+  if (failed || !items) return null;
+  const act = async (id: string, action: "restore" | "remove") => {
+    setBusy(id);
+    try {
+      await api.modComment(id, action);
+      toast(action === "restore" ? "Restored. Reports dismissed." : "Comment removed.");
+      setItems((list) => (list ?? []).filter((x) => x.id !== id));
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "That didn't go through.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  const overdue = (iso: string | null) => !!iso && Date.now() - Date.parse(iso) > 12 * 3600e3;
+  return (
+    <section className="stack" aria-label="Comments">
+      <Label glyph="❝">Comments</Label>
+      {items.length === 0 && <p className="note">No reported comments.</p>}
+      <ul className="mod-comments">
+        {items.map((it) => (
+          <li key={it.id} className="mod-comment">
+            <p className="mod-comment-body">{it.body}</p>
+            <span className="note">
+              {it.author.displayName} on{" "}
+              <button className="link" onClick={() => onOpenEvent(it.eventId)}>
+                {it.eventTitle}
+              </button>
+              {it.strikes > 1 && ` · ${it.strikes} of their comments hidden or removed`}
+            </span>
+            <span className="tags">
+              {it.status === "hidden" && <Tag>Hidden</Tag>}
+              {overdue(it.firstReportAt) && <Tag tone="danger">Over 12 hours</Tag>}
+              {tally(it.reasons).map(([r, n]) => (
+                <Tag key={r}>
+                  {COMMENT_REASON_LABEL[r] ?? r}
+                  {n > 1 && ` ×${n}`}
+                </Tag>
+              ))}
+            </span>
+            {it.notes && <span className="note">“{[...new Set(it.notes.split(" / "))].join(" / ")}”</span>}
+            <span className="inline-actions">
+              <Button size="sm" disabled={busy === it.id} onClick={() => act(it.id, "restore")}>
+                Restore
+              </Button>
+              <Button size="sm" disabled={busy === it.id} onClick={() => act(it.id, "remove")}>
+                Remove
+              </Button>
+            </span>
           </li>
         ))}
       </ul>

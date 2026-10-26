@@ -26,3 +26,4 @@ CREATE TABLE IF NOT EXISTS comment_reports (
   UNIQUE (comment_id, reporter_id)
 );
 CREATE INDEX IF NOT EXISTS comment_reports_open ON comment_reports(status, comment_id);
+

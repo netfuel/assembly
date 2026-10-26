@@ -20,6 +20,8 @@ describe("feature flags", () => {
     expect(moduleFor("/events/abc/react")).toBe("reactions");
     expect(moduleFor("/events/abc/comments")).toBe("comments");
     expect(moduleFor("/comments/xyz/report")).toBe("comments");
+    expect(moduleFor("/events/abc/comments-mode")).toBe("comments");
+    expect(moduleFor("/mod/comments/xyz")).toBe("comments");
     expect(moduleFor("/events/abc")).toBeNull();
     expect(moduleFor("/events")).toBeNull();
   });

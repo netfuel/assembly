@@ -446,13 +446,21 @@ export function EventSheet({
             ) : null;
           if (key === "comments") {
             if (!feat.comments) return null;
+            const mode = detail?.commentsMode ?? "on";
+            const staff = !!(detail?.viewerIsHost || detail?.viewerCanEdit);
+            // Off hides the thread from everyone but the host and moderators.
+            if (mode === "off" && !staff) return null;
             const n = commentTotal ?? detail?.commentCount ?? 0;
             return (
               <EvSection
                 key={key}
                 id="comments"
                 title="Comments"
-                summary={n ? `${n} ${n === 1 ? "comment" : "comments"}` : cancelled ? "Closed" : "Ask a question, say you're coming"}
+                summary={
+                  mode === "off"
+                    ? "Off"
+                    : [n ? `${n} ${n === 1 ? "comment" : "comments"}` : null, mode === "locked" || cancelled ? "read only" : n ? null : "Ask a question, say you're coming"].filter(Boolean).join(" · ")
+                }
                 open={open.comments}
                 onToggle={toggle}
                 refs={sectionRefs}
