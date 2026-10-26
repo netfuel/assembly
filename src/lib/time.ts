@@ -174,3 +174,9 @@ export function dateHeading(date: string): string {
   const d = new Date(`${date}T12:00:00Z`);
   return `${WEEKDAYS[d.getUTCDay()]} ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
+
+/** Live first, then by start time: what's on right now leads the rail and the feed. */
+export function liveFirst<T extends { startsAt: string; endsAt: string; status?: string }>(list: T[], now: Date): T[] {
+  const on = (e: T) => (e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now) ? 0 : 1);
+  return [...list].sort((a, b) => on(a) - on(b) || a.startsAt.localeCompare(b.startsAt));
+}

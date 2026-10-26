@@ -15,31 +15,32 @@
   filter: invert(1) opacity(0.6);
 }
 
-/* The viewer's dot (myLocation.ts): white core, gradient pulse, accuracy circle in real meters, heading cone.
-   Round and flyer-free so it never reads as an event pin. */
+/* The viewer's dot (myLocation.ts): accuracy circle in real meters, heading cone. Round and flyer-free so it never reads as an event pin. */
 .me-marker { position: relative; width: 0; height: 0; pointer-events: none; }
 .me-marker > * { position: absolute; left: 0; top: 0; }
-.me-acc { border-radius: 50%; transform: translate(-50%, -50%); background: rgb(169 139 255 / 0.12); border: 1px solid rgb(169 139 255 / 0.35);
-  transition: width 300ms var(--ease-out), height 300ms var(--ease-out), opacity 200ms; }
-.me-dot { width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #fff; border: 3px solid var(--grad-purple);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25), 0 2px 6px rgb(0 0 0 / 0.35); }
-.me-pulse { width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid var(--grad-pink);
-  animation: me-pulse 2.4s var(--ease-out) infinite; }
+/* You: neutral (the text color), round, with an accuracy circle. No hue, so it never reads as a scene or as live. */
+.me-acc { border-radius: 50%; transform: translate(-50%, -50%); background: color-mix(in srgb, var(--color-fg) 8%, transparent); border: 1px solid color-mix(in srgb, var(--color-fg) 28%, transparent);
+  transition: width var(--dur-med) var(--ease-out), height var(--dur-med) var(--ease-out), opacity var(--dur-med); }
+.me-dot { width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--color-fg); border: 3px solid var(--color-ground);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-fg) 60%, transparent), 0 2px 6px rgb(0 0 0 / 0.35); }
+/* Three rings when your dot first lands, then still: the live pulse is the only motion that keeps going. */
+.me-pulse { width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid var(--color-fg); opacity: 0; }
+.me-marker.is-new .me-pulse { animation: me-pulse 1.6s var(--ease-out) 3; }
 .me-cone { display: none; width: 44px; height: 40px; transform-origin: 50% 100%;
-  background: radial-gradient(ellipse at 50% 100%, rgb(169 139 255 / 0.9), rgb(255 61 242 / 0.35) 45%, transparent 75%);
+  background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--color-fg) 55%, transparent), transparent 75%);
   clip-path: polygon(50% 100%, 0 0, 100% 0); }
 .me-marker.has-heading .me-cone { display: block; }
 .me-marker.is-new .me-dot { animation: me-drop 480ms var(--ease-pop); }
-@keyframes me-pulse { 0% { transform: scale(1); opacity: 0.8; border-color: var(--grad-pink); } 100% { transform: scale(3.4); opacity: 0; border-color: var(--grad-green); } }
+@keyframes me-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(3.2); opacity: 0; } }
 @keyframes me-drop { from { transform: translateY(-14px) scale(0.6); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .me-pulse { animation: none; opacity: 0; } .me-marker.is-new .me-dot { animation: none; } .me-acc { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .me-marker.is-new .me-pulse { animation: none; } .me-marker.is-new .me-dot { animation: none; } .me-acc { transition: none; } }
 
 /* Friends' faces above event pins */
 .friend-pin { all: unset; cursor: pointer; display: inline-flex; align-items: center; padding: 2px; border-radius: 999px; background: var(--color-surface-raised, #1a1b1e); border: 1px solid var(--color-line-strong, #3a3c42); box-shadow: 0 4px 12px rgb(0 0 0 / 0.35); }
 .friend-pin.is-hidden { display: none; }
 .friend-pin-face { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; margin-left: -6px; background: var(--color-surface, #121315); color: var(--color-fg, #ededee); font: 600 11px/1 system-ui, sans-serif; border: 2px solid var(--color-surface-raised, #1a1b1e); }
 .friend-pin-face:first-child { margin-left: 0; }
-.friend-pin-face.is-here { border-color: var(--color-accent, #ff3df2); }
+.friend-pin-face.is-here { border-color: var(--color-live); }
 .friend-pin-face img { width: 100%; height: 100%; object-fit: cover; }
 .friend-pin-more { margin: 0 4px 0 3px; font: 600 10px/1 system-ui, sans-serif; color: var(--color-muted, #9a9da4); }
 .friend-pin:focus-visible { outline: 2px solid var(--color-accent, #ff3df2); outline-offset: 2px; }

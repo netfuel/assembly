@@ -97,3 +97,17 @@ describe("pick a date", () => {
     expect(dateHeading("2026-10-31")).toBe("Sat Oct 31");
   });
 });
+
+describe("liveFirst", () => {
+  it("puts what's on now first, then by start time", async () => {
+    const { liveFirst } = await import("./time");
+    const now = new Date("2026-10-26T22:00:00Z");
+    const list = [
+      { id: "later", startsAt: "2026-10-27T02:00:00Z", endsAt: "2026-10-27T06:00:00Z" },
+      { id: "cancelled-live", startsAt: "2026-10-26T21:00:00Z", endsAt: "2026-10-27T01:00:00Z", status: "cancelled" },
+      { id: "live", startsAt: "2026-10-26T21:30:00Z", endsAt: "2026-10-27T01:00:00Z" },
+      { id: "earlier-done", startsAt: "2026-10-26T18:00:00Z", endsAt: "2026-10-26T20:00:00Z" },
+    ];
+    expect(liveFirst(list, now).map((e) => e.id)).toEqual(["live", "earlier-done", "cancelled-live", "later"]);
+  });
+});

@@ -1,11 +1,12 @@
+import { useMinute } from "../lib/clock";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Skeleton, Tag } from "../components/ui";
+import { Button, LiveBadge, Skeleton, Tag } from "../components/ui";
 import { PromoVideo } from "../components/PromoVideo";
 import { GeneratedArt } from "../components/GeneratedArt";
 import { ShareSheet } from "../components/ShareSheet";
 import { Faces } from "../components/Faces";
 import { SCENES, type EventSummary, type FriendAt, type RsvpStatus, type ServerConfig } from "../../shared/types";
-import { dayLabel, isLive, timeRange } from "../lib/time";
+import { dayLabel, isLive, liveFirst, timeRange } from "../lib/time";
 import { eventUrl } from "./EventSheet";
 
 const PAGE = 12;
@@ -14,7 +15,8 @@ const PAGE = 12;
 function byDay(events: EventSummary[], now: Date, tz: string) {
   const groups: { label: string; events: EventSummary[] }[] = [];
   for (const e of events) {
-    const label = dayLabel(e.startsAt, now, tz);
+    // What's on right now leads, under its own header, whatever night it started.
+    const label = e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now) ? "Live now" : dayLabel(e.startsAt, now, tz);
     const last = groups[groups.length - 1];
     if (last?.label === label) last.events.push(e);
     else groups.push({ label, events: [e] });
@@ -81,8 +83,10 @@ export function FeedView({
       window.removeEventListener("resize", set);
     };
   }, [embedded]);
-  const now = useMemo(() => new Date(), [events]);
-  const sorted = useMemo(() => [...events].sort((a, b) => a.startsAt.localeCompare(b.startsAt)), [events]);
+  const minute = useMinute();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(() => new Date(), [events, minute]);
+  const sorted = useMemo(() => liveFirst(events, now), [events, now]);
   const groups = useMemo(() => byDay(sorted.slice(0, limit), now, tz), [sorted, limit, now, tz]);
   // Day counts cover the whole list, not just the cards loaded so far.
   const totals = useMemo(() => new Map(byDay(sorted, now, tz).map((g) => [g.label, g.events.length])), [sorted, now, tz]);
@@ -199,7 +203,7 @@ function FeedCard({
   const labels = e.scenes.map((s) => SCENES.find((x) => x.id === s)?.label).filter(Boolean) as string[];
   const age = e.policyTags.includes("all-ages") ? "All ages" : e.policyTags.includes("21+") ? "21+" : e.policyTags.includes("18+") ? "18+" : null;
   return (
-    <article className={`feed-card ${queer ? "is-queer" : ""} ${cancelled ? "is-cancelled" : ""} ${live ? "is-live" : ""}`}>
+    <article data-id={e.id} className={`feed-card ${queer ? "is-queer" : ""} ${cancelled ? "is-cancelled" : ""} ${live ? "is-live" : ""}`}>
       {config.video && e.videoId && !cancelled ? (
         <PromoVideo uid={e.videoId} customerCode={config.streamCustomerCode} title={e.title} />
       ) : (
@@ -229,7 +233,7 @@ function FeedCard({
       <div className="feed-card-body">
         <p className="feed-when num">
           {dayLabel(e.startsAt, now, tz)} <span className="dim">/</span> {timeRange(e.startsAt, e.endsAt, tz)}
-          {cancelled ? <Tag>Cancelled</Tag> : live ? <Tag tone="accent">Live</Tag> : null}
+          {cancelled ? <Tag tone="danger">Cancelled</Tag> : live ? <LiveBadge /> : null}
         </p>
         <h3 className="feed-title">
           <button className="link-plain" onClick={onOpen}>

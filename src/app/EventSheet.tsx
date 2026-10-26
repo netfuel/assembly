@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GeneratedArt } from "../components/GeneratedArt";
-import { Button, Frame, Label, LinkButton, Segmented, Sheet, Tag, Skeleton } from "../components/ui";
+import { Button, Frame, Label, LinkButton, LiveBadge, Segmented, Sheet, Tag, Skeleton } from "../components/ui";
 import { announceGoing } from "../lib/install";
 import { ShareSheet } from "../components/ShareSheet";
 import { FlyerViewer } from "../components/FlyerViewer";
@@ -16,7 +16,7 @@ import { saveForOffline } from "../lib/offline";
 import { PushPrompt } from "../components/PushControl";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
-import { countTo, reducedMotion, revealChildren, stamp, useGSAP } from "../lib/motion";
+import { countTo, flipIn, hasFlipOrigin, reducedMotion, revealChildren, stamp, useGSAP } from "../lib/motion";
 import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type FriendPerson, type HerePerson, type PresenceVisibility, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 
@@ -32,6 +32,16 @@ const LINK_LABELS: Record<string, string> = {
 
 export function eventUrl(id: string) {
   return `${location.origin}/e/${encodeURIComponent(id)}`;
+}
+
+/** "Live now · until 2 am" with the time left once it's under an hour: the door is still open, here's for how long. */
+function liveLine(endsAt: string, now: Date) {
+  const left = Math.round((Date.parse(endsAt) - now.getTime()) / 60_000);
+  if (left <= 0) return "Live now · wrapping up";
+  if (left < 60) return `Live now · ${left} min left`;
+  const h = Math.floor(left / 60);
+  const m = left % 60;
+  return `Live now · ${h}h${m ? ` ${m}m` : ""} left`;
 }
 
 type SectionKey = "details" | "here" | "wall" | "people";
@@ -118,6 +128,14 @@ export function EventSheet({
   const otherTags = e.policyTags.filter((t) => !KEY_TAGS.includes(t));
   const baseGoing = e.goingCount - (detail?.viewerRsvp === "going" ? 1 : 0);
   const going = baseGoing + (rsvp === "going" ? 1 : 0);
+
+  // Opened from a card: the card's art flies into the hero, so the sheet itself doesn't slide.
+  const hero = useRef<HTMLDivElement>(null);
+  const [flipping] = useState(() => hasFlipOrigin(summary.id));
+  useLayoutEffect(() => {
+    flipIn(summary.id, hero.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Tweens made here are reverted if the page closes mid-animation. The stamp runs from a click, so it goes through contextSafe.
   const { contextSafe } = useGSAP(
@@ -239,9 +257,9 @@ export function EventSheet({
         </div>
       )}
     </Sheet>
-    <Sheet open onClose={onClose} label={e.title}>
+    <Sheet open onClose={onClose} label={e.title} className={flipping ? "is-flip" : ""}>
       <div ref={root} className={`event ${queer ? "is-queer" : ""}`}>
-        <div data-reveal>
+        <div className="event-hero" ref={hero}>
           {e.flyerUrl ? (
             <button className="flyer-open" onClick={() => setViewing(true)} aria-label={`Open the flyer for ${e.title} full screen`}>
               <FlyerImage src={e.flyerUrl} alt={`Flyer for ${e.title}`} />
@@ -287,8 +305,8 @@ export function EventSheet({
         <header className="event-head" data-reveal>
           <div className="event-meta">
             <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} aria-hidden="true" />
-            {live ? <span className="live-tag">Happening now</span> : <span>{sceneLabels.join(" / ")}</span>}
-            {cancelled && <Tag tone="accent">Cancelled</Tag>}
+            {live ? <LiveBadge size="sm">{liveLine(e.endsAt, now)}</LiveBadge> : <span>{sceneLabels.join(" / ")}</span>}
+            {cancelled && <Tag tone="danger">Cancelled</Tag>}
             {e.updated && !cancelled && <Tag>Updated</Tag>}
           </div>
           <h1 className={`event-title ${cancelled ? "is-cancelled" : ""}`}>{e.title}</h1>

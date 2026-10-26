@@ -81,8 +81,21 @@ export function Disclosure({
 }
 
 /** Small bordered label, like save.design's "▷ Preview" tags. */
-export function Tag({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "accent" | "strong" }) {
+export function Tag({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "accent" | "strong" | "danger" }) {
   return <span className={`tag tag-${tone}`}>{children}</span>;
+}
+
+/**
+ * "Live now": the status color, a dot that pulses three times when it first appears and then holds still
+ * (the map's pulse is the only one that keeps going). Live also reads by the word, not the color alone.
+ */
+export function LiveBadge({ children = "Live now", size = "md" }: { children?: ReactNode; size?: "sm" | "md" }) {
+  return (
+    <span className={`live-badge is-${size}`}>
+      <span className="live-badge-dot" aria-hidden="true" />
+      {children}
+    </span>
+  );
 }
 
 /** Segmented toggle: one option active at a time. */

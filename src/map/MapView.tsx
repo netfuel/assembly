@@ -18,6 +18,11 @@ setWorkerUrl(workerUrl);
 const SOURCE = "events";
 const SELECTED_SOURCE = "event-selected";
 const HOVER_SOURCE = "event-hover";
+/** Live events that get the pulse: the few nearest the middle of the map, so a busy Saturday isn't a field of rings. */
+const LIVE_SOURCE = "event-live";
+const MAX_PULSES = 10;
+/** One breath of the live pulse, in ms. Slower than any feedback motion so the two never read as the same signal. */
+const PULSE_MS = 2000;
 /** Pins cluster up to this zoom; flyer pins start one level later. */
 const CLUSTER_MAX_ZOOM = 12;
 const UNCLUSTERED: FilterSpecification = ["!", ["has", "point_count"]];
@@ -53,6 +58,22 @@ function toGeoJSON(events: EventSummary[], now: Date): GeoJSON.FeatureCollection
 }
 
 type GeoSource = { setData(data: GeoJSON.GeoJSON): unknown };
+
+/** How many pulses are on the map right now; the loop sleeps at zero so a quiet night costs no frames. */
+let pulsing = 0;
+function liveNearCenter(map: MapLibre, events: EventSummary[], now: Date): GeoJSON.FeatureCollection {
+  const c = map.getCenter();
+  const live = events
+    .filter((e) => e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now))
+    .map((e) => ({ e, d: (e.lng - c.lng) ** 2 + (e.lat - c.lat) ** 2 }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, MAX_PULSES);
+  pulsing = live.length;
+  return {
+    type: "FeatureCollection",
+    features: live.map(({ e }) => ({ type: "Feature", id: e.id, geometry: { type: "Point", coordinates: [e.lng, e.lat] }, properties: { id: e.id } })),
+  };
+}
 
 export function MapView({
   events,
@@ -145,12 +166,26 @@ export function MapView({
       // The open event keeps its ring even when its pin is inside a cluster.
       map.addSource(SELECTED_SOURCE, { type: "geojson", data: selectedFeature(latest.current.events, latest.current.selectedId) });
       map.addSource(HOVER_SOURCE, { type: "geojson", data: selectedFeature(latest.current.events, latest.current.highlight?.id ?? null) });
+      map.addSource(LIVE_SOURCE, { type: "geojson", data: liveNearCenter(map, latest.current.events, new Date()) });
 
       const color: unknown = ["case", ["get", "queer"], MAP_COLORS.uv, MAP_COLORS.sodium];
       // Pin size grows with RSVPs, capped so a big party doesn't swallow the block.
       // A filling room (people checked in) makes the halo bigger still, up to 10 px more.
       const haloRadius: unknown = ["+", ["interpolate", ["linear"], ["get", "going"], 0, 12, 100, 18, 400, 26], ["min", ["*", ["get", "here"], 0.25], 10]];
 
+      // Live: an expanding ring under the pin, animated by one loop below. Reduced motion holds it as a still ring.
+      map.addLayer({
+        id: "event-live-pulse",
+        type: "circle",
+        source: LIVE_SOURCE,
+        paint: {
+          "circle-radius": 14,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-color": MAP_COLORS.live,
+          "circle-stroke-width": 2,
+          "circle-stroke-opacity": 0.7,
+        },
+      });
       map.addLayer({
         id: "event-halo",
         type: "circle",
@@ -159,24 +194,28 @@ export function MapView({
         paint: {
           "circle-radius": haloRadius as never,
           "circle-color": ["case", ["get", "live"], MAP_COLORS.live, color] as never,
-          "circle-opacity": ["case", ["get", "live"], 0.35, ["get", "cancelled"], 0, 0.2],
+          "circle-opacity": ["case", ["get", "live"], 0.3, ["get", "cancelled"], 0, 0.2],
           "circle-blur": 0.4,
         },
+        layout: { "circle-sort-key": ["case", ["get", "live"], 1, 0] },
       });
       map.addLayer({
         id: "event-selected",
         type: "circle",
         source: SELECTED_SOURCE,
-        paint: { "circle-radius": 14, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": MAP_COLORS.accent, "circle-stroke-width": 1.5 },
+        // Selected is one still ring in the text color: no pulse, no hue, so it never reads as live.
+        paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": MAP_COLORS.fg, "circle-stroke-width": 2 },
       });
       map.addLayer({
         id: "event-core",
         type: "circle",
         source: SOURCE,
         filter: UNCLUSTERED,
+        // Live pins are the brightest and a size up; RSVPs still size the halo, so live adds to size rather than replacing it.
+        layout: { "circle-sort-key": ["case", ["get", "live"], 1, 0] },
         paint: {
-          "circle-radius": 6,
-          "circle-color": color as never,
+          "circle-radius": ["case", ["get", "live"], 8, 6],
+          "circle-color": ["case", ["get", "live"], MAP_COLORS.live, color] as never,
           "circle-opacity": ["case", ["get", "cancelled"], 0.35, 1],
           "circle-stroke-opacity": ["case", ["get", "cancelled"], 0.35, 1],
           "circle-stroke-color": MAP_COLORS.halo,
@@ -197,7 +236,7 @@ export function MapView({
           "circle-stroke-opacity": ["case", ["get", "cancelled"], 0.35, 1],
         },
       });
-      // Clusters: size by count, UV when most are queer-centered, a magenta ring when any are live.
+      // Clusters: size by count, UV when most are queer-centered, a live ring when any are live.
       map.addLayer({
         id: "cluster",
         type: "circle",
@@ -311,22 +350,30 @@ export function MapView({
       map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
     }
 
-    // Live pins breathe. Skipped when the viewer prefers reduced motion.
+    // The live pulse: the one ambient motion on the map. One loop drives one layer; it idles when nothing is live,
+    // pauses while the tab is hidden (rAF stops), and stays a still ring under reduced motion.
     let raf = 0;
-    const reduce = reducedMotion();
-    if (!reduce) {
-      const tick = (t: number) => {
-        if (ready.current && map.getLayer("event-halo")) {
-          const phase = (Math.sin(t / 450) + 1) / 2;
-          map.setPaintProperty("event-halo", "circle-opacity", ["case", ["get", "live"], 0.15 + phase * 0.4, ["get", "cancelled"], 0, 0.2]);
-        }
-        raf = requestAnimationFrame(tick);
-      };
+    const tick = (t: number) => {
       raf = requestAnimationFrame(tick);
-    }
+      if (!pulsing || !ready.current || !map.getLayer("event-live-pulse") || reducedMotion()) return;
+      const p = (t % PULSE_MS) / PULSE_MS;
+      const ease = 1 - (1 - p) ** 3;
+      map.setPaintProperty("event-live-pulse", "circle-radius", 10 + ease * 18);
+      map.setPaintProperty("event-live-pulse", "circle-stroke-opacity", 0.75 * (1 - p));
+    };
+    raf = requestAnimationFrame(tick);
+    const refreshLive = () => (map.getSource(LIVE_SOURCE) as unknown as GeoSource | undefined)?.setData(liveNearCenter(map, latest.current.events, new Date()));
+    map.on("moveend", refreshLive);
+    // Events go live (and end) on the clock, not only when data changes.
+    const minute = window.setInterval(() => {
+      if (!ready.current) return;
+      (map.getSource(SOURCE) as unknown as GeoSource | undefined)?.setData(toGeoJSON(latest.current.events, new Date()));
+      refreshLive();
+    }, 60_000);
 
     return () => {
       cancelAnimationFrame(raf);
+      window.clearInterval(minute);
       meMarker.current?.destroy();
       meMarker.current = null;
       ready.current = false;
@@ -352,6 +399,7 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !ready.current) return;
     (map.getSource(SOURCE) as unknown as GeoSource | undefined)?.setData(toGeoJSON(events, new Date()));
+    (map.getSource(LIVE_SOURCE) as unknown as GeoSource | undefined)?.setData(liveNearCenter(map, events, new Date()));
     applySelection(map, latest.current.selectedId, events);
     loadThumbsRef.current?.();
   }, [events]);

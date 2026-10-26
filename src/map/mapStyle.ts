@@ -26,9 +26,9 @@ const LIGHT: MapPalette = {
   label: "#8a8d94",
   labelStrong: "#5b5e65",
   halo: "#e9eaec",
-  sodium: "#f07f12",
+  sodium: "#c25e00",
   uv: "#7b5cf0",
-  live: "#ff3df2",
+  live: "#3f8a00",
   accent: "#ff3df2",
   fg: "#121315",
 };
@@ -47,7 +47,7 @@ const DARK: MapPalette = {
   halo: "#0a0a0b",
   sodium: "#ff9a3c",
   uv: "#a98bff",
-  live: "#ff3df2",
+  live: "#b8ff3c",
   accent: "#ff3df2",
   fg: "#ededee",
 };

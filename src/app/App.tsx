@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
-import { Button, Sheet, Toast, Skeleton } from "../components/ui";
+import { Button, LiveBadge, Sheet, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { LocateButton } from "../components/LocateButton";
+import { Logo } from "../components/Logo";
 import { GeneratedArt } from "../components/GeneratedArt";
 import { formatMiles, milesBetween, useMyLocation } from "../lib/location";
+import { useMinute } from "../lib/clock";
 import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
 import { announceGoing, welcomeMode } from "../lib/install";
@@ -18,8 +20,8 @@ import { Faces } from "../components/Faces";
 import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilters, saveFilters, type Filters } from "../lib/filters";
 import { FilterSheet } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
-import { clock, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
-import { revealCards, revealChildren, useGSAP } from "../lib/motion";
+import { clock, dayLabel, isLive, liveFirst, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
+import { flipOut, markFlipOrigin, revealCards, revealChildren, useGSAP } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 import { clearUserCaches, saveForOffline, saveProfileForOffline, useOnline } from "../lib/offline";
 import { EventSheet } from "./EventSheet";
@@ -272,7 +274,9 @@ export function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const now = useMemo(() => new Date(), [events, windowId, pickedDate]);
+  const minute = useMinute();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(() => new Date(), [events, windowId, pickedDate, minute]);
 
   // The list covers two weeks. A picked date further out loads that night and merges it in.
   useEffect(() => {
@@ -332,7 +336,7 @@ export function App() {
     },
     [events, now, city.timezone, searchHits, friendsAt],
   );
-  const shown = useMemo(() => matching(filters), [matching, filters]);
+  const shown = useMemo(() => liveFirst(matching(filters), now), [matching, filters, now]);
   // Tonight's events with a friend going or there, whatever the filters say: a quick way to find your people.
   const friendsTonight = useMemo(() => {
     if (!Object.keys(friendsAt).length) return [];
@@ -457,6 +461,7 @@ export function App() {
 
   const select = useCallback(
     (id: string | null) => {
+      if (id) markFlipOrigin(id);
       setSelectedId(id);
       const ev = id ? events.find((e) => e.id === id) : null;
       if (ev) setFocus({ lng: ev.lng, lat: ev.lat, key: Date.now() });
@@ -571,10 +576,7 @@ export function App() {
 
       <header className="topbar">
         <nav className="nav" aria-label="Main">
-          <a className="logo" href="/" aria-label="Assembly home">
-            <img src="/icons/favicon.svg" alt="" width="22" height="22" />
-            <span className="logo-word">Assembly</span>
-          </a>
+          <Logo />
           <span className="nav-city">{city.name}</span>
           {!online && (
             <span className="offline-tag" role="status">
@@ -697,7 +699,7 @@ export function App() {
                       {cancelled ? (
                         <span className="card-state">Cancelled</span>
                       ) : live ? (
-                        <span className="card-state is-live">Live</span>
+                        <LiveBadge />
                       ) : (
                         <span className="num">{filters.windowId === "tonight" ? clock(e.startsAt, city.timezone) : `${dayLabel(e.startsAt, now, city.timezone)}, ${clock(e.startsAt, city.timezone)}`}</span>
                       )}
@@ -761,7 +763,10 @@ export function App() {
           tz={city.timezone}
           me={me}
           config={config}
-          onClose={() => select(null)}
+          onClose={() => {
+            flipOut(selected.id, document.querySelector<HTMLElement>(".event-hero"));
+            select(null);
+          }}
           onNeedSignIn={() => openSignIn()}
           onEdit={(d) => {
             setEditing(d);

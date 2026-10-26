@@ -20,24 +20,26 @@
   /* Text */
   --color-fg: #121315;
   --color-muted: #5b5e65;
-  --color-faint: #8a8d94;
+  --color-faint: #686b72; /* still 4.5:1 on surface: tertiary text, never below AA */
 
-  /* The one UI accent: primary action, selection, "featured", live */
+  /* Hero accent: primary actions, links, and focus. Never live, never an error, never at rest on content. */
   --color-accent: #ff3df2;
   --color-accent-ink: #1a0119;
   --color-accent-text: #b8139f; /* accent used as text on light ground, for contrast */
   --color-accent-wash: rgb(255 61 242 / 0.08);
 
-  /* Scene markers (pins, small squares) */
-  --color-sodium: #f07f12; /* everything else */
+  /* Scene: what kind of night (pins, the art ring). Violet is only ever queer-centered. */
+  --color-sodium: #c25e00; /* everything else; 3.4:1 on the day map */
   --color-uv: #7b5cf0; /* queer-centered */
 
-  /* Status */
-  --color-ok: #138a5e;
-  --color-ok-ink: #ffffff;
-  --color-warn: #b88600;
+  /* Status: live is the brightest thing on screen and the only thing that pulses. */
+  --color-live: #3f8a00; /* pins and borders on the day map, 3.4:1 */
+  --color-live-text: #3b7700; /* "Live now" as text, 4.5:1 */
+  --color-live-ink: #ffffff; /* text on a live fill */
+  --color-danger: #c41e2f; /* errors, cancelled, reports */
+  --color-warn: #8f6a00; /* offline */
 
-  /* Motion accents (to-do: Gradient micro-animations): pink, purple, green, for selected and processing states only */
+  /* Motion only: a gradient for feedback and state changes (a selected segment, a toast ring). Never at rest on content. */
   --grad-pink: #ff3df2;
   --grad-purple: #7b5cf0;
   --grad-green: #10b981;
@@ -59,7 +61,7 @@
 
   --color-fg: #ededee;
   --color-muted: #8e8e96;
-  --color-faint: #5c5c64;
+  --color-faint: #7d7d86;
 
   --color-accent: #ff3df2;
   --color-accent-ink: #1a0119;
@@ -69,8 +71,10 @@
   --color-sodium: #ff9a3c;
   --color-uv: #a98bff;
 
-  --color-ok: #6fe3b4;
-  --color-ok-ink: #062117;
+  --color-live: #b8ff3c; /* acid: the one color that jumps off the night map */
+  --color-live-text: #b8ff3c;
+  --color-live-ink: #0b1400;
+  --color-danger: #ff6b6b;
   --color-warn: #ffd23f;
 
   --grad-pink: #ff3df2;

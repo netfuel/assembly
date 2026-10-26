@@ -28,6 +28,7 @@ function reveal() {
   splash.classList.add("is-reveal");
   window.setTimeout(() => splash.classList.add("is-done"), reduce ? 0 : ZOOM_MS);
   window.setTimeout(() => splash.remove(), reduce ? 400 : REMOVE_MS);
+  window.setTimeout(() => window.dispatchEvent(new Event("assembly:splash-done")), reduce ? 0 : ZOOM_MS);
 }
 
 let scheduled = false;
@@ -49,6 +50,7 @@ export function hideSplash() {
 export function skipSplash() {
   revealed = true;
   el()?.remove();
+  // No splash, no intro move: the logo only plays "after the preloader" when there was one.
 }
 
 (function init() {
