@@ -122,33 +122,51 @@
   gap: var(--space-3);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: max(var(--space-4), env(safe-area-inset-left));
   scrollbar-width: none;
-  /* room for the corner nodes, which sit half outside each frame */
-  padding: 4px max(var(--space-4), env(safe-area-inset-right)) 4px max(var(--space-4), env(safe-area-inset-left));
+  padding: 2px max(var(--space-4), env(safe-area-inset-right)) 4px max(var(--space-4), env(safe-area-inset-left));
 }
 .rail::-webkit-scrollbar { display: none; }
 .rail-empty { color: var(--color-muted); padding: var(--space-4); border: 1px dashed var(--color-line-strong); width: 100%; font-size: var(--text-xs); }
 .link { background: none; border: 0; padding: 0; color: var(--color-fg); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--color-accent); }
 
+/* Rail card: art, title, one line of when and where. Nothing else unless it's about you (friends, distance). */
 .card {
   flex: none;
-  width: 248px;
-  max-width: 78vw;
-  padding: 0;
-  border: 0;
-  background: none;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  width: 280px;
+  max-width: 82vw;
+  min-height: 88px;
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-fg);
   text-align: left;
   scroll-snap-align: start;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
-.card-frame { display: grid; gap: 6px; padding: var(--space-3); transition: border-color var(--dur-fast); }
-.card:hover .card-frame { border-color: var(--color-line-strong); }
-.card:focus-visible { outline: none; }
-.card:focus-visible .card-frame { border-color: var(--color-accent); }
-.card-top { display: flex; align-items: center; justify-content: space-between; font-size: var(--text-2xs); color: var(--color-faint); }
-.card-title { font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 400; font-size: var(--text-md); line-height: 1.1; letter-spacing: -0.015em; }
-.card-when { font-size: var(--text-2xs); font-weight: 500; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-muted); }
-.card-meta { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--text-2xs); color: var(--color-faint); padding-top: 6px; border-top: 1px solid var(--color-line); }
-.card-venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card:hover { background: var(--color-surface-raised); }
+.card:focus-visible { outline: none; border-color: var(--color-accent); }
+.card.is-highlighted { border-color: var(--color-line-strong); background: var(--color-surface-raised); }
+.card-art { position: relative; width: 64px; height: 64px; overflow: hidden; border-radius: var(--radius-xs); background: var(--color-line); }
+.card-art img, .card-art .card-art-gen { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.card-art.is-queer { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px var(--color-uv); }
+.card-text { display: grid; gap: 4px; min-width: 0; }
+.card-title {
+  font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-weight: 400;
+  font-size: var(--text-md); line-height: var(--leading-title); letter-spacing: -0.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance;
+}
+.card-line { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--text-xs); line-height: var(--leading-meta); color: var(--color-muted); white-space: nowrap; }
+.card-sep { color: var(--color-faint); }
+.card-venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.card-state { color: var(--color-fg); }
+.card-state.is-live { color: var(--color-accent-text); font-weight: var(--weight-medium); }
+.card-extra { gap: var(--space-2); color: var(--color-faint); }
 
 .live-tag { display: inline-flex; align-items: center; gap: 6px; color: var(--color-accent-text); }
 .live-tag::before { content: ""; width: 6px; height: 6px; background: var(--color-accent); }
@@ -371,15 +389,12 @@
 .sso .btn, .email-start .btn { white-space: normal; text-align: center; line-height: 1.25; padding-top: 6px; padding-bottom: 6px; }
 
 /* Flyer thumbnail on rail cards */
-.card-body { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
-.card-thumb { flex: none; width: 44px; height: 44px; object-fit: cover; border: 2px solid; background: #0a0a0b; }
 
 /* Moderator bar on events */
 .mod-bar { flex-wrap: wrap; border-color: var(--color-accent); }
 .hand-over { flex-basis: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
 .hand-over input { min-width: 0; min-height: 30px; padding: 0 8px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-xs); background: var(--color-surface-raised); color: var(--color-fg); font: inherit; font-size: max(16px, var(--text-xs)); }
 .hand-over .note { grid-column: 1 / -1; }
-.card.is-highlighted .card-frame { border-color: var(--color-fg); }
 
 /* The event page's one action bar, pinned to the bottom of the sheet: primary, tickets, then icons. */
 .ev-bar {
@@ -412,7 +427,6 @@
 
 /* Preloaders */
 .card-skeleton { pointer-events: none; animation: skel-card-in 300ms ease both; }
-.card-skeleton .card-top, .card-skeleton .card-meta { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
 @keyframes skel-card-in { from { opacity: 0; transform: translateY(6px); } }
 .flyer-wrap { position: relative; }
 .flyer-wrap:not(.is-loaded) { aspect-ratio: 1; max-height: 60vh; }
@@ -421,7 +435,6 @@
 .mod-skel { display: grid; gap: 8px; padding: var(--space-3); border: 1px solid var(--color-line); }
 .mod-skel-actions { display: flex; gap: var(--space-2); margin-top: 4px; }
 @media (prefers-reduced-motion: reduce) { .card-skeleton { animation: none; } }
-.card-skeleton .card-body { display: grid; gap: 8px; }
 
 /* Share and subscribe menus */
 .share-options { display: grid; gap: var(--space-2); }
@@ -636,12 +649,7 @@
 .rail-subscribe:hover { color: var(--color-fg); }
 .rail-subscribe:active { transform: scale(0.95); }
 
-/* Cards: a gradient line sweeps along the top edge when a card is highlighted or focused */
-.card-frame::after {
-  content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 2px; background: var(--grad-sweep);
-  transform: scaleX(0); transform-origin: left; transition: transform 320ms var(--ease-out); pointer-events: none;
-}
-.card.is-highlighted .card-frame::after, .card:focus-visible .card-frame::after { transform: scaleX(1); }
+
 
 /* Filters badge: pops once when the count changes (keyed in App) */
 .filter-badge { animation: badge-pop 420ms var(--ease-pop); }
@@ -649,7 +657,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .locate-spin, .filter-badge { animation: none; }
-  .card-frame::after { transition: none; }
+
 }
 
 /* Generated flyer art (GeneratedArt.tsx, lib/flyerArt.ts, lib/liquidRenderer.ts). Same in both themes. */
@@ -665,8 +673,7 @@
 }
 .gen-when { font-size: var(--text-2xs); font-weight: 500; letter-spacing: var(--tracking-label); text-transform: uppercase; color: #f4f4f5; opacity: 0.85; }
 .gen-art.is-compact { display: block; }
-.gen-art.card-thumb { border-color: var(--color-line-strong); }
-
+.gen-art
 /* Check-in */
 .checkin { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-line); background: var(--color-surface); }
 .checkin-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; min-height: 36px; }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
-import { Button, Frame, Sheet, Tag, Toast, Skeleton } from "../components/ui";
+import { Button, Sheet, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { LocateButton } from "../components/LocateButton";
 import { GeneratedArt } from "../components/GeneratedArt";
@@ -54,7 +54,6 @@ function eventIdFromPath(): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
 
 /** "Around you": nights within this distance count as close enough to frame with your dot. */
 const NEAR_MILES = 6;
@@ -634,21 +633,13 @@ export function App() {
                 </span>
                 {[0, 1, 2, 3].map((i) => (
                   <div key={i} className="card card-skeleton" aria-hidden="true" style={{ animationDelay: `${i * 80}ms` }}>
-                    <Frame className="card-frame">
-                      <span className="card-top">
-                        <Skeleton w={44} h={9} />
-                        <Skeleton w={8} h={8} />
-                      </span>
-                      <span className="card-body skel-stack">
-                        <Skeleton w="85%" h={18} />
-                        <Skeleton w="55%" h={18} />
-                      </span>
-                      <Skeleton w="60%" h={9} />
-                      <span className="card-meta">
-                        <Skeleton w="45%" h={9} />
-                        <Skeleton w={48} h={9} />
-                      </span>
-                    </Frame>
+                    <span className="card-art">
+                      <Skeleton w="100%" h="100%" />
+                    </span>
+                    <span className="card-text skel-stack">
+                      <Skeleton w="80%" h={18} />
+                      <Skeleton w="55%" h={12} />
+                    </span>
                   </div>
                 ))}
               </>
@@ -657,7 +648,7 @@ export function App() {
             {loadState === "ready" && shown.length === 0 && (
               <div className="rail-empty">{emptyNote}</div>
             )}
-            {shown.map((e, i) => {
+            {shown.map((e) => {
               const queer = e.scenes.includes("queer");
               const cancelled = e.status === "cancelled";
               const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
@@ -665,48 +656,41 @@ export function App() {
                 <button
                   key={e.id}
                   data-id={e.id}
-                  className={`card ${cancelled ? "is-cancelled" : ""} ${highlight?.id === e.id ? "is-highlighted" : ""}`}
+                  className={`card ${cancelled ? "is-cancelled" : ""} ${live ? "is-live" : ""} ${highlight?.id === e.id ? "is-highlighted" : ""}`}
                   onClick={() => select(e.id)}
                   onMouseEnter={() => setHighlight({ id: e.id, follow: false })}
                   onMouseLeave={() => setHighlight((h) => (h?.id === e.id ? null : h))}
                   onFocus={() => setHighlight({ id: e.id, follow: false })}
+                  aria-label={`${e.title}, ${cancelled ? "cancelled" : live ? "happening now" : `${dayLabel(e.startsAt, now, city.timezone)} ${clock(e.startsAt, city.timezone)}`}, ${e.venueName ?? e.neighborhood ?? ""}`}
                 >
-                  <Frame featured={live} className="card-frame">
-                    <span className="card-top num">
-                      <span>
-                        N.{pad(i + 1)} <span className="dim">/ {pad(shown.length)}</span>
-                      </span>
-                      {cancelled ? <Tag>Cancelled</Tag> : live ? <Tag tone="accent">Live</Tag> : <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} />}
-                    </span>
-                    <span className="card-body">
-                      <span className="card-title">{e.title}</span>
-                      {!e.thumbUrl && <GeneratedArt compact id={e.id} className="card-thumb" />}
-                      {e.thumbUrl && (
-                        <img
-                          className="card-thumb"
-                          src={e.thumbUrl}
-                          alt=""
-                          loading="lazy"
-                          style={{ borderColor: queer ? "var(--color-uv)" : "var(--color-sodium)" }}
-                          // Older flyers have no thumbnail.
-                          onError={(ev) => ev.currentTarget.remove()}
-                        />
+                  {/* Art carries the scene: queer-centered gets the violet ring, like its pin. */}
+                  <span className={`card-art ${queer ? "is-queer" : ""}`}>
+                    {e.thumbUrl ? (
+                      <img src={e.thumbUrl} alt="" loading="lazy" onError={(ev) => ev.currentTarget.remove()} />
+                    ) : (
+                      <GeneratedArt compact id={e.id} className="card-art-gen" />
+                    )}
+                  </span>
+                  <span className="card-text">
+                    <span className="card-title">{e.title}</span>
+                    <span className="card-line">
+                      {cancelled ? (
+                        <span className="card-state">Cancelled</span>
+                      ) : live ? (
+                        <span className="card-state is-live">Live</span>
+                      ) : (
+                        <span className="num">{filters.windowId === "tonight" ? clock(e.startsAt, city.timezone) : `${dayLabel(e.startsAt, now, city.timezone)}, ${clock(e.startsAt, city.timezone)}`}</span>
                       )}
+                      <span className="card-sep" aria-hidden="true">·</span>
+                      <span className="card-venue">{e.venueName ?? e.neighborhood}</span>
                     </span>
-                    <span className="card-when num">
-                      {dayLabel(e.startsAt, now, city.timezone)} / {clock(e.startsAt, city.timezone)}
-                      {myPos && <span className="dim"> / {distanceTo(e)}</span>}
-                    </span>
-                    {friendsAt[e.id] && (
-                      <span className="card-friends">
-                        <Faces people={friendsAt[e.id]} size={18} />
+                    {(friendsAt[e.id] || myPos) && (
+                      <span className="card-line card-extra">
+                        {friendsAt[e.id] && <Faces people={friendsAt[e.id]} size={18} />}
+                        {myPos && <span className="num">{distanceTo(e)}</span>}
                       </span>
                     )}
-                    <span className="card-meta">
-                      <span className="card-venue">{e.venueName ?? e.neighborhood}</span>
-                      <span className="num">{e.hereNow ? `${e.hereNow} here · ` : ""}{e.goingCount} going</span>
-                    </span>
-                  </Frame>
+                  </span>
                 </button>
               );
             })}
