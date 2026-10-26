@@ -24,6 +24,7 @@ import type { City } from "../shared/types";
 import { featureGate, features } from "./features";
 import { pageModeration, pages } from "./pages";
 import { live } from "./live";
+import { inbox } from "./inbox";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -105,6 +106,7 @@ app.get("/media/:key{.+}", async (c) => {
 
 app.route("/auth/email", emailAuth);
 app.route("/auth", auth);
+app.route("/me/inbox", inbox);
 app.route("/me", profile);
 app.route("/uploads", uploads);
 app.route("/", posting);

@@ -21,6 +21,7 @@ import type {
   ServerConfig,
   Venue,
   PageClaim,
+  Inbox,
   PageEdit,
   PageEvents,
   PageKind,
@@ -130,6 +131,8 @@ export const api = {
     request<{ ok: true }>(`/api/events/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   reportUser: (id: string, reason: string, note: string) =>
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  inbox: () => request<Inbox>("/api/me/inbox"),
+  inboxSeen: () => request<{ ok: true }>("/api/me/inbox/seen", { method: "POST" }),
   setLive: (id: string, action: "end" | "extend") =>
     request<{ endsAt: string; endedEarly: boolean }>(`/api/events/${encodeURIComponent(id)}/live`, { method: "POST", body: JSON.stringify({ action }) }),
   page: (kind: PageKind, slug: string) => request<PageProfile>(pagePath(kind, slug)),

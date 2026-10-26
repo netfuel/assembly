@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Chip, Label, Tag, Skeleton } from "../components/ui";
+import { Button, Chip, Label, Segmented, Tag, Skeleton } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { MediaError, prepareAvatar } from "../lib/media";
 import { clock, dayLabel } from "../lib/time";
-import { SCENES, type FriendsState, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
+import { SCENES, type FriendsState, type Inbox, type InboxItem, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
 import { PushControl } from "../components/PushControl";
 import { VarsityMark } from "./EventSheet";
 import "./announce.css";
@@ -36,9 +36,16 @@ export function ProfileSheet({
   onModerate,
   friends,
   onFriends,
+  onOpenPage,
+  inbox,
+  onInboxSeen,
   config,
   toast,
 }: {
+  /** Notifications: built on the server from what happened (requests, invites, changes, friends out). */
+  inbox: Inbox | null;
+  onInboxSeen: () => void;
+  onOpenPage: (p: { kind: "artist" | "venue"; slug: string }) => void;
   /** Null when friends aren't available on this server yet. */
   friends: FriendsState | null;
   onFriends: () => void;
@@ -54,6 +61,13 @@ export function ProfileSheet({
 }) {
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [mine, setMine] = useState<{ hosting: MyEvent[]; going: MyEvent[] } | null>(null);
+  // Opens on Notifications when something's new, otherwise on Saved.
+  const [tab, setTab] = useState<"saved" | "inbox" | "profile">(() => ((inbox?.unread ?? 0) > 0 ? "inbox" : "saved"));
+  const unread = inbox?.unread ?? 0;
+  useEffect(() => {
+    if (tab === "inbox" && unread > 0) onInboxSeen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   useEffect(() => {
     api.myEvents().then(setMine).catch(() => setMine({ hosting: [], going: [] }));
@@ -77,23 +91,104 @@ export function ProfileSheet({
   }
 
   const links = LINKS.filter((l) => me.links[l.key as keyof typeof me.links]);
+  const going = mine?.going.filter((e) => e.rsvp !== "interested") ?? [];
+  const saved = mine?.going.filter((e) => e.rsvp === "interested") ?? [];
   return (
     <>
-      <div className="profile-head" data-reveal>
-        <Avatar user={me} size={64} />
-        <div className="stack">
-          <Label glyph="◇">Profile</Label>
-          <h1 className="sheet-title">
-            {me.displayName}
-            {me.verified && (
-              <span className="verified">
-                <VarsityMark /> Verified
-              </span>
-            )}
-          </h1>
-          {me.pronouns && <p className="note">{me.pronouns}</p>}
-        </div>
+      <div className="you-head" data-reveal>
+        <Avatar user={me} size={40} />
+        <span className="you-name">{me.displayName}</span>
       </div>
+      <Segmented
+        label="You"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { id: "saved", label: "Saved" },
+          { id: "inbox", label: unread ? `Notifications ${unread}` : "Notifications" },
+          { id: "profile", label: "Profile" },
+        ]}
+      />
+
+      {tab === "saved" && (
+        <>
+          <section className="stack" aria-label="Going">
+            <Label glyph="✓">Going</Label>
+            {!mine && <ListSkeleton />}
+            {mine && going.length === 0 && <p className="note">Nothing yet. RSVP to a night and it shows up here, saved on this phone for the door.</p>}
+            {going.length > 0 && <MyList items={going} tz={tz} onOpen={onOpenEvent} />}
+          </section>
+          {saved.length > 0 && (
+            <section className="stack" aria-label="Saved for later">
+              <Label glyph="◇">Saved for later</Label>
+              <MyList items={saved} tz={tz} onOpen={onOpenEvent} />
+            </section>
+          )}
+      {friends && (
+        <section className="stack" aria-label="Friends">
+          <Label glyph="◎">Friends</Label>
+          <button className="profile-row" onClick={onFriends}>
+            <span>
+              {!friends.me.friendsOn
+                ? "See which nights your friends are going to"
+                : friends.friends.length
+                  ? `${friends.friends.length} friend${friends.friends.length === 1 ? "" : "s"}${friends.me.username ? ` · @${friends.me.username}` : ""}`
+                  : "Invite your first friend"}
+            </span>
+            {friends.incoming.length + friends.invites.filter((i) => !i.seen).length > 0 && (
+              <Tag tone="accent">{friends.incoming.length + friends.invites.filter((i) => !i.seen).length} new</Tag>
+            )}
+            <span aria-hidden="true">→</span>
+          </button>
+        </section>
+      )}
+
+          <section className="stack" aria-label="Hosting">
+        <Label glyph="▶">Hosting</Label>
+        {!mine && (
+          <div className="skel-list" role="status" aria-label="Loading">
+            <Skeleton w="70%" h={14} />
+            <Skeleton w="50%" h={14} />
+          </div>
+        )}
+        {mine && mine.hosting.length === 0 && (
+          <p className="note">
+            You haven't posted anything.{" "}
+            <button className="link" onClick={onAnnounce}>
+              Make an announcement →
+            </button>
+          </p>
+        )}
+        {mine && mine.hosting.length > 0 && <MyList items={mine.hosting} tz={tz} onOpen={onOpenEvent} />}
+      </section>
+        </>
+      )}
+
+      {tab === "inbox" && (
+        <>
+          <InboxList inbox={inbox} tz={tz} onOpenEvent={onOpenEvent} onFriends={onFriends} onOpenPage={onOpenPage} />
+      {config.push && (
+        <section className="stack" aria-label="Notifications">
+          <Label glyph="◉">Notifications</Label>
+          <PushControl config={config} toast={toast} />
+        </section>
+      )}
+
+        </>
+      )}
+
+      {tab === "profile" && (
+        <>
+          {(me.verified || me.pronouns) && (
+            <p className="note">
+              {me.verified && (
+                <span className="verified">
+                  <VarsityMark /> Verified
+                </span>
+              )}{" "}
+              {me.pronouns}
+            </p>
+          )}
       {me.bio && (
         <p className="serif-text profile-bio" data-reveal>
           {me.bio}
@@ -123,61 +218,6 @@ export function ProfileSheet({
         <span className="note">{me.showAttendance ? "You show up on who's going lists." : "Your RSVPs are private."}</span>
       </div>
 
-      {friends && (
-        <section className="stack" data-reveal aria-label="Friends">
-          <Label glyph="◎">Friends</Label>
-          <button className="profile-row" onClick={onFriends}>
-            <span>
-              {!friends.me.friendsOn
-                ? "See which nights your friends are going to"
-                : friends.friends.length
-                  ? `${friends.friends.length} friend${friends.friends.length === 1 ? "" : "s"}${friends.me.username ? ` · @${friends.me.username}` : ""}`
-                  : "Invite your first friend"}
-            </span>
-            {friends.incoming.length + friends.invites.filter((i) => !i.seen).length > 0 && (
-              <Tag tone="accent">{friends.incoming.length + friends.invites.filter((i) => !i.seen).length} new</Tag>
-            )}
-            <span aria-hidden="true">→</span>
-          </button>
-        </section>
-      )}
-
-      {config.push && (
-        <section className="stack" data-reveal aria-label="Notifications">
-          <Label glyph="◉">Notifications</Label>
-          <PushControl config={config} toast={toast} />
-        </section>
-      )}
-
-      <section className="stack" data-reveal aria-label="Going">
-        <Label glyph="✓">Going</Label>
-        {!mine && (
-          <div className="skel-list" role="status" aria-label="Loading">
-            <Skeleton w="70%" h={14} />
-            <Skeleton w="50%" h={14} />
-          </div>
-        )}
-        {mine && mine.going.length === 0 && <p className="note">Nothing yet. RSVP to a night and it shows up here.</p>}
-        {mine && mine.going.length > 0 && <MyList items={mine.going} tz={tz} onOpen={onOpenEvent} />}
-      </section>
-      <section className="stack" data-reveal aria-label="Hosting">
-        <Label glyph="▶">Hosting</Label>
-        {!mine && (
-          <div className="skel-list" role="status" aria-label="Loading">
-            <Skeleton w="70%" h={14} />
-            <Skeleton w="50%" h={14} />
-          </div>
-        )}
-        {mine && mine.hosting.length === 0 && (
-          <p className="note">
-            You haven't posted anything.{" "}
-            <button className="link" onClick={onAnnounce}>
-              Make an announcement →
-            </button>
-          </p>
-        )}
-        {mine && mine.hosting.length > 0 && <MyList items={mine.hosting} tz={tz} onOpen={onOpenEvent} />}
-      </section>
       <p className="note policy-links" data-reveal>
         <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/guidelines">Community guidelines</a> ·{" "}
         <a href="mailto:hello@assembly.rsvp">Contact</a>
@@ -191,7 +231,77 @@ export function ProfileSheet({
       >
         Sign out
       </Button>
+        </>
+      )}
     </>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <div className="skel-list" role="status" aria-label="Loading">
+      <Skeleton w="70%" h={14} />
+      <Skeleton w="50%" h={14} />
+    </div>
+  );
+}
+
+const INBOX_GLYPH: Record<InboxItem["kind"], string> = {
+  "friend-request": "◎",
+  invite: "→",
+  cancelled: "×",
+  updated: "↻",
+  "starting-soon": "◷",
+  "friend-here": "●",
+  claim: "◇",
+};
+
+/** Notifications, newest first. Tapping one goes where it's about. */
+function InboxList({
+  inbox,
+  tz,
+  onOpenEvent,
+  onFriends,
+  onOpenPage,
+}: {
+  inbox: Inbox | null;
+  tz: string;
+  onOpenEvent: (id: string) => void;
+  onFriends: () => void;
+  onOpenPage: (p: { kind: "artist" | "venue"; slug: string }) => void;
+}) {
+  // What was unread when the tab opened stays marked while you look.
+  const [seenBefore] = useState(() => (inbox ? inbox.items.slice(0, inbox.unread).map((i) => i.id) : []));
+  if (!inbox) return <ListSkeleton />;
+  if (!inbox.items.length) return <p className="note">Nothing new. Friend requests, invites, and changes to nights you're going to show up here.</p>;
+  const now = new Date();
+  const go = (t: InboxItem["target"]) => {
+    if (!t) return;
+    if (t.type === "event") onOpenEvent(t.id);
+    else if (t.type === "friends") onFriends();
+    else onOpenPage({ kind: t.kind, slug: t.slug });
+  };
+  return (
+    <ul className="inbox" aria-label="Notifications">
+      {inbox.items.map((i) => (
+        <li key={i.id}>
+          <button className={`inbox-item ${seenBefore.includes(i.id) ? "is-new" : ""} is-${i.kind}`} onClick={() => go(i.target)} disabled={!i.target}>
+            {i.person ? (
+              <Avatar user={i.person} size={32} />
+            ) : (
+              <span className="inbox-glyph" aria-hidden="true">
+                {INBOX_GLYPH[i.kind]}
+              </span>
+            )}
+            <span className="inbox-text">
+              <span className="inbox-title">{i.title}</span>
+              <span className="inbox-body">{i.body}</span>
+            </span>
+            <span className="inbox-when num">{dayLabel(i.at, now, tz) === "Tonight" ? clock(i.at, tz) : dayLabel(i.at, now, tz)}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -203,11 +313,17 @@ function MyList({ items, tz, onOpen }: { items: MyEvent[]; tz: string; onOpen: (
         <li key={e.id}>
           <button onClick={() => onOpen(e.id)}>
             <span className="my-title">{e.title}</span>
+            {e.venue_name && <span className="my-venue">{e.venue_name}</span>}
             <span className="my-when num">
               {dayLabel(e.starts_at, now, tz)} / {clock(e.starts_at, tz)}
             </span>
-            {e.status === "cancelled" ? <Tag>Cancelled</Tag> : e.status === "hidden" ? <Tag>Hidden</Tag> : e.status === "draft" ? <Tag>In review</Tag> : e.rsvp === "interested" ? <Tag>Interested</Tag> : null}
+            {e.status === "cancelled" ? <Tag tone="danger">Cancelled</Tag> : e.status === "hidden" ? <Tag>Hidden</Tag> : e.status === "draft" ? <Tag>In review</Tag> : null}
           </button>
+          {e.ticket_url && e.status !== "cancelled" && (
+            <a className="my-tickets" href={e.ticket_url} target="_blank" rel="noopener noreferrer">
+              Tickets ↗
+            </a>
+          )}
         </li>
       ))}
     </ul>

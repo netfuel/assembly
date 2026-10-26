@@ -144,6 +144,9 @@ export interface MyEvent {
   starts_at: string;
   status: string;
   rsvp?: RsvpStatus;
+  /** Saved list only: the organizer's ticket link and the venue. */
+  ticket_url?: string | null;
+  venue_name?: string | null;
 }
 
 export type RsvpStatus = "going" | "interested";
@@ -398,4 +401,27 @@ export interface PageClaim {
   user: { id: string; displayName: string; email: string | null };
   message: string;
   createdAt: string;
+}
+
+/* ---------- Notifications (under the avatar) ---------- */
+export type InboxKind = "friend-request" | "invite" | "cancelled" | "updated" | "starting-soon" | "friend-here" | "claim";
+
+export interface InboxItem {
+  /** Stable per item, so the app can key lists. */
+  id: string;
+  kind: InboxKind;
+  /** When it happened: what "new" is measured against. */
+  at: string;
+  title: string;
+  /** One line under the title. */
+  body: string;
+  /** Where tapping goes. */
+  target: { type: "event"; id: string } | { type: "friends" } | { type: "page"; kind: "artist" | "venue"; slug: string } | null;
+  person?: { displayName: string; avatarUrl: string | null };
+}
+
+export interface Inbox {
+  items: InboxItem[];
+  /** Items newer than the last time you opened Notifications. */
+  unread: number;
 }

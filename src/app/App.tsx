@@ -30,7 +30,7 @@ import { AnnounceForm } from "./AnnounceForm";
 import { ProfileSheet } from "./ProfileSheet";
 import { SignInSheet } from "./SignInSheet";
 import { ModerationSheet } from "./ModerationSheet";
-import { type AuthProviders, type FriendAt, type FriendsState, type RsvpStatus, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
+import { type AuthProviders, type FriendAt, type FriendsState, type Inbox, type RsvpStatus, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
 
@@ -179,6 +179,20 @@ export function App() {
     api.friends().then(setFriendsState).catch(() => setFriendsState(null));
   }, [meId, friendsFeature]);
   const friendsOn = !!friendsState?.me.friendsOn;
+  // Notifications under the avatar: on sign-in, when the tab comes back, and every two minutes.
+  const [inbox, setInbox] = useState<Inbox | null>(null);
+  const loadInbox = useCallback(() => api.inbox().then(setInbox).catch(() => undefined), []);
+  useEffect(() => {
+    if (!meId) return setInbox(null);
+    void loadInbox();
+    const t = setInterval(() => document.visibilityState === "visible" && void loadInbox(), 120000);
+    const onVis = () => document.visibilityState === "visible" && void loadInbox();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [meId, loadInbox]);
   // Friends' nights: on load, whenever an event sheet closes (you may have RSVP'd), and every two minutes.
   const loadFriendsAt = useCallback(() => api.friendsAt().then(setFriendsAt).catch(() => undefined), []);
   useEffect(() => {
@@ -619,9 +633,9 @@ export function App() {
             <span className="show-narrow">Post</span>
           </Button>
           {me ? (
-            <button className="avatar" onClick={() => setSheet("profile")} aria-label="Your profile">
+            <button className="avatar" onClick={() => setSheet("profile")} aria-label={inbox?.unread ? `You: ${inbox.unread} new` : "You: saved, notifications and profile"}>
               {me.avatarUrl ? <img src={me.avatarUrl} alt="" referrerPolicy="no-referrer" /> : me.displayName.slice(0, 1).toUpperCase()}
-              {!!(friendsState?.incoming.length || friendsState?.invites.some((i) => !i.seen)) && <span className="avatar-dot" aria-label="New friend requests or invites" />}
+              {!!(inbox?.unread || friendsState?.incoming.length) && <span className="avatar-dot" aria-hidden="true" />}
             </button>
           ) : (
             <Button size="sm" variant="solid" onClick={() => openSignIn()}>
@@ -895,6 +909,12 @@ export function App() {
             onModerate={() => setSheet("moderation")}
             friends={friendsState}
             onFriends={() => setSheet("friends")}
+            onOpenPage={(p) => openPage(p)}
+            inbox={inbox}
+            onInboxSeen={() => {
+              void api.inboxSeen().catch(() => undefined);
+              setInbox((cur) => (cur ? { ...cur, unread: 0 } : cur));
+            }}
             config={config}
             onSignedOut={(message) => {
               clearUserCaches();

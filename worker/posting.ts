@@ -298,7 +298,8 @@ posting.get("/me/events", async (c) => {
       .all(),
     db
       .prepare(
-        `SELECT e.id, e.title, e.starts_at, e.status, r.status AS rsvp FROM events e JOIN rsvps r ON r.event_id = e.id
+        `SELECT e.id, e.title, e.starts_at, e.status, r.status AS rsvp, e.ticket_url, v.name AS venue_name
+         FROM events e JOIN rsvps r ON r.event_id = e.id LEFT JOIN venues v ON v.id = e.venue_id
          WHERE r.user_id = ? AND e.ends_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now') ORDER BY e.starts_at ASC LIMIT 50`,
       )
       .bind(userId)
