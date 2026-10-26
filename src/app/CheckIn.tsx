@@ -43,7 +43,10 @@ export function CheckIn({
   onNeedSignIn,
   onChange,
   toast,
+  trigger = 0,
 }: {
+  /** Bump to open the check-in choices from outside (the event page's action bar). */
+  trigger?: number;
   event: EventSummary;
   me: MeProfile | null;
   onNeedSignIn: () => void;
@@ -66,6 +69,10 @@ export function CheckIn({
     },
     [onChange],
   );
+
+  useEffect(() => {
+    if (trigger > 0) setMode("choose");
+  }, [trigger]);
 
   useEffect(() => {
     api

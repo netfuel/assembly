@@ -10,7 +10,8 @@ import type { ArtParams } from "./flyerArt";
 
 const MAX = 512; // largest art size in art pixels, per side
 const FPS = 30;
-const MAX_ANIMATED = 6;
+// The design review caps motion: at most two pieces of generated art move at once; the rest hold a still frame.
+const MAX_ANIMATED = 2;
 
 const VERT = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`;
 

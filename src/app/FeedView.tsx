@@ -27,6 +27,7 @@ function byDay(events: EventSummary[], now: Date, tz: string) {
  * cards load as you scroll. Videos play muted one at a time as they come into view.
  */
 export function FeedView({
+  embedded = false,
   events,
   loadState,
   loadError,
@@ -50,6 +51,8 @@ export function FeedView({
   online: boolean;
   tz: string;
   config: ServerConfig;
+  /** Inside the home sheet: the sheet scrolls, and there's no floating top bar to clear. */
+  embedded?: boolean;
   rsvps: Record<string, RsvpStatus>;
   friendsAt?: Record<string, FriendAt[]>;
   emptyNote: React.ReactNode;
@@ -64,6 +67,7 @@ export function FeedView({
   const root = useRef<HTMLElement>(null);
   // The top bar floats over the list: measure where its controls end so the list and day headers start below them.
   useEffect(() => {
+    if (embedded) return;
     const bar = document.querySelector(".topbar .filters");
     const el = root.current;
     if (!bar || !el) return;
@@ -76,7 +80,7 @@ export function FeedView({
       ro.disconnect();
       window.removeEventListener("resize", set);
     };
-  }, []);
+  }, [embedded]);
   const now = useMemo(() => new Date(), [events]);
   const sorted = useMemo(() => [...events].sort((a, b) => a.startsAt.localeCompare(b.startsAt)), [events]);
   const groups = useMemo(() => byDay(sorted.slice(0, limit), now, tz), [sorted, limit, now, tz]);
@@ -89,13 +93,13 @@ export function FeedView({
   useEffect(() => {
     const el = sentinel.current;
     if (!el || limit >= sorted.length) return;
-    const io = new IntersectionObserver(([entry]) => entry.isIntersecting && setLimit((n) => n + PAGE), { root: root.current, rootMargin: "800px 0px" });
+    const io = new IntersectionObserver(([entry]) => entry.isIntersecting && setLimit((n) => n + PAGE), { root: embedded ? (root.current?.closest(".home-sheet-body") ?? null) : root.current, rootMargin: "800px 0px" });
     io.observe(el);
     return () => io.disconnect();
   }, [limit, sorted.length]);
 
   return (
-    <section ref={root} className="feed" aria-label="Events, as a list">
+    <section ref={root} className={`feed ${embedded ? "feed-embedded" : ""}`} aria-label="Events, as a list">
       <div className="feed-inner">
         {loadState === "loading" && (
           <div className="feed-list" aria-hidden="true">
@@ -193,6 +197,7 @@ function FeedCard({
   const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
   const [loaded, setLoaded] = useState(false);
   const labels = e.scenes.map((s) => SCENES.find((x) => x.id === s)?.label).filter(Boolean) as string[];
+  const age = e.policyTags.includes("all-ages") ? "All ages" : e.policyTags.includes("21+") ? "21+" : e.policyTags.includes("18+") ? "18+" : null;
   return (
     <article className={`feed-card ${queer ? "is-queer" : ""} ${cancelled ? "is-cancelled" : ""} ${live ? "is-live" : ""}`}>
       {config.video && e.videoId && !cancelled ? (
@@ -222,42 +227,53 @@ function FeedCard({
         </button>
       )}
       <div className="feed-card-body">
-        <div className="feed-card-top">
-          <span className="feed-when num">
-            {timeRange(e.startsAt, e.endsAt, tz)}
-          </span>
+        <p className="feed-when num">
+          {dayLabel(e.startsAt, now, tz)} <span className="dim">/</span> {timeRange(e.startsAt, e.endsAt, tz)}
           {cancelled ? <Tag>Cancelled</Tag> : live ? <Tag tone="accent">Live</Tag> : null}
-        </div>
+        </p>
         <h3 className="feed-title">
           <button className="link-plain" onClick={onOpen}>
             {e.title}
           </button>
         </h3>
-        {e.pitch && <p className="feed-pitch serif-text">{e.pitch}</p>}
         <p className="feed-where">
           {e.venueName ?? e.address}
           {e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
           {distance && <span className="dim num distance"> / {distance}</span>}
         </p>
-        {labels.length > 0 && (
+        {/* One scene label and only the tags people decide on at a glance: queer-centered and age. */}
+        {(labels.length > 0 || age) && (
           <p className="feed-scenes">
             <span className="marker" style={{ background: queer ? "var(--color-uv)" : "var(--color-sodium)" }} aria-hidden="true" />
-            {labels.join(" / ")}
+            {[queer ? "Queer-centered" : labels[0], age].filter(Boolean).join(" · ")}
           </p>
         )}
-        {friends.length > 0 && <Faces people={friends} />}
         <div className="feed-actions">
           <Button size="sm" variant={rsvp === "going" ? "confirmed" : "primary"} onClick={onRsvp} disabled={cancelled} aria-pressed={rsvp === "going"}>
             {rsvp === "going" ? "Going ✓" : "RSVP"}
           </Button>
-          <Button size="sm" onClick={onShare}>
-            Share
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onShowOnMap}>
-            Show on map
-          </Button>
+          {friends.length > 0 ? <Faces people={friends} size={22} /> : <span className="feed-going num">{e.goingCount > 0 ? `${e.goingCount} going` : ""}</span>}
           <span className="spacer" />
-          <span className="feed-going num">{e.hereNow ? `${e.hereNow} here · ` : ""}{e.goingCount} going</span>
+          <details className="card-more">
+            <summary aria-label={`More for ${e.title}`}>
+              <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                <circle cx="3" cy="8" r="1.3" fill="currentColor" />
+                <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+                <circle cx="13" cy="8" r="1.3" fill="currentColor" />
+              </svg>
+            </summary>
+            <div className="card-more-menu" role="menu">
+              <button role="menuitem" onClick={onShare}>
+                Share
+              </button>
+              <button role="menuitem" onClick={onShowOnMap}>
+                Show on map
+              </button>
+              <button role="menuitem" onClick={onOpen}>
+                Details
+              </button>
+            </div>
+          </details>
         </div>
       </div>
     </article>

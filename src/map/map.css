@@ -6,7 +6,7 @@
 .map .maplibregl-ctrl-attrib {
   background: var(--color-glass);
   color: var(--color-faint);
-  font-size: 10px;
+  font-size: var(--text-2xs);
 }
 .map .maplibregl-ctrl-attrib a {
   color: var(--color-muted);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "../map/MapView";
-import { Button, Frame, Segmented, Sheet, Tag, Toast, Skeleton } from "../components/ui";
+import { Button, Frame, Sheet, Tag, Toast, Skeleton } from "../components/ui";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { LocateButton } from "../components/LocateButton";
 import { GeneratedArt } from "../components/GeneratedArt";
@@ -9,13 +9,15 @@ import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
 import { announceGoing } from "../lib/install";
 import { FeedView } from "./FeedView";
+import { HomeSheet, useWide, type Detent } from "./HomeSheet";
+import { SheetHeader } from "./SheetHeader";
 import { SearchSheet } from "./SearchSheet";
 import { FriendsSheet, InviteSheet } from "./FriendsSheet";
 import { Faces } from "../components/Faces";
 import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilters, saveFilters, type Filters } from "../lib/filters";
-import { FilterSheet, FilterChips } from "./FilterSheet";
+import { FilterSheet } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
-import { clock, dateHeading, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
+import { clock, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
 import { revealCards, revealChildren } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 import { clearUserCaches, saveForOffline, saveProfileForOffline, useOnline } from "../lib/offline";
@@ -27,13 +29,6 @@ import { ModerationSheet } from "./ModerationSheet";
 import { type AuthProviders, type FriendAt, type FriendsState, type RsvpStatus, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
-const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
-  { id: "tonight", label: "Tonight", heading: "Tonight." },
-  { id: "weekend", label: "Weekend", heading: "This weekend." },
-  { id: "week", label: "7 days", heading: "Next 7 days." },
-  { id: "all", label: "All", heading: "Coming up." },
-  { id: "date", label: "Date", heading: "" },
-];
 
 const FALLBACK_CITY: City = { id: "memphis", name: "Memphis", timezone: "America/Chicago", center: [-90.01, 35.14], zoom: 12.2 };
 
@@ -80,6 +75,9 @@ export function App() {
   const setWindowId = (windowId: WindowId) => setFilters((f) => ({ ...f, windowId }));
   const [selectedId, setSelectedId] = useState<string | null>(eventIdFromPath());
   const [view, setViewState] = useState<View>(initialView);
+  const wide = useWide();
+  // The home sheet's height. Full is the feed; peek and half show the map with cards.
+  const [detent, setDetent] = useState<Detent>(() => (initialView() === "feed" ? "full" : "half"));
   const setView = (v: View) => {
     setViewState(v);
     try {
@@ -153,10 +151,11 @@ export function App() {
     if (!meId) return;
     saveProfileForOffline();
   }, [meId]);
+  const friendsFeature = config.features?.friends !== false;
   useEffect(() => {
-    if (!meId) return setFriendsState(null);
+    if (!meId || !friendsFeature) return setFriendsState(null);
     api.friends().then(setFriendsState).catch(() => setFriendsState(null));
-  }, [meId]);
+  }, [meId, friendsFeature]);
   const friendsOn = !!friendsState?.me.friendsOn;
   // Friends' nights: on load, whenever an event sheet closes (you may have RSVP'd), and every two minutes.
   const loadFriendsAt = useCallback(() => api.friendsAt().then(setFriendsAt).catch(() => undefined), []);
@@ -453,7 +452,6 @@ export function App() {
                 ) : null}
     </>
   );
-  const heading = windowId === "date" ? `${dateHeading(pickedDate)}.` : WINDOWS.find((w) => w.id === windowId)!.heading;
   const [signInIntent, setSignInIntent] = useState<"post" | null>(null);
   const returnTo =
     signInIntent === "post" ? "/?compose=1" : sheet === "invite" && inviteToken ? `/f/${inviteToken}` : selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
@@ -486,6 +484,22 @@ export function App() {
       toast(err instanceof ApiError ? err.message : "Couldn't save your RSVP. Try again.");
     }
   }
+  // Dragging the sheet to full is opening the feed; back down is the map.
+  const changeDetent = useCallback((d: Detent) => {
+    setDetent(d);
+    setViewState(d === "full" ? "feed" : "map");
+    try {
+      localStorage.setItem(VIEW_KEY, d === "full" ? "feed" : "map");
+    } catch {
+      // ignore
+    }
+  }, []);
+  useEffect(() => {
+    if (view === "feed" && detent !== "full") setDetent("full");
+    if (view === "map" && detent === "full") setDetent("half");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
   function showOnMap(id: string) {
     const ev = events.find((e) => e.id === id);
     setView("map");
@@ -532,22 +546,6 @@ export function App() {
             </span>
           )}
           <span className="spacer" />
-          <button className="search-button" onClick={() => setSearchOpen(true)} aria-label="Search events, artists, and venues">
-            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-              <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
-            </svg>
-            <span className="hide-narrow">Search</span>
-          </button>
-          <button
-            className="theme-toggle"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            title={theme === "light" ? "Dark mode" : "Light mode"}
-          >
-            <span className="theme-toggle-dot" aria-hidden="true" />
-            <span className="hide-narrow">{theme === "light" ? "Light" : "Dark"}</span>
-          </button>
           <Button
             size="sm"
             onClick={() => {
@@ -570,66 +568,26 @@ export function App() {
             </Button>
           )}
         </nav>
-        <div className="filters" role="toolbar" aria-label="Filter events">
-          <Segmented
-            label="View"
-            options={[
-              { id: "map", label: "Map" },
-              { id: "feed", label: "Feed" },
-            ]}
-            value={view}
-            onChange={(v) => setView(v as View)}
-          />
-          <button className={`filter-button ${activeCount(filters) ? "is-active" : ""}`} onClick={() => setFiltersOpen(true)} aria-haspopup="dialog">
-            <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-              <path d="M2 4h12M4.5 8h7M7 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
-            </svg>
-            Filters
-            {activeCount(filters) > 0 && (
-              // Keyed by the count so it pops once each time the filters change.
-              <span key={activeCount(filters)} className="filter-badge num">
-                {activeCount(filters)}
-              </span>
-            )}
-          </button>
-          <FilterChips filters={filters} onChange={setFilters} />
-        </div>
       </header>
 
-      {view === "feed" && (
-        <FeedView
-          events={shown}
-          loadState={loadState}
-          loadError={loadError}
-          online={online}
-          tz={city.timezone}
-          config={config}
-          rsvps={rsvps}
-          friendsAt={friendsAt}
-          emptyNote={emptyNote}
-          onOpen={select}
-          onShowOnMap={showOnMap}
-          onRsvp={feedRsvp}
-          toast={toast}
-          distance={myPos ? distanceTo : undefined}
-        />
-      )}
-
-      {!selected && view === "map" && (
-        <section className="rail-wrap" aria-label={`${heading} events`}>
-          <LocateButton status={loc.status} following={followMe} onTap={tapLocate} />
-          <div className="rail-head">
-            <h2 className="rail-title">{heading}</h2>
-            <span className="rail-count num">{loadState === "ready" ? `${pad(shown.length)} events` : "—"}</span>
-            <span className="spacer" />
-            <Button size="sm" className="rail-subscribe" onClick={() => setSheet("subscribe")}>
-              <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-                <rect x="2" y="3" width="12" height="11" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" strokeWidth="1.4" />
-              </svg>
-              Subscribe
-            </Button>
-          </div>
+      <HomeSheet
+        detent={detent}
+        onDetent={changeDetent}
+        hidden={!!selected && !wide}
+        floating={<LocateButton status={loc.status} following={followMe} onTap={tapLocate} />}
+        header={
+          <SheetHeader
+            filters={filters}
+            tz={city.timezone}
+            count={shown.length}
+            loading={loadState === "loading"}
+            onSearch={() => setSearchOpen(true)}
+            onFilters={() => setFiltersOpen(true)}
+            onChange={setFilters}
+          />
+        }
+        peekExtra={
+          <>
           {friendsTonight.length > 0 && (
             <div className="friends-tonight" role="list" aria-label="Friends tonight">
               <span className="friends-tonight-label">Friends tonight</span>
@@ -642,6 +600,10 @@ export function App() {
               ))}
             </div>
           )}
+          </>
+        }
+        half={
+          <>
           <div className="rail" ref={railRef}>
             {loadState === "loading" && (
               <>
@@ -727,8 +689,41 @@ export function App() {
               );
             })}
           </div>
-        </section>
-      )}
+          </>
+        }
+        full={
+          <>
+        <FeedView
+          embedded
+          events={shown}
+          loadState={loadState}
+          loadError={loadError}
+          online={online}
+          tz={city.timezone}
+          config={config}
+          rsvps={rsvps}
+          friendsAt={friendsAt}
+          emptyNote={emptyNote}
+          onOpen={select}
+          onShowOnMap={showOnMap}
+          onRsvp={feedRsvp}
+          toast={toast}
+          distance={myPos ? distanceTo : undefined}
+        />
+            <footer className="sheet-footer">
+              <button className="link" onClick={() => setSheet("subscribe")}>
+                Subscribe in your calendar
+              </button>
+              <button className="link" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+                {theme === "light" ? "Dark mode" : "Light mode"}
+              </button>
+              <a href="/guidelines">Guidelines</a>
+              <a href="/privacy">Privacy</a>
+              <a href="/terms">Terms</a>
+            </footer>
+          </>
+        }
+      />
 
       {selected && (
         <EventSheet

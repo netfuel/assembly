@@ -95,15 +95,29 @@
   --vary-display: "STYL" 0; /* Timeless Serif, display sizes */
   --vary-text: "STYL" 100; /* Timeless Serif Text, reading sizes */
 
-  --text-2xs: 0.6875rem; /* 11: labels, counters */
-  --text-xs: 0.75rem; /* 12: buttons, meta */
-  --text-sm: 0.8125rem; /* 13: body */
-  --text-md: 0.9375rem; /* 15 */
-  --text-lg: 1.5rem; /* 24: rail and sheet headings (serif) */
-  --text-xl: 2.25rem; /* 36: event title (serif) */
-  --text-2xl: 3rem; /* 48: display */
+  /*
+    Type scale: six steps, set for phones first and read at arm's length in the dark.
+    Each step has one job. Don't add sizes; pick the role.
+      label   12  caps, tracked: section labels, counters, tags
+      meta    14  secondary lines: venue, times, buttons, notes
+      body    16  reading and list rows (16 also keeps iOS from zooming inputs)
+      lead    18  decks and pitches, set in Serif Italic
+      title   26  sheet and section headings, card titles (Serif)
+      display 40  event and sheet titles (Serif, light); hero type scales up to 52
+  */
+  --text-2xs: 0.75rem; /* 12: label */
+  --text-xs: 0.875rem; /* 14: meta */
+  --text-sm: 1rem; /* 16: body */
+  --text-md: 1.125rem; /* 18: lead */
+  --text-lg: 1.625rem; /* 26: title (serif) */
+  --text-xl: 2.5rem; /* 40: display (serif) */
+  --text-2xl: 3.25rem; /* 52: hero display */
   --leading-display: 0.98;
+  --leading-title: 1.08;
+  --leading-body: 1.5;
+  --leading-meta: 1.4;
   --tracking-display: -0.025em;
+  --tracking-title: -0.015em;
 
   --weight-light: 300;
   --weight-regular: 400;
