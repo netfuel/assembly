@@ -17,10 +17,14 @@ export function useWide() {
 }
 
 const TOP_GAP = 84; // the quiet top bar stays visible above the full sheet
-function heights(vh: number) {
-  return { peek: 148, half: Math.round(Math.min(440, Math.max(340, vh * 0.5))), full: vh - TOP_GAP };
+const PEEK = 148;
+/** Half fits its content (header + cards) so there's no empty gap under the rail, up to half the screen. */
+function heights(vh: number, fit: number) {
+  const max = Math.round(Math.min(440, vh * 0.5));
+  const half = fit > 0 ? Math.min(max, Math.max(PEEK + 40, Math.ceil(fit))) : Math.max(340, max);
+  return { peek: PEEK, half, full: vh - TOP_GAP };
 }
-const yFor = (d: Detent, vh: number) => vh - heights(vh)[d];
+const yFor = (d: Detent, vh: number, fit: number) => vh - heights(vh, fit)[d];
 
 /**
  * The home sheet, like a maps app: drag the header (or the content, from its top) between peek, half, and full.
@@ -63,6 +67,18 @@ export function HomeSheet({
     ro.observe(h);
     return () => ro.disconnect();
   }, []);
+  // Natural height of the half content, so the half detent can hug it.
+  const halfInner = useRef<HTMLDivElement>(null);
+  const [halfH, setHalfH] = useState(0);
+  const fit = halfH > 0 ? headH + halfH : 0;
+  useLayoutEffect(() => {
+    const n = halfInner.current;
+    if (!n) return;
+    const ro = new ResizeObserver(() => setHalfH(Math.ceil(n.getBoundingClientRect().height)));
+    ro.observe(n);
+    setHalfH(Math.ceil(n.getBoundingClientRect().height));
+    return () => ro.disconnect();
+  }, [wide, detent === "full"]);
   const [vh, setVh] = useState(() => (typeof window !== "undefined" ? window.innerHeight : 800));
   const drag = useRef<{ startY: number; startSheet: number; lastY: number; lastT: number; v: number; active: boolean; fromBody: boolean } | null>(null);
 
@@ -83,18 +99,18 @@ export function HomeSheet({
   useLayoutEffect(() => {
     const node = el.current;
     if (!node || wide) return;
-    const y = yFor(detent, vh);
+    const y = yFor(detent, vh, fit);
     if (first.current) {
       setY(node, y);
       first.current = false;
     } else slideTo(node, y);
-  }, [detent, vh, wide]);
+  }, [detent, vh, wide, fit]);
 
   // Drags. Native listeners so a drag that starts on the content can stop it scrolling (React's are passive).
   useEffect(() => {
     const node = el.current;
     if (!node || wide) return;
-    const ys = () => (["peek", "half", "full"] as Detent[]).map((d) => [d, yFor(d, vh)] as const);
+    const ys = () => (["peek", "half", "full"] as Detent[]).map((d) => [d, yFor(d, vh, fit)] as const);
     const nearest = (y: number, v: number): Detent => {
       const list = ys();
       const cur = list.reduce((a, b) => (Math.abs(b[1] - y) < Math.abs(a[1] - y) ? b : a));
@@ -137,8 +153,8 @@ export function HomeSheet({
       d.v = ((y - d.lastY) / Math.max(1, now - d.lastT)) * 1000;
       d.lastY = y;
       d.lastT = now;
-      const min = yFor("full", vh);
-      const max = yFor("peek", vh);
+      const min = yFor("full", vh, fit);
+      const max = yFor("peek", vh, fit);
       let next = d.startSheet + dy;
       // Rubber band past the ends.
       if (next < min) next = min - (min - next) * 0.25;
@@ -150,7 +166,7 @@ export function HomeSheet({
       drag.current = null;
       if (!d?.active) return;
       const target = nearest(currentY(node), d.v);
-      if (target === detent) slideTo(node, yFor(target, vh), d.v);
+      if (target === detent) slideTo(node, yFor(target, vh, fit), d.v);
       else onDetent(target);
     };
     let x0 = 0;
@@ -182,7 +198,7 @@ export function HomeSheet({
       window.removeEventListener("pointermove", pm);
       window.removeEventListener("pointerup", pu);
     };
-  }, [detent, vh, wide, onDetent]);
+  }, [detent, vh, wide, fit, onDetent]);
 
   const showFull = wide || detent === "full";
   return (
@@ -206,14 +222,14 @@ export function HomeSheet({
         )}
         {header}
       </div>
-      <div ref={body} className="home-sheet-body" style={wide ? undefined : { height: Math.max(0, heights(vh)[detent] - headH) }}>
+      <div ref={body} className="home-sheet-body" style={wide ? undefined : { height: Math.max(0, heights(vh, fit)[detent] - headH) }}>
         {showFull ? (
           full
         ) : (
-          <>
+          <div ref={halfInner} className="home-sheet-half">
             {peekExtra}
             {half}
-          </>
+          </div>
         )}
       </div>
     </section>
