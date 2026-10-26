@@ -7,7 +7,8 @@ import { GeneratedArt } from "../components/GeneratedArt";
 import { formatMiles, milesBetween, useMyLocation } from "../lib/location";
 import { SubscribeSheet } from "../components/SubscribeSheet";
 import { hideSplash } from "../lib/splash";
-import { announceGoing } from "../lib/install";
+import { announceGoing, welcomeMode } from "../lib/install";
+import { AddToHomeBody } from "../components/AddToHomeSheet";
 import { FeedView } from "./FeedView";
 import { HomeSheet, useWide, type Detent } from "./HomeSheet";
 import { SheetHeader } from "./SheetHeader";
@@ -99,7 +100,8 @@ export function App() {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
   const [providersFailed, setProvidersFailed] = useState(false);
-  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation" | "subscribe" | "friends" | "invite">(null);
+  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation" | "subscribe" | "friends" | "invite" | "install">(null);
+  const [installMode, setInstallMode] = useState<"prompt" | "ios">("ios");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<ServerConfig>({ video: false, streamCustomerCode: null });
   const [editing, setEditing] = useState<EventDetail | null>(null);
@@ -227,6 +229,16 @@ export function App() {
         setMe(user);
         // Signed in from the Post button: go straight to the form.
         if (user && compose) setSheet("announce");
+        // First sign-in on this device: show how to add Assembly to the home screen, once the toast has landed.
+        // The browser's install prompt can arrive a beat late, so ask after a short wait.
+        else if (user && signin === "ok") {
+          setTimeout(() => {
+            const mode = welcomeMode();
+            if (!mode) return;
+            setInstallMode(mode);
+            setSheet((open) => open ?? "install");
+          }, 1600);
+        }
       })
       .catch(() => undefined);
     if (signin || compose) {
@@ -827,6 +839,10 @@ export function App() {
             toast={toast}
           />
         )}
+      </Sheet>
+
+      <Sheet open={sheet === "install"} onClose={() => setSheet(null)} label="Add to home screen" modal center>
+        <AddToHomeBody mode={installMode} onDone={() => setSheet(null)} />
       </Sheet>
 
       <Sheet open={sheet === "friends" && !!me} onClose={() => setSheet("profile")} label="Friends" modal center>
