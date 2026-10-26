@@ -178,6 +178,8 @@
 
 /* Map attribution sits above the rail so it stays visible. */
 .app .maplibregl-ctrl-bottom-right { bottom: 156px; }
+/* Beside the right panel on wide screens, not under it. */
+@media (min-width: 900px) { .app .maplibregl-ctrl-bottom-right { bottom: 16px; right: 432px; } }
 
 /* Event sheet */
 .event { display: grid; gap: var(--space-6); }
@@ -856,9 +858,9 @@
 .home-sheet-float.is-gone { opacity: 0; transform: translateY(8px); pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .home-sheet-float { transition: none; } }
 
-/* Wide screens: a left panel, always the list; the map keeps the rest. */
+/* Wide screens: a right panel, always the list; the map keeps the rest. Events and pages open in the same column. */
 .home-sheet.is-panel {
-  inset: 84px auto 16px 16px;
+  inset: 84px 16px 16px auto;
   width: 400px;
   border: 1px solid var(--color-line-strong);
   border-radius: 14px;

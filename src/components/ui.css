@@ -195,7 +195,8 @@
   @keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } }
 }
 @media (min-width: 900px) {
-  .sheet { top: 116px; right: var(--space-4); bottom: var(--space-4); width: 420px; border-radius: var(--radius-md); }
+  /* Same column as the home panel, so an event or page replaces the list in place. */
+  .sheet { top: 84px; right: var(--space-4); bottom: var(--space-4); width: 400px; border-radius: 14px; }
   .sheet-center { top: 50%; left: 50%; right: auto; bottom: auto; width: 420px; max-height: calc(100% - 48px); transform: translate(-50%, -50%); }
   .scrim-soft { background: transparent; pointer-events: none; }
   @keyframes sheet-in { from { opacity: 0; } }

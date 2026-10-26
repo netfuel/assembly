@@ -139,6 +139,10 @@ export function MapView({
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
     meMarker.current = new MyLocationMarker(map);
+    // Wide screens: the list panel covers the right edge, so the map's visual center sits left of it.
+    const panelPad = () => map.setPadding(window.matchMedia("(min-width: 900px)").matches ? { top: 0, bottom: 0, left: 0, right: 416 } : { top: 0, bottom: 0, left: 0, right: 0 });
+    panelPad();
+    window.addEventListener("resize", panelPad);
     // A hand on the map ends follow mode; programmatic moves (flyTo, easeTo) have no originalEvent.
     map.on("dragstart", () => latest.current.onUnfollow?.());
     map.on("zoomstart", (e) => {
@@ -374,6 +378,7 @@ export function MapView({
     return () => {
       cancelAnimationFrame(raf);
       window.clearInterval(minute);
+      window.removeEventListener("resize", panelPad);
       meMarker.current?.destroy();
       meMarker.current = null;
       ready.current = false;
@@ -458,7 +463,7 @@ export function MapView({
         // One point (just you): settle at neighborhood zoom rather than street level.
         maxZoom: fit.minZoom ?? 15,
         // Clear of the top bar and the rail of cards.
-        padding: wide ? { top: 140, bottom: 260, left: 80, right: 80 } : { top: 200, bottom: window.innerHeight * 0.4, left: 40, right: 40 },
+        padding: wide ? { top: 120, bottom: 80, left: 80, right: 480 } : { top: 200, bottom: window.innerHeight * 0.4, left: 40, right: 40 },
         duration: reducedMotion() ? 0 : 700,
       },
     );
@@ -477,7 +482,7 @@ export function MapView({
     }
     const reduce = reducedMotion();
     const wide = window.matchMedia("(min-width: 900px)").matches;
-    const padding = wide ? { top: 120, bottom: 220, left: 0, right: 0 } : { top: 160, bottom: 240, left: 0, right: 0 };
+    const padding = wide ? { top: 120, bottom: 80, left: 0, right: 440 } : { top: 160, bottom: 240, left: 0, right: 0 };
     if (!followed.current) {
       followed.current = true;
       map.flyTo({ center: [myPosition.lng, myPosition.lat], zoom: Math.max(map.getZoom(), 14.5), padding, duration: reduce ? 0 : 900 });

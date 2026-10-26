@@ -13,7 +13,7 @@ import { hideSplash } from "../lib/splash";
 import { announceGoing, welcomeMode } from "../lib/install";
 import { AddToHomeBody } from "../components/AddToHomeSheet";
 import { FeedView } from "./FeedView";
-import { HomeSheet, useWide, type Detent } from "./HomeSheet";
+import { HomeSheet, type Detent } from "./HomeSheet";
 import { SheetHeader } from "./SheetHeader";
 import { SearchSheet } from "./SearchSheet";
 import { FriendsSheet, InviteSheet } from "./FriendsSheet";
@@ -89,7 +89,6 @@ export function App() {
     setPage(p);
   }, []);
   const [view, setViewState] = useState<View>(initialView);
-  const wide = useWide();
   // The home sheet's height. Full is the feed; peek and half show the map with cards.
   const [detent, setDetent] = useState<Detent>(() => (initialView() === "feed" ? "full" : "half"));
   const setView = (v: View) => {
@@ -622,7 +621,7 @@ export function App() {
       <HomeSheet
         detent={detent}
         onDetent={changeDetent}
-        hidden={(!!selected || !!page) && !wide}
+        hidden={!!selected || !!page}
         floating={<LocateButton status={loc.status} following={followMe} onTap={tapLocate} />}
         header={
           <SheetHeader
