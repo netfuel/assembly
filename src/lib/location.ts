@@ -22,7 +22,8 @@ function turnedOff(): boolean {
 }
 function remember(on: boolean) {
   try {
-    localStorage.setItem(KEY, on ? "on" : "off");
+    if (on) localStorage.setItem(KEY, "on");
+    else localStorage.setItem(KEY, "off");
   } catch {
     // Private mode: it just won't be remembered.
   }
