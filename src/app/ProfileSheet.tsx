@@ -134,7 +134,9 @@ export function ProfileSheet({
                   ? `${friends.friends.length} friend${friends.friends.length === 1 ? "" : "s"}${friends.me.username ? ` · @${friends.me.username}` : ""}`
                   : "Invite your first friend"}
             </span>
-            {friends.incoming.length > 0 && <Tag tone="accent">{friends.incoming.length} new</Tag>}
+            {friends.incoming.length + friends.invites.filter((i) => !i.seen).length > 0 && (
+              <Tag tone="accent">{friends.incoming.length + friends.invites.filter((i) => !i.seen).length} new</Tag>
+            )}
             <span aria-hidden="true">→</span>
           </button>
         </section>

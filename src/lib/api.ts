@@ -16,6 +16,8 @@ import type {
   FriendPerson,
   FriendAt,
   UserRelation,
+  HerePerson,
+  PresenceVisibility,
   ServerConfig,
   Venue,
 } from "../../shared/types";
@@ -156,9 +158,16 @@ export const api = {
   blockUser: (id: string) => request<FriendsState>(`/api/friends/${enc(id)}/block`, { method: "POST" }),
   unblockUser: (id: string) => request<FriendsState>(`/api/friends/${enc(id)}/block`, { method: "DELETE" }),
   friendsAt: () => request<{ events: Record<string, FriendAt[]> }>("/api/friends/at").then((r) => r.events),
-  friendVisibility: (eventId: string) => request<{ visibility: "friends" | "me"; friendsOn: boolean }>(`/api/events/${enc(eventId)}/friend-visibility`),
-  setFriendVisibility: (eventId: string, visibility: "friends" | "me") =>
-    request<{ visibility: "friends" | "me"; friendsOn: boolean }>(`/api/events/${enc(eventId)}/friend-visibility`, { method: "PUT", body: JSON.stringify({ visibility }) }),
+  friendVisibility: (eventId: string) => request<{ visibility: PresenceVisibility; friendsOn: boolean }>(`/api/events/${enc(eventId)}/friend-visibility`),
+  setFriendVisibility: (eventId: string, visibility: PresenceVisibility) =>
+    request<{ visibility: PresenceVisibility; friendsOn: boolean }>(`/api/events/${enc(eventId)}/friend-visibility`, { method: "PUT", body: JSON.stringify({ visibility }) }),
+  setFriendAlert: (id: string, on: boolean) => request<FriendsState>(`/api/friends/${enc(id)}/alert`, { method: "PUT", body: JSON.stringify({ on }) }),
+  invitesSeen: () => request<FriendsState>("/api/friends/invites/seen", { method: "POST" }),
+  setFindable: (on: boolean) => request<FriendsState>("/api/friends/findable", { method: "PUT", body: JSON.stringify({ on }) }),
+  matchContacts: (prefixes: string[]) =>
+    request<{ matches: { hash: string; person: FriendPerson; relation: UserRelation }[] }>("/api/friends/contacts", { method: "POST", body: JSON.stringify({ prefixes }) }).then((r) => r.matches),
+  inviteToEvent: (eventId: string, to: string[]) => request<{ sent: number }>(`/api/events/${enc(eventId)}/invite`, { method: "POST", body: JSON.stringify({ to }) }),
+  hereList: (eventId: string) => request<{ people: HerePerson[]; inRoom: boolean }>(`/api/events/${enc(eventId)}/here`),
   search: (q: string, signal?: AbortSignal) => request<SearchResults>(`/api/search?q=${enc(q)}&city=memphis`, { signal }),
   myEvents: () => request<{ hosting: MyEvent[]; going: MyEvent[] }>("/api/me/events"),
 

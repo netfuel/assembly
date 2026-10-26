@@ -320,6 +320,14 @@ export function App() {
     [events, now, city.timezone, searchHits, friendsAt],
   );
   const shown = useMemo(() => matching(filters), [matching, filters]);
+  // Tonight's events with a friend going or there, whatever the filters say: a quick way to find your people.
+  const friendsTonight = useMemo(() => {
+    if (!Object.keys(friendsAt).length) return [];
+    const tonight = windowRange("tonight", now, city.timezone);
+    return events
+      .filter((e) => friendsAt[e.id]?.length && overlaps(e.startsAt, e.endsAt, tonight))
+      .sort((a, b) => (friendsAt[b.id]?.length ?? 0) - (friendsAt[a.id]?.length ?? 0));
+  }, [events, friendsAt, now, city.timezone]);
   // Frame the results on the map once a search lands.
   useEffect(() => {
     if (!fitNext.current || !filters.q || searchHits?.q !== filters.q) return;
@@ -554,7 +562,7 @@ export function App() {
           {me ? (
             <button className="avatar" onClick={() => setSheet("profile")} aria-label="Your profile">
               {me.avatarUrl ? <img src={me.avatarUrl} alt="" referrerPolicy="no-referrer" /> : me.displayName.slice(0, 1).toUpperCase()}
-              {!!friendsState?.incoming.length && <span className="avatar-dot" aria-label={`${friendsState.incoming.length} friend requests`} />}
+              {!!(friendsState?.incoming.length || friendsState?.invites.some((i) => !i.seen)) && <span className="avatar-dot" aria-label="New friend requests or invites" />}
             </button>
           ) : (
             <Button size="sm" variant="solid" onClick={() => openSignIn()}>
@@ -622,6 +630,18 @@ export function App() {
               Subscribe
             </Button>
           </div>
+          {friendsTonight.length > 0 && (
+            <div className="friends-tonight" role="list" aria-label="Friends tonight">
+              <span className="friends-tonight-label">Friends tonight</span>
+              {friendsTonight.map((e) => (
+                <button key={e.id} role="listitem" className="friends-tonight-item" onClick={() => select(e.id)}>
+                  <Faces people={friendsAt[e.id]} size={20} label={false} />
+                  <span className="friends-tonight-title">{e.title}</span>
+                  {friendsAt[e.id].some((f) => f.state === "here") && <span className="friends-tonight-here">here</span>}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="rail" ref={railRef}>
             {loadState === "loading" && (
               <>
@@ -716,6 +736,7 @@ export function App() {
           summary={selected}
           friends={friendsAt[selected.id] ?? []}
           friendsOn={friendsOn}
+          myFriends={friendsState?.friends ?? []}
           tz={city.timezone}
           me={me}
           config={config}
@@ -800,7 +821,7 @@ export function App() {
       </Sheet>
 
       <Sheet open={sheet === "friends" && !!me} onClose={() => setSheet("profile")} label="Friends" modal center>
-        <FriendsSheet state={friendsState} onState={setFriendsState} toast={toast} />
+        <FriendsSheet state={friendsState} onState={setFriendsState} onOpenEvent={openEvent} toast={toast} />
       </Sheet>
 
       <Sheet open={sheet === "invite" && !!inviteToken} onClose={() => setSheet(null)} label="Friend invite" modal center>

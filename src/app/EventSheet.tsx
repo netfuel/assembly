@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GeneratedArt } from "../components/GeneratedArt";
-import { Button, Frame, Label, LinkButton, Sheet, Tag, Skeleton } from "../components/ui";
+import { Button, Frame, Label, LinkButton, Segmented, Sheet, Tag, Skeleton } from "../components/ui";
 import { announceGoing } from "../lib/install";
 import { ShareSheet } from "../components/ShareSheet";
 import { FlyerViewer } from "../components/FlyerViewer";
 import { CheckIn } from "./CheckIn";
 import { EventWall } from "./EventWall";
 import { Faces } from "../components/Faces";
+import { FriendAvatar } from "./FriendsSheet";
+import { createPortal } from "react-dom";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
@@ -15,7 +17,7 @@ import { PushPrompt } from "../components/PushControl";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
-import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
+import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type FriendPerson, type HerePerson, type PresenceVisibility, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 
 const LINK_LABELS: Record<string, string> = {
@@ -36,6 +38,7 @@ export function EventSheet({
   summary,
   friends = [],
   friendsOn = false,
+  myFriends = [],
   tz,
   me,
   onClose,
@@ -49,6 +52,8 @@ export function EventSheet({
   /** Friends going to or at this event (only when your friends are on). */
   friends?: FriendAt[];
   friendsOn?: boolean;
+  /** Your friends, for inviting. */
+  myFriends?: FriendPerson[];
   tz: string;
   me: MeProfile | null;
   onClose: () => void;
@@ -299,8 +304,16 @@ export function EventSheet({
 
         {!cancelled && <CheckIn event={e} me={me} onNeedSignIn={onNeedSignIn} onChange={onPresence} toast={toast} />}
 
-        {friendsOn && !cancelled && (friends.length > 0 || rsvp === "going" || checkedIn) && (
-          <FriendsHere eventId={e.id} friends={friends} showToggle={rsvp === "going" || checkedIn} toast={toast} />
+        {friendsOn && !cancelled && (
+          <FriendsHere
+            eventId={e.id}
+            friends={friends}
+            myFriends={myFriends}
+            showToggle={rsvp === "going" || checkedIn}
+            checkedIn={checkedIn}
+            upcoming={Date.parse(e.endsAt) > Date.now()}
+            toast={toast}
+          />
         )}
 
         {e.videoId && (
@@ -655,10 +668,29 @@ function FlyerImage({ src, alt }: { src: string; alt: string }) {
 }
 
 /**
- * Friends at this event, and your own choice for this night: whether friends see that you're going or here.
+ * Friends at this event; your choice for this night (just me, friends, or everyone here); who's in the room with
+ * you once you've checked in; and inviting friends.
  */
-function FriendsHere({ eventId, friends, showToggle, toast }: { eventId: string; friends: FriendAt[]; showToggle: boolean; toast: (m: string) => void }) {
-  const [visibility, setVisibility] = useState<"friends" | "me" | null>(null);
+function FriendsHere({
+  eventId,
+  friends,
+  myFriends,
+  showToggle,
+  checkedIn,
+  upcoming,
+  toast,
+}: {
+  eventId: string;
+  friends: FriendAt[];
+  myFriends: FriendPerson[];
+  showToggle: boolean;
+  checkedIn: boolean;
+  upcoming: boolean;
+  toast: (m: string) => void;
+}) {
+  const [visibility, setVisibility] = useState<PresenceVisibility | null>(null);
+  const [room, setRoom] = useState<HerePerson[]>([]);
+  const [inviting, setInviting] = useState(false);
   useEffect(() => {
     if (!showToggle) return;
     api
@@ -666,11 +698,28 @@ function FriendsHere({ eventId, friends, showToggle, toast }: { eventId: string;
       .then((r) => setVisibility(r.visibility))
       .catch(() => setVisibility(null));
   }, [eventId, showToggle]);
+  useEffect(() => {
+    if (!checkedIn) return setRoom([]);
+    const load = () => api.hereList(eventId).then((r) => setRoom(r.people.filter((p) => !p.friend))).catch(() => undefined);
+    void load();
+    const t = setInterval(() => document.visibilityState === "visible" && void load(), 60000);
+    return () => clearInterval(t);
+  }, [eventId, checkedIn, visibility]);
+
   const here = friends.filter((f) => f.state === "here");
   const going = friends.filter((f) => f.state === "going");
+  const goingIds = new Set(friends.map((f) => f.id));
   return (
     <section className="friends-here" aria-label="Friends" data-reveal>
-      <Label glyph="◎">Friends</Label>
+      <div className="friends-here-head">
+        <Label glyph="◎">Friends</Label>
+        <span className="spacer" />
+        {upcoming && myFriends.length > 0 && (
+          <Button size="sm" onClick={() => setInviting(true)}>
+            Invite friends
+          </Button>
+        )}
+      </div>
       {friends.length > 0 ? (
         <>
           <Faces people={friends} size={28} label={false} />
@@ -690,26 +739,121 @@ function FriendsHere({ eventId, friends, showToggle, toast }: { eventId: string;
       ) : (
         <p className="note">None of your friends are going yet.</p>
       )}
+      {room.length > 0 && (
+        <div className="friends-room">
+          <span className="field-label">Also here, sharing with the room</span>
+          <ul className="room-list">
+            {room.map((p) => (
+              <li key={p.id}>
+                <FriendAvatar p={p} size={24} />
+                {p.displayName}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {showToggle && visibility && (
-        <label className="friends-toggle">
-          <input
-            type="checkbox"
-            checked={visibility === "friends"}
-            onChange={async (ev) => {
-              const next = ev.target.checked ? "friends" : "me";
+        <div className="friends-visibility">
+          <span className="field-label">Who sees you're {checkedIn ? "here" : "going"}</span>
+          <Segmented
+            label="Who sees you tonight"
+            options={[
+              { id: "me", label: "Just me" },
+              { id: "friends", label: "Friends" },
+              { id: "event", label: "Everyone here" },
+            ]}
+            value={visibility}
+            onChange={async (v) => {
+              const prev = visibility;
+              const next = v as PresenceVisibility;
               setVisibility(next);
               try {
                 await api.setFriendVisibility(eventId, next);
-                toast(next === "friends" ? "Friends can see you're going." : "This night is just for you now.");
+                toast(next === "me" ? "This night is just for you now." : next === "friends" ? "Friends can see you're going." : "Friends, and anyone checked in here, can see you're here.");
               } catch (err) {
-                setVisibility(next === "friends" ? "me" : "friends");
+                setVisibility(prev);
                 toast(err instanceof ApiError ? err.message : "Couldn't change that.");
               }
             }}
           />
-          Friends can see I'm going
-        </label>
+          {visibility === "event" && <p className="note">People checked in to this event see your name and photo while you're here. Friends see you as usual.</p>}
+        </div>
       )}
+      {inviting && <InviteFriends eventId={eventId} friends={myFriends.filter((f) => !goingIds.has(f.id))} onClose={() => setInviting(false)} toast={toast} />}
     </section>
+  );
+}
+
+function InviteFriends({ eventId, friends, onClose, toast }: { eventId: string; friends: FriendPerson[]; onClose: () => void; toast: (m: string) => void }) {
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") {
+        ev.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+  return createPortal(
+    <div className="wall-modal" role="dialog" aria-modal="true" aria-label="Invite friends" onClick={(ev) => ev.target === ev.currentTarget && onClose()}>
+      <form
+        className="wall-composer"
+        onSubmit={async (ev) => {
+          ev.preventDefault();
+          if (!picked.size) return;
+          setBusy(true);
+          try {
+            const r = await api.inviteToEvent(eventId, [...picked]);
+            toast(r.sent ? `Invited ${r.sent} friend${r.sent === 1 ? "" : "s"}.` : "They've already been invited.");
+            onClose();
+          } catch (err) {
+            toast(err instanceof ApiError ? err.message : "Couldn't send invites.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <Label glyph="◎">Invite friends</Label>
+        {friends.length === 0 ? (
+          <p className="note">All your friends are already going.</p>
+        ) : (
+          <ul className="friend-list invite-pick">
+            {friends.map((f) => (
+              <li key={f.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={picked.has(f.id)}
+                    onChange={() =>
+                      setPicked((cur) => {
+                        const n = new Set(cur);
+                        if (n.has(f.id)) n.delete(f.id);
+                        else n.add(f.id);
+                        return n;
+                      })
+                    }
+                  />
+                  <FriendAvatar p={f} size={28} />
+                  <span className="friend-name">{f.displayName}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="note">They get a notification (if they turned those on) and see it under Friends.</p>
+        <div className="wall-composer-actions">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" size="lg" disabled={!picked.size || busy}>
+            {busy ? "Sending…" : picked.size ? `Invite ${picked.size}` : "Invite"}
+          </Button>
+        </div>
+      </form>
+    </div>,
+    document.body,
   );
 }

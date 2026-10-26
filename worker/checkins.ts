@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import { isModerator } from "./moderation";
 import { rateLimit } from "./posting";
+import { alertFriendsOfCheckIn } from "./friends";
 import type { Presence } from "../shared/types";
 
 const OPEN_BEFORE_MS = 30 * 60e3;
@@ -138,6 +139,7 @@ checkins.post("/:id/checkin", async (c) => {
     )
       .bind(e.id, userId, method)
       .run();
+    c.executionCtx.waitUntil(alertFriendsOfCheckIn(c.env, e.id, userId));
     return c.json(await presence(c.env, e, userId));
   } catch (err) {
     if (notMigrated(err)) return c.json({ error: "Check-in isn't set up on this server yet." }, 503);

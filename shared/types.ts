@@ -271,8 +271,13 @@ export interface FriendsState {
     friendsOn: boolean;
     /** What friends see for a new Going or check-in. */
     presenceDefault: "friends" | "me";
+    /** Listed for contact matching (by email hash prefix). */
+    findable: boolean;
   };
-  friends: (FriendPerson & { hidden: boolean })[];
+  /** alert: you asked to be told when they check in. */
+  friends: (FriendPerson & { hidden: boolean; alert: boolean })[];
+  /** Friends inviting you to upcoming events, newest first. */
+  invites: EventInvite[];
   incoming: FriendPerson[];
   outgoing: FriendPerson[];
   blocked: FriendPerson[];
@@ -287,3 +292,23 @@ export interface FriendAt {
 }
 
 export type UserRelation = "self" | "none" | "friends" | "incoming" | "outgoing";
+
+export interface EventInvite {
+  eventId: string;
+  title: string;
+  startsAt: string;
+  venueName: string | null;
+  from: FriendPerson;
+  seen: boolean;
+}
+
+/** Who can see your presence for one night. "event": friends, plus anyone checked in to the same event. */
+export type PresenceVisibility = "me" | "friends" | "event";
+
+/** Someone checked in to the event you're at, shown because they chose "everyone here" (or they're your friend). */
+export interface HerePerson {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  friend: boolean;
+}

@@ -47,6 +47,9 @@ export const PRIVACY: LegalDoc = {
         "Event walls: photos are visible to the host and to people who RSVP'd or checked in to that event. The host can pick a few as highlights, which anyone with the event link can see. If you post without your name, other people (the host included) don't see who posted it; moderators can, to handle abuse.",
         "Check-ins: others see only how many people are checked in, not who.",
         "Friends: only after you turn friends on, your friends (people you both accepted) see the events you RSVP'd Going to or checked in to. You can keep any night just for you, hide your nights from one friend, or turn friends off, which hides you from everyone at once. Friends never see a location, only the event. Nobody, including other friends and hosts, can see your friend list. Blocking someone ends the friendship and they aren't told.",
+        "\"Everyone here\" for a night: besides friends, people checked in to the same event see your name and photo while you're both there. Only people checked in can see that list.",
+        "Check-in alerts: friends who asked to be told get a notification when you check in, if that night is shared with friends. Event invites from friends arrive as a notification and under Friends.",
+        "Finding friends from contacts: only if you turn on \"find me by email\", we keep a one-way hash of your verified sign-in email. When someone checks their contacts, their phone hashes the addresses and sends only the first few characters of each hash; matching finishes on their phone, so we never learn who's in anyone's contacts. Phone numbers aren't used.",
       ],
     },
     {

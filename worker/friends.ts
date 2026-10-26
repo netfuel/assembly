@@ -5,7 +5,8 @@ import { Hono, type Context } from "hono";
 import type { AppContext, Env } from "./env";
 import { notMigrated } from "./checkins";
 import { rateLimit } from "./posting";
-import type { FriendAt, FriendPerson, FriendsState, UserRelation } from "../shared/types";
+import type { EventInvite, FriendAt, FriendPerson, FriendsState, HerePerson, UserRelation } from "../shared/types";
+import { notifyUsers } from "./push";
 
 const RESERVED = new Set(["admin", "assembly", "mod", "mods", "moderator", "support", "help", "root", "api", "hello", "staff", "team", "official", "null", "undefined", "me", "you", "feed", "map", "search"]);
 export function validUsername(raw: unknown): { ok: true; value: string } | { ok: false; error: string } {
@@ -42,26 +43,39 @@ async function relation(env: Env, me: string, other: string): Promise<UserRelati
 }
 
 async function state(env: Env, me: string): Promise<FriendsState> {
-  const u = await env.DB.prepare("SELECT username, friends_on, presence_default FROM users WHERE id = ?")
+  const u = await env.DB.prepare("SELECT username, friends_on, presence_default, findable FROM users WHERE id = ?")
     .bind(me)
-    .first<{ username: string | null; friends_on: number; presence_default: "friends" | "me" }>();
+    .first<{ username: string | null; friends_on: number; presence_default: "friends" | "me"; findable: number }>();
   const { results: rows } = await env.DB.prepare(
     `SELECT u.id, u.display_name, u.avatar_url, u.username, f.status, f.requested_by,
-       EXISTS (SELECT 1 FROM presence_hidden h WHERE h.user_id = ?1 AND h.friend_id = u.id) AS hidden
+       EXISTS (SELECT 1 FROM presence_hidden h WHERE h.user_id = ?1 AND h.friend_id = u.id) AS hidden,
+       EXISTS (SELECT 1 FROM friend_alerts a WHERE a.user_id = ?1 AND a.friend_id = u.id) AS alert
      FROM friendships f JOIN users u ON u.id = CASE WHEN f.user_a = ?1 THEN f.user_b ELSE f.user_a END
      WHERE f.user_a = ?1 OR f.user_b = ?1
      ORDER BY lower(u.display_name)`,
   )
     .bind(me)
-    .all<PersonRow & { status: string; requested_by: string; hidden: number }>();
+    .all<PersonRow & { status: string; requested_by: string; hidden: number; alert: number }>();
+  const { results: inv } = await env.DB.prepare(
+    `SELECT i.event_id, i.seen_at, e.title, e.starts_at, v.name AS venue_name, u.id, u.display_name, u.avatar_url, u.username
+     FROM event_invites i JOIN events e ON e.id = i.event_id AND e.status = 'live' AND e.ends_at > ?2
+     LEFT JOIN venues v ON v.id = e.venue_id JOIN users u ON u.id = i.from_id
+     WHERE i.to_id = ?1 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id = ?1 AND b.blocked_id = i.from_id)
+     ORDER BY i.created_at DESC LIMIT 50`,
+  )
+    .bind(me, new Date().toISOString())
+    .all<PersonRow & { event_id: string; seen_at: string | null; title: string; starts_at: string; venue_name: string | null }>();
   const { results: blocked } = await env.DB.prepare(
     "SELECT u.id, u.display_name, u.avatar_url, u.username FROM blocks b JOIN users u ON u.id = b.blocked_id WHERE b.blocker_id = ? ORDER BY lower(u.display_name)",
   )
     .bind(me)
     .all<PersonRow>();
   return {
-    me: { username: u?.username ?? null, friendsOn: u?.friends_on === 1, presenceDefault: u?.presence_default ?? "friends" },
-    friends: rows.filter((r) => r.status === "accepted").map((r) => ({ ...person(r), hidden: r.hidden === 1 })),
+    me: { username: u?.username ?? null, friendsOn: u?.friends_on === 1, presenceDefault: u?.presence_default ?? "friends", findable: u?.findable === 1 },
+    friends: rows.filter((r) => r.status === "accepted").map((r) => ({ ...person(r), hidden: r.hidden === 1, alert: r.alert === 1 })),
+    invites: inv.map(
+      (r): EventInvite => ({ eventId: r.event_id, title: r.title, startsAt: r.starts_at, venueName: r.venue_name, from: person(r), seen: !!r.seen_at }),
+    ),
     incoming: rows.filter((r) => r.status === "pending" && r.requested_by !== me).map(person),
     outgoing: rows.filter((r) => r.status === "pending" && r.requested_by === me).map(person),
     blocked: blocked.map(person),
@@ -94,7 +108,7 @@ export async function friendsAtEvents(env: Env, me: string, from: string, to: st
        JOIN events e ON e.id = a.event_id AND e.status = 'live' AND e.starts_at < ?3
          AND e.ends_at > CASE WHEN a.state = 'here' THEN ?4 ELSE ?2 END
        LEFT JOIN event_presence ep ON ep.event_id = a.event_id AND ep.user_id = u.id
-       WHERE coalesce(ep.visibility, u.presence_default) = 'friends'
+       WHERE coalesce(ep.visibility, u.presence_default) IN ('friends', 'event')
          AND NOT EXISTS (SELECT 1 FROM presence_hidden h WHERE h.user_id = u.id AND h.friend_id = ?1)
          AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = u.id AND b.blocked_id = ?1) OR (b.blocker_id = ?1 AND b.blocked_id = u.id))
        LIMIT 2000`,
@@ -274,6 +288,7 @@ friends.delete(
     await c.env.DB.batch([
       c.env.DB.prepare("DELETE FROM friendships WHERE user_a = ? AND user_b = ?").bind(a, b),
       c.env.DB.prepare("DELETE FROM presence_hidden WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)").bind(me, other, other, me),
+      c.env.DB.prepare("DELETE FROM friend_alerts WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)").bind(me, other, other, me),
     ]);
     return c.json(await state(c.env, me));
   }),
@@ -303,6 +318,8 @@ friends.post(
       c.env.DB.prepare("INSERT OR IGNORE INTO blocks (blocker_id, blocked_id) VALUES (?, ?)").bind(me, other),
       c.env.DB.prepare("DELETE FROM friendships WHERE user_a = ? AND user_b = ?").bind(a, b),
       c.env.DB.prepare("DELETE FROM presence_hidden WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)").bind(me, other, other, me),
+      c.env.DB.prepare("DELETE FROM friend_alerts WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)").bind(me, other, other, me),
+      c.env.DB.prepare("DELETE FROM event_invites WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)").bind(me, other, other, me),
     ]);
     return c.json(await state(c.env, me));
   }),
@@ -340,7 +357,7 @@ eventFriendVisibility.get(
        LEFT JOIN event_presence ep ON ep.user_id = u.id AND ep.event_id = ? WHERE u.id = ?`,
     )
       .bind(c.req.param("id"), me)
-      .first<{ visibility: "friends" | "me"; friends_on: number }>();
+      .first<{ visibility: "friends" | "me" | "event"; friends_on: number }>();
     noStore(c);
     return c.json({ visibility: row?.visibility ?? "friends", friendsOn: row?.friends_on === 1 });
   }),
@@ -349,7 +366,7 @@ eventFriendVisibility.put(
   "/:id/friend-visibility",
   guard(async (c, me) => {
     const body = (await c.req.json().catch(() => ({}))) as { visibility?: string };
-    const v = body.visibility === "me" ? "me" : "friends";
+    const v = body.visibility === "me" ? "me" : body.visibility === "event" ? "event" : "friends";
     const id = c.req.param("id") ?? "";
     if (!(await c.env.DB.prepare("SELECT 1 FROM events WHERE id = ?").bind(id).first())) return c.json({ error: "We couldn't find that event." }, 404);
     await c.env.DB.prepare(
@@ -361,3 +378,181 @@ eventFriendVisibility.put(
     return c.json({ visibility: v, friendsOn: on?.friends_on === 1 });
   }),
 );
+
+async function areFriends(env: Env, a: string, b: string) {
+  const [x, y] = pair(a, b);
+  return !!(await env.DB.prepare("SELECT 1 FROM friendships WHERE user_a = ? AND user_b = ? AND status = 'accepted'").bind(x, y).first());
+}
+
+/** "Tell me when they check in." Only for friends. */
+friends.put(
+  "/:id/alert",
+  guard(async (c, me) => {
+    const other = c.req.param("id") ?? "";
+    const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
+    if (body.on) {
+      if (!(await areFriends(c.env, me, other))) return c.json({ error: "Only for friends." }, 403);
+      await c.env.DB.prepare("INSERT OR IGNORE INTO friend_alerts (user_id, friend_id) VALUES (?, ?)").bind(me, other).run();
+    } else await c.env.DB.prepare("DELETE FROM friend_alerts WHERE user_id = ? AND friend_id = ?").bind(me, other).run();
+    return c.json(await state(c.env, me));
+  }),
+);
+
+/** Invites you've opened. */
+friends.post(
+  "/invites/seen",
+  guard(async (c, me) => {
+    await c.env.DB.prepare("UPDATE event_invites SET seen_at = ? WHERE to_id = ? AND seen_at IS NULL").bind(new Date().toISOString(), me).run();
+    return c.json(await state(c.env, me));
+  }),
+);
+
+export const sha256Hex = async (s: string) =>
+  [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+export const normalizeEmail = (e: string) => e.trim().toLowerCase();
+
+/** "Let friends find me by email": lists the hashes of your verified sign-in emails for contact matching. */
+friends.put(
+  "/findable",
+  guard(async (c, me) => {
+    const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
+    const stmts = [c.env.DB.prepare("DELETE FROM email_hashes WHERE user_id = ?").bind(me), c.env.DB.prepare("UPDATE users SET findable = ? WHERE id = ?").bind(body.on ? 1 : 0, me)];
+    if (body.on) {
+      const { results } = await c.env.DB.prepare("SELECT DISTINCT email FROM identities WHERE user_id = ? AND email IS NOT NULL AND email_verified = 1").bind(me).all<{ email: string }>();
+      for (const r of results) {
+        const h = await sha256Hex(normalizeEmail(r.email));
+        stmts.push(c.env.DB.prepare("INSERT OR IGNORE INTO email_hashes (user_id, hash, prefix) VALUES (?, ?, ?)").bind(me, h, h.slice(0, 5)));
+      }
+    }
+    await c.env.DB.batch(stmts);
+    return c.json(await state(c.env, me));
+  }),
+);
+
+/**
+ * Contact matching. The phone sends 5-character prefixes of its contacts' email hashes; we return the full hashes
+ * (and names) of findable people under those prefixes, and the phone keeps only exact matches. We never see
+ * which contacts the person has, and nobody who didn't opt in is ever returned.
+ */
+friends.post(
+  "/contacts",
+  guard(async (c, me) => {
+    if (!(await rateLimit(c.env.SESSIONS, `contacts:${me}`, 20, 3600))) return c.json({ error: "Too many tries. Wait a bit." }, 429);
+    const body = (await c.req.json().catch(() => ({}))) as { prefixes?: unknown };
+    const prefixes = [...new Set((Array.isArray(body.prefixes) ? body.prefixes : []).filter((p): p is string => typeof p === "string" && /^[0-9a-f]{5}$/.test(p)))].slice(0, 1000);
+    if (!prefixes.length) return c.json({ matches: [] });
+    const out: { hash: string; person: FriendPerson; relation: UserRelation }[] = [];
+    for (let i = 0; i < prefixes.length; i += 90) {
+      const chunk = prefixes.slice(i, i + 90);
+      const { results } = await c.env.DB.prepare(
+        `SELECT h.hash, u.id, u.display_name, u.avatar_url, u.username FROM email_hashes h JOIN users u ON u.id = h.user_id AND u.findable = 1
+         WHERE h.prefix IN (${chunk.map(() => "?").join(",")}) AND u.id != ?
+           AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id = u.id AND b.blocked_id = ?)`,
+      )
+        .bind(...chunk, me, me)
+        .all<PersonRow & { hash: string }>();
+      for (const r of results) out.push({ hash: r.hash, person: person(r), relation: await relation(c.env, me, r.id) });
+    }
+    noStore(c);
+    return c.json({ matches: out });
+  }),
+);
+
+/** Invite friends to an event. Only your friends; they get a notification and see it in Friends. */
+eventFriendVisibility.post(
+  "/:id/invite",
+  guard(async (c, me) => {
+    if (!(await rateLimit(c.env.SESSIONS, `invite:${me}`, 60, 86400))) return c.json({ error: "That's a lot of invites today." }, 429);
+    const id = c.req.param("id") ?? "";
+    const ev = await c.env.DB.prepare("SELECT id, title, starts_at FROM events WHERE id = ? AND status = 'live' AND ends_at > ?")
+      .bind(id, new Date().toISOString())
+      .first<{ id: string; title: string; starts_at: string }>();
+    if (!ev) return c.json({ error: "That event isn't open for invites." }, 404);
+    const body = (await c.req.json().catch(() => ({}))) as { to?: unknown };
+    const wanted = [...new Set((Array.isArray(body.to) ? body.to : []).filter((x): x is string => typeof x === "string"))].slice(0, 25);
+    const sent: string[] = [];
+    for (const to of wanted) {
+      if (to === me || !(await areFriends(c.env, me, to)) || (await blockedEitherWay(c.env, me, to))) continue;
+      const r = await c.env.DB.prepare("INSERT OR IGNORE INTO event_invites (event_id, from_id, to_id) VALUES (?, ?, ?)").bind(ev.id, me, to).run();
+      if (r.meta.changes) sent.push(to);
+    }
+    if (sent.length) {
+      const from = await c.env.DB.prepare("SELECT display_name FROM users WHERE id = ?").bind(me).first<{ display_name: string }>();
+      c.executionCtx.waitUntil(
+        notifyUsers(c.env, sent, { title: `${from?.display_name ?? "A friend"} invited you`, body: ev.title, url: `/e/${encodeURIComponent(ev.id)}`, tag: `invite-${ev.id}` }).catch(() => 0),
+      );
+    }
+    return c.json({ sent: sent.length });
+  }),
+);
+
+/**
+ * People checked in here who chose "everyone here", plus your friends who share with you. Only for someone
+ * checked in to this event right now: you have to be in the room to see who's in the room.
+ */
+eventFriendVisibility.get(
+  "/:id/here",
+  guard(async (c, me) => {
+    const id = c.req.param("id") ?? "";
+    const since = new Date(Date.now() - 2 * 3600e3).toISOString();
+    const inRoom = await c.env.DB.prepare(
+      `SELECT 1 FROM checkins ck JOIN events e ON e.id = ck.event_id WHERE ck.event_id = ? AND ck.user_id = ? AND ck.checked_out_at IS NULL AND e.ends_at > ?`,
+    )
+      .bind(id, me, since)
+      .first();
+    noStore(c);
+    if (!inRoom) return c.json({ people: [], inRoom: false });
+    const { results } = await c.env.DB.prepare(
+      `SELECT u.id, u.display_name, u.avatar_url, coalesce(ep.visibility, u.presence_default) AS vis,
+         EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'accepted' AND ((f.user_a = u.id AND f.user_b = ?2) OR (f.user_b = u.id AND f.user_a = ?2))) AS friend
+       FROM checkins ck JOIN users u ON u.id = ck.user_id AND u.friends_on = 1
+       LEFT JOIN event_presence ep ON ep.event_id = ck.event_id AND ep.user_id = u.id
+       WHERE ck.event_id = ?1 AND ck.checked_out_at IS NULL AND u.id != ?2
+         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = u.id AND b.blocked_id = ?2) OR (b.blocker_id = ?2 AND b.blocked_id = u.id))
+         AND NOT EXISTS (SELECT 1 FROM presence_hidden h WHERE h.user_id = u.id AND h.friend_id = ?2)
+       LIMIT 300`,
+    )
+      .bind(id, me)
+      .all<{ id: string; display_name: string; avatar_url: string | null; vis: string; friend: number }>();
+    const people: HerePerson[] = results
+      .filter((r) => r.vis === "event" || (r.friend === 1 && r.vis === "friends"))
+      .map((r) => ({ id: r.id, displayName: r.display_name, avatarUrl: r.avatar_url, friend: r.friend === 1 }))
+      .sort((a, b) => Number(b.friend) - Number(a.friend) || a.displayName.localeCompare(b.displayName));
+    return c.json({ people, inRoom: true });
+  }),
+);
+
+/**
+ * After a check-in: tell friends who asked ("tell me when they check in"), if this night is shared with friends.
+ * Once per friend per event.
+ */
+export async function alertFriendsOfCheckIn(env: Env, eventId: string, userId: string) {
+  try {
+    const who = await env.DB.prepare(
+      `SELECT u.display_name, u.friends_on, coalesce(ep.visibility, u.presence_default) AS vis, e.title
+       FROM users u JOIN events e ON e.id = ?1 LEFT JOIN event_presence ep ON ep.event_id = ?1 AND ep.user_id = u.id WHERE u.id = ?2`,
+    )
+      .bind(eventId, userId)
+      .first<{ display_name: string; friends_on: number; vis: string; title: string }>();
+    if (!who || who.friends_on !== 1 || who.vis === "me") return;
+    const { results } = await env.DB.prepare(
+      `SELECT a.user_id FROM friend_alerts a JOIN users r ON r.id = a.user_id AND r.friends_on = 1
+       WHERE a.friend_id = ?1
+         AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'accepted' AND ((f.user_a = a.user_id AND f.user_b = ?1) OR (f.user_b = a.user_id AND f.user_a = ?1)))
+         AND NOT EXISTS (SELECT 1 FROM presence_hidden h WHERE h.user_id = ?1 AND h.friend_id = a.user_id)
+         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = ?1 AND b.blocked_id = a.user_id) OR (b.blocker_id = a.user_id AND b.blocked_id = ?1))`,
+    )
+      .bind(userId)
+      .all<{ user_id: string }>();
+    const to: string[] = [];
+    for (const r of results) {
+      const key = `ckalert:${eventId}:${userId}:${r.user_id}`;
+      if (await env.SESSIONS.get(key)) continue;
+      await env.SESSIONS.put(key, "1", { expirationTtl: 86400 });
+      to.push(r.user_id);
+    }
+    if (to.length) await notifyUsers(env, to, { title: `${who.display_name} just checked in`, body: who.title, url: `/e/${encodeURIComponent(eventId)}`, tag: `ck-${eventId}-${userId}` }, 3 * 3600);
+  } catch (err) {
+    if (!notMigrated(err)) console.error("check-in alerts", err);
+  }
+}
