@@ -1,5 +1,5 @@
 // Filter state in the URL (?when=weekend&scene=queer,rave&policy=all-ages&price=free&venue=diy), so a filtered map
-// can be shared, and on the device, so it's still there next visit. The saved copy resets to Tonight on a new day.
+// can be shared, and on the device, so it's still there next visit. The saved copy's time window resets to the default on a new day.
 import { POLICY_TAGS, SCENES, VENUE_TYPES, type EventSummary, type SceneId } from "../../shared/types";
 import type { WindowId } from "./time";
 
@@ -24,7 +24,10 @@ export interface Filters {
   friends: boolean;
 }
 
-export const DEFAULT_FILTERS: Filters = { windowId: "tonight", date: null, scenes: [], policies: [], price: "any", venueTypes: [], q: null, friends: false };
+/** The time window a new or signed-out visitor starts on: the next 7 days, so a quiet night never shows an empty map. */
+export const DEFAULT_WINDOW: WindowId = "week";
+
+export const DEFAULT_FILTERS: Filters = { windowId: DEFAULT_WINDOW, date: null, scenes: [], policies: [], price: "any", venueTypes: [], q: null, friends: false };
 
 const WINDOWS: WindowId[] = ["tonight", "weekend", "week", "all", "date"];
 const KEY = "assembly:filters";
@@ -53,9 +56,9 @@ function clean(raw: Raw): Filters | null {
   const friends = raw.friends === "1";
   if (!when && !scenes.length && !policies.length && !venueTypes.length && price === "any" && !q && !friends) return null;
   const date = isDate(raw.date) ? raw.date : null;
-  // "date" without a valid date falls back to tonight.
+  // "date" without a valid date falls back to the default window.
   // A search link without a time window looks at everything coming up.
-  const fallback: WindowId = q ? "all" : "tonight";
+  const fallback: WindowId = q ? "all" : DEFAULT_WINDOW;
   return { windowId: when === "date" && !date ? fallback : (when ?? fallback), date, scenes, policies, price, venueTypes, q, friends };
 }
 
@@ -64,11 +67,11 @@ export function filtersFromUrl(search: string): Filters | null {
   return clean({ when: p.get("when"), date: p.get("date"), scene: p.get("scene"), policy: p.get("policy"), price: p.get("price"), venue: p.get("venue"), q: p.get("q"), friends: p.get("friends") });
 }
 
-/** The URL query for these filters, empty for the default (tonight, everything). */
+/** The URL query for these filters, empty for the default (next 7 days, everything). */
 export function filtersQuery(f: Filters): string {
   const p = new URLSearchParams();
   if (f.q) p.set("q", f.q);
-  if (f.windowId !== (f.q ? "all" : "tonight")) p.set("when", f.windowId);
+  if (f.windowId !== (f.q ? "all" : DEFAULT_WINDOW)) p.set("when", f.windowId);
   if (f.windowId === "date" && f.date) p.set("date", f.date);
   if (f.scenes.length) p.set("scene", f.scenes.join(","));
   if (f.policies.length) p.set("policy", f.policies.join(","));
@@ -79,9 +82,9 @@ export function filtersQuery(f: Filters): string {
   return s ? `?${s}` : "";
 }
 
-/** How many filters are on, for the badge on the Filters button. The time window counts when it isn't Tonight. */
+/** How many filters are on, for the badge on the Filters button. The time window counts when it isn't the default. */
 export function activeCount(f: Filters) {
-  return (f.q ? 1 : 0) + (f.windowId !== "tonight" ? 1 : 0) + f.scenes.length + f.policies.length + (f.price !== "any" ? 1 : 0) + f.venueTypes.length + (f.friends ? 1 : 0);
+  return (f.q ? 1 : 0) + (f.windowId !== DEFAULT_WINDOW ? 1 : 0) + f.scenes.length + f.policies.length + (f.price !== "any" ? 1 : 0) + f.venueTypes.length + (f.friends ? 1 : 0);
 }
 
 export function saveFilters(f: Filters, today: string) {
@@ -93,7 +96,7 @@ export function saveFilters(f: Filters, today: string) {
   }
 }
 
-/** Saved filters from an earlier visit. On a new day the time window resets to tonight; everything else carries over. */
+/** Saved filters from an earlier visit. On a new day the time window resets to the default; everything else carries over. */
 export function savedFilters(today: string): Filters | null {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? "null") as (Partial<Filters> & { day?: string }) | null;
@@ -109,7 +112,7 @@ export function savedFilters(today: string): Filters | null {
     });
     if (!f) return null;
     if (raw.day !== today) {
-      const kept = { ...f, windowId: "tonight" as const, date: null };
+      const kept = { ...f, windowId: DEFAULT_WINDOW, date: null };
       return activeCount(kept) ? kept : null;
     }
     return f;

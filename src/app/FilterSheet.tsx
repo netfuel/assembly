@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Chip, Disclosure, Label, Segmented, Sheet } from "../components/ui";
 import { POLICY_TAGS, SCENES, VENUE_TYPES, type SceneId } from "../../shared/types";
-import { DEFAULT_FILTERS, PRESETS, PRICES, activeCount, type Filters, type PriceId } from "../lib/filters";
+import { DEFAULT_FILTERS, DEFAULT_WINDOW, PRESETS, PRICES, activeCount, type Filters, type PriceId } from "../lib/filters";
 
 // Door policies people filter on. "No photos" and BYOB are info, not something to search by.
 const POLICY_FILTERS = ["all-ages", "18+", "21+", "sliding-scale", "accessible-entrance", "sober-friendly", "harm-reduction"];
@@ -48,7 +48,7 @@ export function FilterSheet({
   const n = count(draft);
   // Clear all leaves the time window where the date pill has it.
   const cleared: Filters = { ...DEFAULT_FILTERS, windowId: draft.windowId, date: draft.date };
-  const dirty = activeCount({ ...draft, windowId: "tonight" }) > 0;
+  const dirty = activeCount({ ...draft, windowId: DEFAULT_WINDOW }) > 0;
 
   return (
     <Sheet open={open} onClose={onClose} label="Filters" modal className="sheet-filters">

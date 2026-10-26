@@ -476,7 +476,7 @@ export function App() {
 
   const emptyNote = (
     <>
-                Nothing on the schedule {windowId === "tonight" ? "tonight" : windowId === "date" ? "that night yet" : "for these filters"}.{" "}
+                Nothing on the schedule {windowId === "tonight" ? "tonight" : windowId === "week" ? "in the next 7 days" : windowId === "date" ? "that night yet" : "for these filters"}.{" "}
                 {windowId === "tonight" ? (
                   <button className="link" onClick={() => setWindowId("weekend")}>
                     Check the weekend →
