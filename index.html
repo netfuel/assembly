@@ -31,7 +31,10 @@
         document.documentElement.dataset.theme = t;
         if (t === "light") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#e9eaec");
         // Shared links and policy pages go straight to their content: no splash.
-        if (/^\/(e|a|v|o|terms|privacy|guidelines)\//.test(location.pathname + "/") || /[?&]ref=/.test(location.search)) document.documentElement.dataset.splash = "skip";
+        // And once per tab: an app update reloads the page right after the first open, and the splash shouldn't play twice.
+        var seen = false;
+        try { seen = sessionStorage.getItem("assembly-splash") === "1"; sessionStorage.setItem("assembly-splash", "1"); } catch (e) {}
+        if (seen || /^\/(e|a|v|o|terms|privacy|guidelines)\//.test(location.pathname + "/") || /[?&]ref=/.test(location.search)) document.documentElement.dataset.splash = "skip";
       })();
     </script>
     <style>
