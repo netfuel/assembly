@@ -922,3 +922,6 @@
 .ev-section-body > .wall > .label:first-child, .ev-section-body > section > .label:first-child { display: none; }
 .ev-section-body .wall-head > .label { display: none; }
 .ev-section-body .wall-head:not(:has(button, .wall-toggle)) { display: none; }
+
+.sheet-summary-near { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--color-accent-text); font: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); text-underline-offset: 3px; }
+.sheet-summary-near:disabled { color: var(--color-muted); text-decoration: none; }

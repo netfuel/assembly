@@ -10,19 +10,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export type Position = { lng: number; lat: number; accuracy: number; heading: number | null };
 export type LocationStatus = "off" | "locating" | "on" | "denied" | "unavailable";
 
-const KEY = "assembly-location"; // "on" while the person wants their dot shown; never coordinates
+const KEY = "assembly-location"; // "on" or "off" once the person chose; never coordinates
 
-function remembered(): boolean {
+/** "off" only when the person turned location off themselves; then we never resume on our own. */
+function turnedOff(): boolean {
   try {
-    return localStorage.getItem(KEY) === "on";
+    return localStorage.getItem(KEY) === "off";
   } catch {
     return false;
   }
 }
 function remember(on: boolean) {
   try {
-    if (on) localStorage.setItem(KEY, "on");
-    else localStorage.removeItem(KEY);
+    localStorage.setItem(KEY, on ? "on" : "off");
   } catch {
     // Private mode: it just won't be remembered.
   }
@@ -58,7 +58,6 @@ export function useMyLocation() {
         wanted.current = false;
         setPosition(null);
         if (err.code === err.PERMISSION_DENIED) {
-          remember(false);
           setStatus("denied");
         } else {
           setStatus("unavailable");
@@ -89,9 +88,9 @@ export function useMyLocation() {
     setStatus("off");
   }, []);
 
-  // Resume on launch only if they turned it on before AND the browser already allows it: no prompt on open.
+  // Start on launch when the browser already allows it (so there's no prompt on open), unless they turned it off here.
   useEffect(() => {
-    if (!remembered() || !navigator.permissions?.query) return;
+    if (turnedOff() || !navigator.permissions?.query) return;
     navigator.permissions
       .query({ name: "geolocation" as PermissionName })
       .then((p) => {

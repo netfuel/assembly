@@ -35,7 +35,12 @@ export function SheetHeader({
   onSearch,
   onFilters,
   onChange,
+  near,
+  onNear,
 }: {
+  /** Your location: on (the map opened around you), off (offer it), locating, or unavailable (say nothing). */
+  near?: "on" | "off" | "locating" | "none";
+  onNear?: () => void;
   filters: Filters;
   tz: string;
   count: number;
@@ -126,7 +131,21 @@ export function SheetHeader({
         </button>
       </div>
       <p className="sheet-summary">
-        <span className="num">{loading ? "Finding nights…" : `${count} ${count === 1 ? "night" : "nights"}`}</span>
+        <span className="num">
+          {loading ? "Finding nights…" : `${count} ${count === 1 ? "night" : "nights"}`}
+          {near === "on" && !loading && " near you"}
+        </span>
+        {(near === "off" || near === "locating") && onNear && (
+          <>
+            <span className="dim" aria-hidden="true">
+              {" "}
+              ·{" "}
+            </span>
+            <button className="sheet-summary-near no-sheet-drag" onClick={onNear} disabled={near === "locating"}>
+              {near === "locating" ? "Finding you…" : "Show what's near me"}
+            </button>
+          </>
+        )}
         {others.length > 0 && (
           <>
             <span className="dim" aria-hidden="true">

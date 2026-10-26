@@ -56,6 +56,9 @@ function eventIdFromPath(): string | null {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/** "Around you": nights within this distance count as close enough to frame with your dot. */
+const NEAR_MILES = 6;
+
 export function App() {
   const [city, setCity] = useState<City>(FALLBACK_CITY);
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -335,7 +338,21 @@ export function App() {
   }, [shown, searchHits, filters.q]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [fit, setFit] = useState<{ key: number; points: [number, number][] } | null>(null);
+  const [fit, setFit] = useState<{ key: number; points: [number, number][]; minZoom?: number } | null>(null);
+  // Open on what's around you: the first fix frames you and the closest few nights (within a short ride),
+  // or just your neighborhood when nothing's close. Once per load, and never over an open event or a search.
+  const framedMe = useRef(false);
+  useEffect(() => {
+    if (framedMe.current || !myPos || loadState === "loading") return;
+    framedMe.current = true;
+    if (selectedId || filters.q) return;
+    const near = shown
+      .map((e) => ({ e, d: milesBetween(myPos, e) }))
+      .filter((x) => x.d <= NEAR_MILES)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 4);
+    setFit({ key: Date.now(), points: [[myPos.lng, myPos.lat], ...near.map((x) => [x.e.lng, x.e.lat] as [number, number])], minZoom: near.length ? undefined : 13.5 });
+  }, [myPos, loadState, shown, selectedId, filters.q]);
 
   const selected = events.find((e) => e.id === selectedId) ?? (extra && extra.id === selectedId ? extra : null);
 
@@ -582,6 +599,11 @@ export function App() {
             count={shown.length}
             loading={loadState === "loading"}
             onSearch={() => setSearchOpen(true)}
+            near={loc.status === "on" ? "on" : loc.status === "locating" ? "locating" : loc.status === "off" ? "off" : "none"}
+            onNear={() => {
+              setToastMsg("Your location stays on this device. Assembly never saves or shares it.");
+              loc.start();
+            }}
             onFilters={() => setFiltersOpen(true)}
             onChange={setFilters}
           />
