@@ -886,7 +886,7 @@
 }
 .hs-filters.is-active { border-color: var(--color-fg); }
 .hs-filters-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 10px; background: var(--color-fg); color: var(--color-ground); font-size: var(--text-2xs); font-weight: 600; }
-.sheet-summary { margin: 0; display: flex; align-items: baseline; gap: 2px; min-width: 0; font-size: var(--text-xs); color: var(--color-muted); white-space: nowrap; }
+.sheet-summary { margin: 0; display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: var(--text-xs); color: var(--color-muted); white-space: nowrap; }
 .sheet-summary-filters { all: unset; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--color-fg); cursor: pointer; }
 .sheet-summary-clear { all: unset; margin-left: auto; padding-left: var(--space-3); color: var(--color-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
