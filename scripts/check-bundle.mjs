@@ -5,6 +5,20 @@ import { execSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { register } from "node:module";
+
+// Workers import .wasm files as compiled modules (link-preview images, worker/ogImage.ts); Node needs telling.
+register(
+  "data:text/javascript," +
+    encodeURIComponent(`
+      import { readFileSync } from "node:fs";
+      import { fileURLToPath } from "node:url";
+      export async function load(url, context, next) {
+        if (!url.endsWith(".wasm")) return next(url, context);
+        const bytes = readFileSync(fileURLToPath(url)).toString("base64");
+        return { format: "module", shortCircuit: true, source: "export default new WebAssembly.Module(Buffer.from('" + bytes + "', 'base64'));" };
+      }`),
+);
 
 const out = mkdtempSync(join(tmpdir(), "assembly-bundle-"));
 execSync(`npx wrangler deploy --dry-run --outdir ${out}`, { stdio: ["ignore", "ignore", "inherit"] });
@@ -19,7 +33,7 @@ const env = {
 };
 const ctx = { waitUntil() {}, passThroughOnException() {} };
 let failed = false;
-for (const path of ["/api/health", "/api/auth/providers", "/api/config", "/e/example"]) {
+for (const path of ["/api/health", "/api/auth/providers", "/api/config", "/e/example", "/api/og/e/example.png"]) {
   const res = await mod.default.fetch(new Request(`https://assembly.rsvp${path}`), env, ctx);
   const csp = res.headers.has("content-security-policy");
   const ok = res.status < 500 && csp;

@@ -2,6 +2,7 @@
 // in Open Graph and Twitter tags, so shared links unfurl in iMessage, Instagram DMs, Slack, and so on.
 import { Hono } from "hono";
 import type { Env } from "./env";
+import { ogVersion } from "./ogVersion";
 
 interface Row {
   id: string;
@@ -21,6 +22,7 @@ interface Row {
   ticket_url: string | null;
   lineup: string | null;
   host_name: string | null;
+  city_name?: string;
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -51,7 +53,7 @@ og.get("/:id", async (c) => {
   const id = decodeURIComponent(c.req.param("id"));
   const e = await c.env.DB.prepare(
     `SELECT e.id, e.title, e.pitch, e.starts_at, e.ends_at, e.status, e.neighborhood, e.flyer_key, v.name AS venue_name, ci.timezone,
-            e.address, e.lat, e.lng, e.door_price, e.ticket_url,
+            e.address, e.lat, e.lng, e.door_price, e.ticket_url, ci.name AS city_name,
             (SELECT json_group_array(name) FROM (SELECT ar.name FROM lineup_slots ls JOIN artists ar ON ar.id = ls.artist_id
                WHERE ls.event_id = e.id ORDER BY ls.position)) AS lineup,
             (SELECT u.display_name FROM event_hosts h JOIN users u ON u.id = h.user_id WHERE h.event_id = e.id AND h.role = 'owner' LIMIT 1) AS host_name
@@ -72,7 +74,8 @@ og.get("/:id", async (c) => {
 
   const { title, description } = previewText(e);
   const url = `${origin}/e/${encodeURIComponent(e.id)}`;
-  const image = e.flyer_key ? `${origin}/api/media/${e.flyer_key}` : `${origin}/icons/og.png`;
+  // The designed preview (worker/ogImage.ts); the version in the URL makes apps fetch it again after an edit.
+  const image = `${origin}/api/og/e/${encodeURIComponent(e.id)}.png?v=${await ogVersion(e)}`;
   const tags = [
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="Assembly">`,
@@ -80,7 +83,9 @@ og.get("/:id", async (c) => {
     `<meta property="og:description" content="${esc(description)}">`,
     `<meta property="og:url" content="${esc(url)}">`,
     `<meta property="og:image" content="${esc(image)}">`,
-    `<meta property="og:image:alt" content="${esc(e.flyer_key ? `Flyer for ${e.title}` : "Assembly")}">`,
+    `<meta property="og:image:width" content="1200">`,
+    `<meta property="og:image:height" content="630">`,
+    `<meta property="og:image:alt" content="${esc(`${e.title}: ${description}`)}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<link rel="canonical" href="${esc(url)}">`,
     `<script type="application/ld+json">${structuredData(e, url, image, origin)}</script>`,

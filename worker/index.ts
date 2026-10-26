@@ -10,6 +10,7 @@ import { emailAuth } from "./emailAuth";
 import { events } from "./events";
 import { fonts } from "./fonts";
 import { og } from "./og";
+import { ogImages } from "./ogImage";
 import { feeds, sitemap } from "./feeds";
 import { searchRoute } from "./search";
 import { checkins } from "./checkins";
@@ -114,6 +115,7 @@ app.route("/wall", wallPosts);
 app.route("/", wallModeration);
 app.route("/events", events);
 app.route("/search", searchRoute);
+app.route("/og", ogImages);
 
 app.notFound((c) => c.json({ error: "Not found." }, 404));
 // Log the real error (it shows in Workers Logs and wrangler tail) and answer in JSON like every other route.

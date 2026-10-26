@@ -30,4 +30,20 @@ for (const f of FILES) {
     { stdio: "inherit" },
   );
 }
+// Static cuts for link-preview images (scripts/make-og-fonts.py). Private: the Worker reads them, nothing serves them.
+const ogDir = new URL("../fonts-og/", import.meta.url);
+const OG = ["TimelessSerif-Light.ttf", "TimelessGrotesk-Regular.ttf", "TimelessGrotesk-Medium.ttf"];
+const ogMissing = OG.filter((f) => !existsSync(new URL(f, ogDir)));
+if (ogMissing.length) {
+  console.log(`\nSkipping link-preview fonts (missing in fonts-og/: ${ogMissing.join(", ")}). Make them with: python3 scripts/make-og-fonts.py`);
+} else {
+  for (const f of OG) {
+    console.log(`Uploading ${f}…`);
+    execFileSync(
+      "npx",
+      ["wrangler", "r2", "object", "put", `${BUCKET}/fonts/og/${f}`, "--remote", "--file", fileURLToPath(new URL(f, ogDir)), "--content-type", "font/ttf"],
+      { stdio: "inherit" },
+    );
+  }
+}
 console.log("\n✓ Fonts are in R2. Production serves them at /fonts/timeless/ to Assembly's own pages only.");

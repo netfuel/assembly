@@ -9,6 +9,8 @@ dev-dist
 
 # Timeless fonts: their license forbids public repositories. Copy them in locally (see README).
 public/fonts/timeless/
+# Static cuts of them for link-preview images (scripts/make-og-fonts.py)
+fonts-og/
 
 # Credentials downloaded from Google and Apple. Never commit these; go-live.command reads them.
 client_secret*.json
