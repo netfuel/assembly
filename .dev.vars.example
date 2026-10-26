@@ -24,3 +24,6 @@ VAPID_SUBJECT=mailto:hello@assembly.rsvp
 # Email sign-in sender (must be on a domain onboarded in Cloudflare Email Sending). Leave empty locally:
 # with DEV_LOGIN=1 the code shows on screen instead.
 EMAIL_FROM=
+
+# Beta modules to switch off (comma-separated): wall, friends, checkin. Leave unset for all on.
+# FEATURES_OFF=

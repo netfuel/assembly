@@ -34,6 +34,15 @@ export function eventUrl(id: string) {
   return `${location.origin}/e/${encodeURIComponent(id)}`;
 }
 
+type SectionKey = "details" | "here" | "wall" | "people";
+/** What comes first depends on the night: before, the details; during, who's here and the wall; after, the wall. */
+const SECTION_ORDER: Record<"cancelled" | "upcoming" | "live" | "past", SectionKey[]> = {
+  upcoming: ["details", "people"],
+  live: ["here", "wall", "details"],
+  past: ["wall", "details"],
+  cancelled: ["details"],
+};
+
 export function EventSheet({
   summary,
   friends = [],
@@ -70,20 +79,6 @@ export function EventSheet({
   const [busy, setBusy] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const rsvpBtn = useRef<HTMLButtonElement>(null);
-  const actionsRef = useRef<HTMLDivElement>(null);
-  // Once the main buttons scroll out of view, a compact RSVP bar sticks to the bottom of the sheet.
-  const [stickyBar, setStickyBar] = useState(false);
-  useEffect(() => {
-    const el = actionsRef.current;
-    const scroller = el?.closest(".sheet-body");
-    if (!el || !scroller || !("IntersectionObserver" in window)) return;
-    const io = new IntersectionObserver(
-      ([entry]) => setStickyBar(!entry.isIntersecting && entry.boundingClientRect.top < (entry.rootBounds?.top ?? 0)),
-      { root: scroller, threshold: 0 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
   const goingEl = useRef<HTMLSpanElement>(null);
   const now = new Date();
   const e = detail ?? summary;
@@ -91,6 +86,36 @@ export function EventSheet({
   const cancelled = e.status === "cancelled";
   const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
   const directions = directionsLinks(e);
+  // One state, one primary action (design review): upcoming → RSVP, doors open → Check in, after → See the wall.
+  const nowMs = now.getTime();
+  const phase: "cancelled" | "upcoming" | "live" | "past" = cancelled
+    ? "cancelled"
+    : nowMs > Date.parse(e.endsAt) + 30 * 60e3
+      ? "past"
+      : nowMs >= Date.parse(e.startsAt) - 30 * 60e3
+        ? "live"
+        : "upcoming";
+  const photoFree = e.policyTags.includes("no-photos");
+  // Beta modules can be switched off on the server (FEATURES_OFF); their sections and actions go with them.
+  const feat = config.features ?? { wall: true, friends: true, checkin: true };
+  const canCheckIn = feat.checkin && phase === "live";
+  const hasWall = feat.wall && !photoFree;
+  const [open, setOpen] = useState<Record<string, boolean>>(() => ({
+    details: phase === "upcoming" || phase === "cancelled",
+    here: phase === "live",
+    wall: phase === "past" || (phase === "live" && !photoFree),
+    people: false,
+  }));
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [checkInSignal, setCheckInSignal] = useState(0);
+  const reveal = (key: string) => {
+    setOpen((o) => ({ ...o, [key]: true }));
+    requestAnimationFrame(() => sectionRefs.current[key]?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
+  };
+  // Tags people decide on at a glance stay visible; the rest fold into Details.
+  const KEY_TAGS = ["queer-centered", "all-ages", "18+", "21+", "accessible-entrance", "harm-reduction"];
+  const keyTags = e.policyTags.filter((t) => KEY_TAGS.includes(t));
+  const otherTags = e.policyTags.filter((t) => !KEY_TAGS.includes(t));
   const baseGoing = e.goingCount - (detail?.viewerRsvp === "going" ? 1 : 0);
   const going = baseGoing + (rsvp === "going" ? 1 : 0);
 
@@ -264,47 +289,48 @@ export function EventSheet({
           <p className="event-when num">
             {dayLabel(e.startsAt, now, tz)} <span className="dim">/</span> {timeRange(e.startsAt, e.endsAt, tz)}
           </p>
+          <p className="event-where">
+            <span className="event-where-venue">{e.venueName ?? e.neighborhood ?? "Location"}</span>
+            {e.venueName && e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
+            <span className="event-where-address">{e.address}</span>
+          </p>
+          {(keyTags.length > 0 || otherTags.length > 0 || e.doorPrice) && (
+            <ul className="event-tags" aria-label="Door">
+              {e.doorPrice && <li className="is-price">{e.doorPrice}</li>}
+              {keyTags.map((t) => (
+                <li key={t} className={t === "queer-centered" ? "is-queer" : ""}>
+                  {POLICY_TAGS[t] ?? t}
+                </li>
+              ))}
+              {otherTags.length > 0 && (
+                <li>
+                  <button className="event-tags-more" onClick={() => reveal("details")}>
+                    +{otherTags.length}
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+          <p className="going num" aria-live="polite">
+            <span ref={goingEl}>{going}</span> going
+            {rsvp && <span className="dim"> · saved on this device for the door</span>}
+          </p>
         </header>
 
-        <div className="event-actions" data-reveal ref={actionsRef}>
-          <Button
-            ref={rsvpBtn}
-            size="lg"
-            variant={rsvp === "going" ? "confirmed" : "primary"}
-            onClick={() => choose("going")}
-            disabled={busy || cancelled}
-            aria-pressed={rsvp === "going"}
-          >
-            {rsvp === "going" ? "Going ✓" : "RSVP"}
-          </Button>
-          <Button size="lg" variant={rsvp === "interested" ? "confirmed" : "default"} onClick={() => choose("interested")} disabled={busy || cancelled} aria-pressed={rsvp === "interested"}>
-            {rsvp === "interested" ? "Interested ✓" : "Interested"}
-          </Button>
-          {e.ticketUrl && !cancelled && (
-            <LinkButton size="lg" href={e.ticketUrl} target="_blank" rel="noopener noreferrer">
-              Tickets ↗
-            </LinkButton>
-          )}
-          <Button size="lg" onClick={() => setSharing(true)}>
-            Share
-          </Button>
-          <Button size="lg" onClick={makeStory} disabled={story === "working"}>
-            {story === "working" ? "Making card…" : "Story card"}
-          </Button>
-          <p className="going num">
-            <span ref={goingEl}>{going}</span> going
-            {rsvp && <span className="dim"> · Saved on this device for the door</span>}
-          </p>
-          {rsvp && !cancelled && (
-            <div className="going-push">
-              <PushPrompt config={config} toast={toast} />
-            </div>
-          )}
-        </div>
+        {rsvp && !cancelled && phase !== "past" && (
+          <div className="going-push" data-reveal>
+            <PushPrompt config={config} toast={toast} />
+          </div>
+        )}
 
-        {!cancelled && <CheckIn event={e} me={me} onNeedSignIn={onNeedSignIn} onChange={onPresence} toast={toast} />}
-
-        {friendsOn && !cancelled && (
+        {/* Sections, ordered by the night's state. The one that matters now is open; the rest are a single row. */}
+        {SECTION_ORDER[phase].map((key) => {
+          const toggle = () => setOpen((o) => ({ ...o, [key]: !o[key] }));
+          if (key === "here")
+            return !feat.checkin ? null : (
+              <EvSection key={key} id="here" title="Here now" summary={checkedIn ? "You're checked in" : "Check in at the door"} open={open.here} onToggle={toggle} refs={sectionRefs}>
+                <CheckIn trigger={checkInSignal} event={e} me={me} onNeedSignIn={onNeedSignIn} onChange={onPresence} toast={toast} />
+                {friendsOn && (
           <FriendsHere
             eventId={e.id}
             friends={friends}
@@ -314,40 +340,41 @@ export function EventSheet({
             upcoming={Date.parse(e.endsAt) > Date.now()}
             toast={toast}
           />
-        )}
-
-        {e.videoId && (
-          <section aria-label="Promo video" data-reveal>
-            <Label glyph="▷">Promo</Label>
-            <div className="event-video">
-              <PromoVideo uid={e.videoId} customerCode={config.streamCustomerCode} title={e.title} />
-            </div>
-          </section>
-        )}
-
-        <Frame as="section" className="where" aria-label="Location" data-reveal>
-          <Label glyph="⌖">Where</Label>
-          <p className="where-venue">
-            {e.venueName ?? "Location"}
-            {e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
-          </p>
-          <p className="where-address">{e.address}</p>
-          {detail?.gettingThere && <p className="where-note serif-text">{detail.gettingThere}</p>}
-          <div className="where-links">
-            <LinkButton size="sm" href={directions.apple} target="_blank" rel="noopener noreferrer">
-              ▷ Apple Maps
-            </LinkButton>
-            <LinkButton size="sm" href={directions.google} target="_blank" rel="noopener noreferrer">
-              ▷ Google Maps
-            </LinkButton>
-            <Button size="sm" onClick={() => downloadIcs(e, eventUrl(e.id))}>
-              + Calendar
-            </Button>
-          </div>
-        </Frame>
-
-        <section aria-label="Lineup" data-reveal>
-          <Label glyph="♫">Lineup</Label>
+                )}
+              </EvSection>
+            );
+          if (key === "people")
+            return friendsOn ? (
+              <EvSection key={key} id="people" title="Friends" summary={friends.length ? `${friends.length} going` : "Invite a friend"} open={open.people} onToggle={toggle} refs={sectionRefs}>
+          <FriendsHere
+            eventId={e.id}
+            friends={friends}
+            myFriends={myFriends}
+            showToggle={rsvp === "going" || checkedIn}
+            checkedIn={checkedIn}
+            upcoming={Date.parse(e.endsAt) > Date.now()}
+            toast={toast}
+          />
+              </EvSection>
+            ) : null;
+          if (key === "wall")
+            return !hasWall ? null : (
+              <EvSection key={key} id="wall" title="Wall" summary={phase === "past" ? "Photos from the night" : "Photos from the room"} open={open.wall} onToggle={toggle} refs={sectionRefs}>
+                <EventWall event={e} me={me} checkedIn={checkedIn} onNeedSignIn={onNeedSignIn} toast={toast} />
+              </EvSection>
+            );
+          return (
+            <EvSection
+              key={key}
+              id="details"
+              title="Details"
+              summary={[detail?.lineup.length ? `${detail.lineup.length} on the lineup` : "Lineup", e.policyTags.length ? "door" : null, "getting there"].filter(Boolean).join(" · ")}
+              open={open.details}
+              onToggle={toggle}
+              refs={sectionRefs}
+            >
+              <div className="ev-block" aria-label="Lineup">
+                <h3 className="ev-subhead">Lineup</h3>
           {loadError && <p className="note">{loadError}</p>}
           {!detail && !loadError && (
             <div className="skel-list" role="status" aria-label="Loading the lineup">
@@ -387,31 +414,61 @@ export function EventSheet({
               ))}
             </ol>
           )}
-        </section>
+              </div>
+              {(e.doorPrice || e.policyTags.length > 0) && (
+                <div className="ev-block" aria-label="Door">
+                  <h3 className="ev-subhead">Door</h3>
+                  <ul className="door">
+                    {e.doorPrice && (
+                      <li>
+                        <strong>{e.doorPrice}</strong>
+                      </li>
+                    )}
+                    {e.policyTags.map((t) => (
+                      <li key={t}>{POLICY_TAGS[t] ?? t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="ev-block where" aria-label="Getting there">
+                <h3 className="ev-subhead">Getting there</h3>
+          <p className="where-venue">
+            {e.venueName ?? "Location"}
+            {e.neighborhood && <span className="dim"> / {e.neighborhood}</span>}
+          </p>
+          <p className="where-address">{e.address}</p>
+          {detail?.gettingThere && <p className="where-note serif-text">{detail.gettingThere}</p>}
+          <div className="where-links">
+            <LinkButton size="sm" href={directions.apple} target="_blank" rel="noopener noreferrer">
+              ▷ Apple Maps
+            </LinkButton>
+            <LinkButton size="sm" href={directions.google} target="_blank" rel="noopener noreferrer">
+              ▷ Google Maps
+            </LinkButton>
+            <Button size="sm" onClick={() => downloadIcs(e, eventUrl(e.id))}>
+              + Calendar
+            </Button>
+          </div>
+              </div>
+              {e.videoId && (
+                <div className="ev-block" aria-label="Promo video">
+                  <h3 className="ev-subhead">Promo</h3>
+            <div className="event-video">
+              <PromoVideo uid={e.videoId} customerCode={config.streamCustomerCode} title={e.title} />
+            </div>
+                </div>
+              )}
+            </EvSection>
+          );
+        })}
 
-        <EventWall event={e} me={me} checkedIn={checkedIn} onNeedSignIn={onNeedSignIn} toast={toast} />
-
+        <div className="ev-quiet">
         {detail?.host && (
           <div data-reveal>
             <HostLine host={detail.host} me={me} toast={toast} />
           </div>
         )}
 
-        {(e.doorPrice || e.policyTags.length > 0) && (
-          <section aria-label="Door" data-reveal>
-            <Label glyph="▣">Door</Label>
-            <ul className="door">
-              {e.doorPrice && (
-                <li>
-                  <strong>{e.doorPrice}</strong>
-                </li>
-              )}
-              {e.policyTags.map((t) => (
-                <li key={t}>{POLICY_TAGS[t] ?? t}</li>
-              ))}
-            </ul>
-          </section>
-        )}
 
         <p className="note" data-reveal>
           {e.isSample && (
@@ -431,22 +488,100 @@ export function EventSheet({
           </div>
         )}
 
-        {stickyBar && !cancelled && (
-          <div className="sticky-rsvp" aria-hidden={false}>
-            <span className="sticky-rsvp-title">{e.title}</span>
-            {e.ticketUrl && (
-              <LinkButton size="sm" href={e.ticketUrl} target="_blank" rel="noopener noreferrer">
-                Tickets ↗
-              </LinkButton>
-            )}
-            <Button size="sm" variant={rsvp === "going" ? "confirmed" : "primary"} onClick={() => choose("going")} disabled={busy} aria-pressed={rsvp === "going"}>
+        </div>
+
+        {/* One pinned bar: the night's primary action, tickets when there are some, and icons for the rest. */}
+        <div className="ev-bar">
+          {phase === "cancelled" ? (
+            <span className="ev-bar-note">Cancelled</span>
+          ) : phase === "past" ? (
+            <Button size="lg" variant="primary" className="ev-bar-primary" onClick={() => reveal(hasWall ? "wall" : "details")} disabled={!hasWall}>
+              {hasWall ? "See the wall" : "That's a wrap"}
+            </Button>
+          ) : canCheckIn && !checkedIn ? (
+            <Button
+              size="lg"
+              variant="primary"
+              className="ev-bar-primary"
+              onClick={() => {
+                if (!me) return onNeedSignIn();
+                reveal("here");
+                setCheckInSignal((n) => n + 1);
+              }}
+            >
+              Check in
+            </Button>
+          ) : canCheckIn && hasWall ? (
+            <Button size="lg" variant="primary" className="ev-bar-primary" onClick={() => reveal("wall")}>
+              See the wall
+            </Button>
+          ) : (
+            <Button
+              ref={rsvpBtn}
+              size="lg"
+              variant={rsvp === "going" ? "confirmed" : "primary"}
+              className="ev-bar-primary"
+              onClick={() => choose("going")}
+              disabled={busy}
+              aria-pressed={rsvp === "going"}
+            >
               {rsvp === "going" ? "Going ✓" : "RSVP"}
             </Button>
-          </div>
-        )}
+          )}
+          {e.ticketUrl && (phase === "upcoming" || phase === "live") && (
+            <LinkButton size="lg" className="ev-bar-tickets" href={e.ticketUrl} target="_blank" rel="noopener noreferrer">
+              Tickets ↗
+            </LinkButton>
+          )}
+          <span className="ev-bar-icons">
+            {(phase === "upcoming" || phase === "live") && (
+              <button
+                className="ev-icon"
+                onClick={() => choose("interested")}
+                disabled={busy}
+                aria-pressed={rsvp === "interested"}
+                aria-label={rsvp === "interested" ? "Saved. Tap to unsave" : "Save for later"}
+                title="Save"
+              >
+                <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+                  <path d="M4 2h8v12l-4-3-4 3z" fill={rsvp === "interested" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
+            {/* With tickets the bar is full; directions stay one tap away under Details. */}
+            <a className={`ev-icon ${e.ticketUrl && (phase === "upcoming" || phase === "live") ? "is-spare" : ""}`} href={directions.apple} target="_blank" rel="noopener noreferrer" aria-label="Directions" title="Directions">
+              <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+                <path d="M8 1.5l6.5 6.5L8 14.5 1.5 8z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M6 9.5V7.5h4M8.5 6l1.5 1.5L8.5 9" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              </svg>
+            </a>
+            <button className="ev-icon" onClick={() => setSharing(true)} aria-label="Share" title="Share">
+              <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+                <path d="M8 1.5v9M5 4.5l3-3 3 3M3.5 7.5v6.5h9V7.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+            </button>
+          </span>
+        </div>
       </div>
     </Sheet>
-    <ShareSheet target={shareTarget} open={sharing} onClose={() => setSharing(false)} toast={toast} />
+    <ShareSheet
+      target={shareTarget}
+      open={sharing}
+      onClose={() => setSharing(false)}
+      toast={toast}
+      extra={
+        <Button
+          size="lg"
+          onClick={() => {
+            setSharing(false);
+            void makeStory();
+          }}
+          disabled={story === "working"}
+        >
+          {story === "working" ? "Making the card…" : "Story card for Instagram"}
+        </Button>
+      }
+    />
     {viewing && e.flyerUrl && (
       <FlyerViewer src={e.flyerUrl} title={e.title} url={eventUrl(e.id)} credit={detail?.host?.displayName ?? null} onClose={() => setViewing(false)} toast={toast} />
     )}
@@ -855,5 +990,48 @@ function InviteFriends({ eventId, friends, onClose, toast }: { eventId: string; 
       </form>
     </div>,
     document.body,
+  );
+}
+
+/** One collapsible section of the event page: a single row with a short summary when closed. */
+function EvSection({
+  id,
+  title,
+  summary,
+  open,
+  onToggle,
+  refs,
+  children,
+}: {
+  id: string;
+  title: string;
+  summary: string;
+  open: boolean;
+  onToggle: () => void;
+  refs: React.MutableRefObject<Record<string, HTMLElement | null>>;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={`ev-section ${open ? "is-open" : ""}`}
+      ref={(el) => {
+        refs.current[id] = el;
+      }}
+    >
+      <h2 className="ev-section-h">
+        <button id={`ev-${id}`} className="ev-section-row" aria-expanded={open} aria-controls={`ev-${id}-body`} onClick={onToggle}>
+          <span className="ev-section-title">{title}</span>
+          <span className="ev-section-summary">{open ? "" : summary}</span>
+          <svg className="ev-section-chev" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true">
+            <path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </button>
+      </h2>
+      {open && (
+        <div id={`ev-${id}-body`} className="ev-section-body" role="region" aria-labelledby={`ev-${id}`}>
+          {children}
+        </div>
+      )}
+    </section>
   );
 }

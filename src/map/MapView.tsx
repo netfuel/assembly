@@ -77,7 +77,7 @@ export function MapView({
   /** The viewer dragged or zoomed the map by hand while following. */
   onUnfollow?: () => void;
   /** When this changes, the map frames all these points (search results). */
-  fit?: { key: number; points: [number, number][] } | null;
+  fit?: { key: number; points: [number, number][]; minZoom?: number } | null;
   events: EventSummary[];
   /** A card the person is looking at in the rail: its pin gets a ring. `follow` pans the map to it if it's off screen. */
   highlight?: { id: string; follow: boolean } | null;
@@ -406,7 +406,8 @@ export function MapView({
         [Math.max(...lngs), Math.max(...lats)],
       ],
       {
-        maxZoom: 15,
+        // One point (just you): settle at neighborhood zoom rather than street level.
+        maxZoom: fit.minZoom ?? 15,
         // Clear of the top bar and the rail of cards.
         padding: wide ? { top: 140, bottom: 260, left: 80, right: 80 } : { top: 200, bottom: window.innerHeight * 0.4, left: 40, right: 40 },
         duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,

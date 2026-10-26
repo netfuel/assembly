@@ -31,8 +31,8 @@
 .field-label { display: flex; align-items: baseline; gap: var(--space-2); font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-muted); }
 .field-count { margin-left: auto; text-transform: none; letter-spacing: 0; color: var(--color-faint); }
 .field-count.over { color: var(--color-accent-text); }
-.field-hint { font-size: var(--text-2xs); color: var(--color-faint); line-height: 1.5; }
-.field-error { font-size: var(--text-2xs); color: var(--color-accent-text); line-height: 1.5; font-style: normal; }
+.field-hint { font-size: var(--text-xs); color: var(--color-faint); line-height: 1.5; }
+.field-error { font-size: var(--text-xs); color: var(--color-accent-text); line-height: 1.5; font-style: normal; }
 .field-error::before { content: "◆ "; font-size: 8px; vertical-align: 1px; }
 
 .compose input:not([type="file"]):not([type="checkbox"]),
@@ -210,3 +210,28 @@
 .confirm-cancel { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--text-xs); }
 
 .compose .link { font-size: var(--text-xs); cursor: pointer; white-space: nowrap; }
+
+/* Steps: Essentials, then the optional ones. Each is a 44px target; the current one is underlined. */
+.compose-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.compose-step {
+  display: grid; gap: 2px; width: 100%; min-height: var(--tap); padding: var(--space-2) 0; border: 0; border-top: 2px solid var(--color-line);
+  background: transparent; color: var(--color-muted); text-align: left; font: inherit;
+}
+.compose-step[aria-current="step"] { color: var(--color-fg); border-top-color: var(--color-fg); }
+.compose-step:disabled { opacity: 0.45; }
+.compose-step-n { font-size: var(--text-2xs); color: var(--color-faint); letter-spacing: var(--tracking-label); }
+.compose-step-label { font-size: var(--text-sm); font-weight: var(--weight-medium); }
+.compose-step-opt { font-size: var(--text-2xs); color: var(--color-faint); }
+.compose-step-body { display: grid; gap: var(--space-8); }
+.compose-step-body[hidden] { display: none; }
+
+/* Live preview of the feed card. */
+.compose-preview { display: grid; gap: var(--space-2); }
+.compose-preview-label { font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-faint); }
+.compose-preview-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-line); background: var(--color-surface); }
+.compose-preview-card img, .compose-preview-art { width: 72px; aspect-ratio: 4 / 5; object-fit: cover; background: var(--grad-sweep, var(--color-line)); opacity: 0.9; }
+.compose-preview-body { display: grid; align-content: start; gap: 2px; min-width: 0; }
+.compose-preview-when { font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-muted); }
+.compose-preview-title { font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-size: var(--text-lg); line-height: var(--leading-title); letter-spacing: var(--tracking-title); text-wrap: balance; overflow-wrap: anywhere; }
+.compose-preview-where { font-size: var(--text-xs); color: var(--color-muted); }
+.compose-preview-pitch { font-family: var(--font-serif); font-style: italic; font-size: var(--text-sm); color: var(--color-muted); }

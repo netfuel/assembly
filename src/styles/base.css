@@ -18,8 +18,14 @@ body {
   font-variation-settings: var(--vary-grotesk);
   font-weight: 420;
   font-size: var(--text-sm);
-  line-height: 1.5;
+  line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  /* Real ligatures and contextual forms from Timeless; old-style figures stay off so times line up. */
+  font-feature-settings: "kern", "liga", "calt";
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   overflow: hidden;
   overscroll-behavior: none;
 }

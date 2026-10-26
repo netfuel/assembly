@@ -24,6 +24,7 @@
     "prebuild": "node scripts/sync-theme-hash.mjs"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "arctic": "^3.7.0",
     "gsap": "^3.15.0",
     "hono": "^4.13.13",

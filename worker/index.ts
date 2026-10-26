@@ -19,6 +19,7 @@ import { withSecurityHeaders } from "./security";
 import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
+import { featureGate, features } from "./features";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -39,6 +40,9 @@ app.use("*", async (c, next) => {
   }
   await next();
 });
+
+// Beta modules switched off with FEATURES_OFF answer 404.
+app.use("*", featureGate);
 
 app.get("/health", (c) => c.json({ ok: true }));
 
@@ -78,6 +82,7 @@ app.get("/config", (c) => {
     streamCustomerCode: c.env.STREAM_CUSTOMER_CODE ?? null,
     push: pushConfigured(c.env),
     vapidPublicKey: pushConfigured(c.env) ? c.env.VAPID_PUBLIC_KEY : null,
+    features: features(c.env),
   });
 });
 

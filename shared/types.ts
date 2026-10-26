@@ -116,8 +116,16 @@ export interface GeocodeResult {
   lng: number;
 }
 
+/** Beta modules, each behind a flag (all on unless FEATURES_OFF lists them). */
+export interface Features {
+  wall: boolean;
+  friends: boolean;
+  checkin: boolean;
+}
+
 export interface ServerConfig {
   video: boolean;
+  features?: Features;
   streamCustomerCode: string | null;
   /** Web push is configured (VAPID keys set). */
   push?: boolean;

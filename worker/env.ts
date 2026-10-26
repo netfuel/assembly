@@ -17,6 +17,8 @@ export interface Env {
   STREAM_CUSTOMER_CODE?: string;
   /** "1" enables /api/auth/dev on localhost for testing without OAuth. Never set in production. */
   DEV_LOGIN?: string;
+  /** Beta modules to switch off, comma-separated: wall, friends, checkin. Unset means all on. */
+  FEATURES_OFF?: string;
   /** Comma-separated sign-in emails of people who can review reports and verify organizers. */
   MODERATORS?: string;
   /** Cloudflare Email Service binding (wrangler.jsonc send_email). */

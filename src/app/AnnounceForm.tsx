@@ -163,7 +163,7 @@ function Section({ n, title, children, id }: { n: string; title: string; childre
   return (
     <section className="compose-section" aria-labelledby={`${id}-h`} data-reveal>
       <h2 className="compose-h" id={`${id}-h`}>
-        <span className="compose-n num">{n}</span>
+        {n && <span className="compose-n num">{n}</span>}
         {title}
       </h2>
       <div className="compose-fields">{children}</div>
@@ -175,19 +175,29 @@ function Section({ n, title, children, id }: { n: string; title: string; childre
 const FIELD_SECTION: Record<string, string> = {
   flyerKey: "flyer",
   title: "what",
-  pitch: "what",
-  description: "what",
+  pitch: "pitch",
+  description: "about",
   startsAt: "when",
   endsAt: "when",
   venueId: "where",
   address: "where",
   location: "where",
-  scenes: "door",
-  ticketUrl: "door",
+  scenes: "scene",
+  doorPrice: "tickets",
+  ticketUrl: "tickets",
+  policyTags: "door",
   lineup: "lineup",
   video: "video",
   videoId: "video",
 };
+
+/** Three steps: what people need to find it, what makes them want to go, and the rest. */
+const STEPS = [
+  { id: "essentials", label: "Essentials", sections: ["what", "when", "where", "scene"], optional: false },
+  { id: "details", label: "Details", sections: ["flyer", "pitch", "tickets", "lineup"], optional: true },
+  { id: "more", label: "More", sections: ["about", "door", "video"], optional: true },
+];
+const stepOf = (section: string) => Math.max(0, STEPS.findIndex((st) => st.sections.includes(section)));
 
 /** Which error keys each form value answers for. Keys ending in "." match a prefix. */
 const ERROR_KEYS: Partial<Record<keyof FormState, string[]>> = {
@@ -274,11 +284,25 @@ export function AnnounceForm({
     return e;
   }
 
+  const [step, setStep] = useState(0);
+  const essentialKeys = ["title", "startsAt", "venueId", "address", "location", "scenes"];
+  const essentialsOk = Object.keys(clientCheck()).every((k) => !essentialKeys.includes(k));
+  function goTo(i: number) {
+    setStep(i);
+    requestAnimationFrame(() => root.current?.scrollIntoView({ block: "start" }));
+  }
+  function checkEssentials() {
+    const errs = clientCheck();
+    setErrors(errs);
+    scrollToFirst(errs);
+  }
+
   function scrollToFirst(errs: Record<string, string>) {
     const first = Object.keys(errs)[0];
     if (!first) return;
     const section = FIELD_SECTION[first] ?? FIELD_SECTION[first.split(".")[0]] ?? "what";
-    root.current?.querySelector(`#${section}-h`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStep(stepOf(section));
+    requestAnimationFrame(() => root.current?.querySelector(`#${section}-h`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   async function submit(ev: React.FormEvent) {
@@ -365,23 +389,27 @@ export function AnnounceForm({
         </p>
       </div>
 
-      <Section n="01" title="Flyer" id="flyer">
-        <FlyerField value={s.flyer} onChange={(f) => set("flyer", f)} error={errors.flyerKey} />
-      </Section>
+      <ol className="compose-steps" aria-label="Steps">
+        {STEPS.map((st, i) => (
+          <li key={st.id}>
+            <button type="button" className="compose-step" aria-current={step === i ? "step" : undefined} onClick={() => goTo(i)} disabled={i > 0 && !essentialsOk && !editing}>
+              <span className="compose-step-n num">{String(i + 1).padStart(2, "0")}</span>
+              <span className="compose-step-label">{st.label}</span>
+              {st.optional && <span className="compose-step-opt">Optional</span>}
+            </button>
+          </li>
+        ))}
+      </ol>
 
-      <Section n="02" title="The night" id="what">
+      {step > 0 && <ComposePreview s={s} times={times} city={city} />}
+
+      <div className="compose-step-body" hidden={step !== 0}>
+        <Section n="" title="The night" id="what">
         <Field label="Name" error={errors.title} count={[s.title.length, 80]}>
           <input value={s.title} maxLength={80} onChange={(e) => set("title", e.target.value)} placeholder="Wet Paint" autoComplete="off" />
         </Field>
-        <Field label="One line" hint="Shows on the map card." error={errors.pitch} count={[s.pitch.length, 140]}>
-          <input value={s.pitch} maxLength={140} onChange={(e) => set("pitch", e.target.value)} placeholder="Disco edits till the lights come up" />
-        </Field>
-        <Field label="About" hint="Optional. Vibe, dress code, what to bring." error={errors.description}>
-          <textarea rows={4} value={s.description} maxLength={4000} onChange={(e) => set("description", e.target.value)} />
-        </Field>
-      </Section>
-
-      <Section n="03" title="When" id="when">
+        </Section>
+        <Section n="" title="When" id="when">
         <div className="field-row three">
           <Field label="Date" error={errors.startsAt}>
             <input type="date" value={s.date} onChange={(e) => set("date", e.target.value)} />
@@ -400,15 +428,13 @@ export function AnnounceForm({
             <span className="dim"> · {city.name} time</span>
           </p>
         )}
-      </Section>
-
-      <Section n="04" title="Where" id="where">
+        </Section>
+        <Section n="" title="Where" id="where">
         <WhereField s={s} setS={setS} city={city} theme={theme} errors={errors} />
-      </Section>
-
-      <Section n="05" title="Scene and door" id="door">
+        </Section>
+        <Section n="" title="Scene" id="scene">
         <div className={`field ${errors.scenes ? "has-error" : ""}`}>
-          <span className="field-label">Scene</span>
+          <span className="field-hint">Pick at least one so people can find it.</span>
           <div className="chips">
             {SCENES.map((sc) => (
               <Chip
@@ -423,16 +449,19 @@ export function AnnounceForm({
           </div>
           {errors.scenes && <span className="field-error">{errors.scenes}</span>}
         </div>
-        <div className="field">
-          <span className="field-label">At the door</span>
-          <div className="chips">
-            {Object.entries(POLICY_TAGS).map(([id, label]) => (
-              <Chip key={id} pressed={s.policyTags.includes(id)} onClick={() => set("policyTags", s.policyTags.includes(id) ? s.policyTags.filter((x) => x !== id) : [...s.policyTags, id])}>
-                {label}
-              </Chip>
-            ))}
-          </div>
-        </div>
+        </Section>
+      </div>
+
+      <div className="compose-step-body" hidden={step !== 1}>
+        <Section n="" title="Flyer" id="flyer">
+        <FlyerField value={s.flyer} onChange={(f) => set("flyer", f)} error={errors.flyerKey} />
+        </Section>
+        <Section n="" title="The pitch" id="pitch">
+        <Field label="One line" hint="Shows on the map card." error={errors.pitch} count={[s.pitch.length, 140]}>
+          <input value={s.pitch} maxLength={140} onChange={(e) => set("pitch", e.target.value)} placeholder="Disco edits till the lights come up" />
+        </Field>
+        </Section>
+        <Section n="" title="Tickets" id="tickets">
         <div className="field-row">
           <Field label="Door price" hint="Free, $10, $5–15 sliding…" error={errors.doorPrice}>
             <input value={s.doorPrice} maxLength={60} onChange={(e) => set("doorPrice", e.target.value)} placeholder="$10" />
@@ -441,15 +470,33 @@ export function AnnounceForm({
             <input value={s.ticketUrl} inputMode="url" onChange={(e) => set("ticketUrl", e.target.value)} placeholder="ra.co/events/…" />
           </Field>
         </div>
-      </Section>
-
-      <Section n="06" title="Lineup" id="lineup">
+        </Section>
+        <Section n="" title="Lineup" id="lineup">
         <LineupField rows={s.lineup} onChange={(rows) => set("lineup", rows)} errors={errors} />
-      </Section>
+        </Section>
+      </div>
 
-      <Section n="07" title="Promo video" id="video">
+      <div className="compose-step-body" hidden={step !== 2}>
+        <Section n="" title="About" id="about">
+        <Field label="Description" hint="Optional. Vibe, dress code, what to bring." error={errors.description}>
+          <textarea rows={4} value={s.description} maxLength={4000} onChange={(e) => set("description", e.target.value)} />
+        </Field>
+        </Section>
+        <Section n="" title="At the door" id="door">
+        <div className="field">
+          <div className="chips">
+            {Object.entries(POLICY_TAGS).map(([id, label]) => (
+              <Chip key={id} pressed={s.policyTags.includes(id)} onClick={() => set("policyTags", s.policyTags.includes(id) ? s.policyTags.filter((x) => x !== id) : [...s.policyTags, id])}>
+                {label}
+              </Chip>
+            ))}
+          </div>
+        </div>
+        </Section>
+        <Section n="" title="Promo video" id="video">
         <VideoField enabled={config.video} customerCode={config.streamCustomerCode} value={s.video} onChange={(v) => set("video", v)} error={errors.video ?? errors.videoId} />
-      </Section>
+        </Section>
+      </div>
 
       <footer className="compose-foot">
         {formError && (
@@ -479,8 +526,18 @@ export function AnnounceForm({
               </Button>
             </span>
           )}
+          {step > 0 && !confirmCancel && (
+            <Button type="button" variant="ghost" onClick={() => goTo(step - 1)}>
+              Back
+            </Button>
+          )}
           <span className="spacer" />
-          <Button type="submit" variant="primary" size="lg" disabled={saving}>
+          {step < STEPS.length - 1 && (
+            <Button type="button" size="lg" onClick={() => (essentialsOk || editing ? goTo(step + 1) : checkEssentials())}>
+              {step === 0 ? "Add details" : "More options"}
+            </Button>
+          )}
+          <Button type="submit" variant="primary" size="lg" disabled={saving || !essentialsOk}>
             {saving ? "Saving…" : editing ? "Save changes" : "Post it"}
           </Button>
         </div>
@@ -993,6 +1050,37 @@ function VideoField({
         <input ref={input} type="file" accept="video/mp4,video/quicktime,video/webm,video/*" hidden onChange={(e) => take(e.target.files?.[0])} />
       </div>
       {(phase.kind === "error" || error) && <span className="field-error">{phase.kind === "error" ? phase.message : error}</span>}
+    </div>
+  );
+}
+
+/** How the post will look in the feed, from what's filled in so far. */
+function ComposePreview({ s, times, city }: { s: FormState; times: { startsAt: string; endsAt: string } | null; city: City }) {
+  const scene = SCENES.find((x) => s.scenes.includes(x.id) && x.id !== "queer")?.label ?? (s.scenes.includes("queer") ? "Queer" : null);
+  const [venueName, setVenueName] = useState<string | null>(null);
+  useEffect(() => {
+    if (s.where !== "venue" || !s.venueId) return setVenueName(null);
+    let live = true;
+    api
+      .venues()
+      .then((list) => live && setVenueName(list.find((v) => v.id === s.venueId)?.name ?? null))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [s.where, s.venueId]);
+  return (
+    <div className="compose-preview" aria-label="Preview of your post">
+      <span className="compose-preview-label">Preview</span>
+      <div className="compose-preview-card">
+        {s.flyer ? <img src={s.flyer.url} alt="" /> : <span className="compose-preview-art" aria-hidden="true" />}
+        <span className="compose-preview-body">
+          <span className="compose-preview-when num">{times ? `${dayLabel(times.startsAt, new Date(), city.timezone)} · ${timeRange(times.startsAt, times.endsAt, city.timezone)}` : "Date and time"}</span>
+          <span className="compose-preview-title">{s.title || "Untitled"}</span>
+          <span className="compose-preview-where">{[s.where === "address" ? s.neighborhood || s.address : venueName, scene].filter(Boolean).join(" · ") || city.name}</span>
+          {s.pitch && <span className="compose-preview-pitch">{s.pitch}</span>}
+        </span>
+      </div>
     </div>
   );
 }
