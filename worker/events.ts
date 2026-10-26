@@ -5,6 +5,8 @@ import { hereNowCounts } from "./checkins";
 import { organizerSlug, venueSlug } from "./pages";
 import { endedEarly, markEnded } from "./live";
 import { flyerDownloadsOn } from "./posting";
+import { reactionsFor } from "./reactions";
+import { features } from "./features";
 import type { EventDetail, EventSummary, LineupSlot, RsvpStatus, SceneId } from "../shared/types";
 
 export interface EventRow {
@@ -164,6 +166,7 @@ events.get("/:id", async (c) => {
     ...toSummary(row),
     endedEarly: (await endedEarly(c.env, [row.id])).has(row.id) || undefined,
     flyerDownloads: await flyerDownloadsOn(c.env.DB, row.id),
+    reactions: features(c.env).reactions ? await reactionsFor(c.env, row.id, userId) : undefined,
     description: row.description,
     gettingThere: row.getting_there,
     lineup,

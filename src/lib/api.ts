@@ -26,6 +26,8 @@ import type {
   PageEvents,
   PageKind,
   PageProfile,
+  ReactionKind,
+  Reactions,
 } from "../../shared/types";
 
 const PAGE_PATH: Record<PageKind, string> = { artist: "artists", venue: "venues", organizer: "organizers" };
@@ -132,6 +134,7 @@ export const api = {
   reportUser: (id: string, reason: string, note: string) =>
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   inbox: () => request<Inbox>("/api/me/inbox"),
+  react: (id: string, kind: ReactionKind, on: boolean) => request<Reactions>(`/api/events/${enc(id)}/react`, { method: "POST", body: JSON.stringify({ kind, on }) }),
   inboxSeen: () => request<{ ok: true }>("/api/me/inbox/seen", { method: "POST" }),
   setLive: (id: string, action: "end" | "extend") =>
     request<{ endsAt: string; endedEarly: boolean }>(`/api/events/${encodeURIComponent(id)}/live`, { method: "POST", body: JSON.stringify({ action }) }),

@@ -5,6 +5,7 @@ import { announceGoing } from "../lib/install";
 import { ShareSheet } from "../components/ShareSheet";
 import { FlyerViewer } from "../components/FlyerViewer";
 import { CheckIn } from "./CheckIn";
+import { ReactionBar } from "./Reactions";
 import { EventWall } from "./EventWall";
 import { Faces } from "../components/Faces";
 import { FriendAvatar } from "./FriendsSheet";
@@ -114,7 +115,7 @@ export function EventSheet({
   // Ended early by mistake? The organizer can reopen it for an hour afterwards.
   const reopenable = !!e.endedEarly && phase === "past" && nowMs < Date.parse(e.endsAt) + 3600e3;
   // Beta modules can be switched off on the server (FEATURES_OFF); their sections and actions go with them.
-  const feat = config.features ?? { wall: true, friends: true, checkin: true };
+  const feat = config.features ?? { wall: true, friends: true, checkin: true, reactions: true };
   const canCheckIn = feat.checkin && phase === "live";
   const hasWall = feat.wall && !photoFree;
   const [open, setOpen] = useState<Record<string, boolean>>(() => ({
@@ -385,6 +386,9 @@ export function EventSheet({
             <span ref={goingEl}>{going}</span> going
             {rsvp && <span className="dim"> · saved on this device for the door</span>}
           </p>
+          {feat.reactions && detail?.reactions && !cancelled && (
+            <ReactionBar eventId={e.id} initial={detail.reactions} signedIn={!!me} onNeedSignIn={onNeedSignIn} toast={toast} />
+          )}
         </header>
 
         {rsvp && !cancelled && phase !== "past" && (

@@ -65,6 +65,12 @@ export function stamp(el: Element | null) {
     );
 }
 
+/** The stamp's overshoot without the ring, for small marks inside a clipped strip (a reaction's icon). */
+export function pop(el: Element | null) {
+  if (!el || reduce) return;
+  return gsap.fromTo(el, { scale: 1.35, rotate: -8 }, { scale: 1, rotate: 0, duration: DUR.count, ease: "elastic.out(1, 0.45)", clearProps: "transform" });
+}
+
 const counting = new WeakMap<Element, gsap.core.Tween>();
 
 /** Count a number up into an element, e.g. RSVP totals. A new count replaces one still running on the same element. */

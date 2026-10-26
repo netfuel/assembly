@@ -92,6 +92,8 @@ export interface EventDetail extends EventSummary {
   venueSlug?: string | null;
   /** The organizer lets people download the flyer (on unless they turned it off). */
   flyerDownloads?: boolean;
+  /** Absent when reactions are switched off. */
+  reactions?: Reactions;
   flyerKey: string | null;
   createdAt: string;
   updatedAt: string;
@@ -127,6 +129,7 @@ export interface Features {
   wall: boolean;
   friends: boolean;
   checkin: boolean;
+  reactions: boolean;
 }
 
 export interface ServerConfig {
@@ -424,4 +427,20 @@ export interface Inbox {
   items: InboxItem[];
   /** Items newer than the last time you opened Notifications. */
   unread: number;
+}
+
+/* ---------- Reactions ---------- */
+export const REACTIONS = [
+  { id: "heart", label: "Love" },
+  { id: "fire", label: "Fire" },
+  { id: "smiley", label: "Happy" },
+  { id: "rainbow", label: "Rainbow" },
+  { id: "see-you", label: "See you there" },
+] as const;
+export type ReactionKind = (typeof REACTIONS)[number]["id"];
+
+export interface Reactions {
+  counts: Partial<Record<ReactionKind, number>>;
+  /** Which ones you've added. */
+  mine: ReactionKind[];
 }

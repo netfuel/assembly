@@ -218,13 +218,35 @@
 .going { margin: var(--space-1) 0 0; font-size: var(--text-xs); color: var(--color-muted); }
 .going .dim { color: var(--color-faint); }
 
+/* Reactions under the count: four icons joined into one outlined strip, then "See you there" as its own button,
+   which drops to a second line on narrow phones. 44 px targets. Yours turn accent (text, and a filled heart or
+   flame), not a filled button: the accent fill belongs to the page's primary action. */
+.reactions { margin: var(--space-2) 0 0; display: flex; flex-wrap: wrap; gap: 6px; justify-self: start; }
+.reaction-strip { display: flex; border: 1px solid var(--color-line-strong); border-radius: var(--radius-xs); }
+.reaction-strip > span + span { border-left: 1px solid var(--color-line); }
+.reaction {
+  min-height: 44px; min-width: 44px; padding: 0 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--color-muted);
+  font: inherit; font-size: var(--text-xs); cursor: pointer;
+}
+.reaction-strip .reaction { height: 100%; border-radius: 0; }
+.reaction.is-text { padding: 0 10px; border: 1px solid var(--color-line-strong); }
+.reaction:hover { color: var(--color-fg); }
+.reaction:focus-visible { outline-offset: -3px; }
+.reaction.is-mine { color: var(--color-accent-text); }
+.reaction.is-text.is-mine { border-color: var(--color-accent); }
+.reaction.is-mine.is-solid svg { fill: currentColor; }
+.reaction-count { font-variant-numeric: tabular-nums; }
+.reaction-text { white-space: nowrap; }
+
 /* Venue under the time: the venue in the display serif, the address as plain meta. */
 .event-where { margin: 0; display: grid; gap: 2px; }
 .event-where-venue { font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-size: var(--text-md); line-height: var(--leading-title); letter-spacing: -0.01em; }
 .event-where > .dim { display: none; }
 .event-where-address { font-size: var(--text-xs); color: var(--color-muted); }
 /* The few tags people decide on; the rest fold into Details. */
-.event-tags { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.event-tags { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .event-tags li { display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--space-2); border: 1px solid var(--color-line-strong); border-radius: var(--radius-xs); font-size: var(--text-xs); color: var(--color-muted); }
 .event-tags li.is-price { color: var(--color-fg); border-color: var(--color-fg); }
 .event-tags li.is-queer { color: var(--color-uv); border-color: var(--color-uv); }
@@ -293,7 +315,7 @@
 .video-frame { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--color-line-strong); overflow: hidden; background: #000; }
 .video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .report { display: grid; gap: var(--space-3); padding: var(--space-4); }
-.report-reasons { display: flex; flex-wrap: wrap; gap: 6px; }
+.report-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
 .report-note { width: 100%; padding: 8px 10px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-xs); background: var(--color-surface-raised); color: var(--color-fg); font: inherit; font-size: max(16px, var(--text-sm)); resize: vertical; }
 .report-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 .report-link { color: var(--color-faint); font-size: var(--text-2xs); text-decoration-color: var(--color-line-strong); }
