@@ -55,7 +55,7 @@ export function ProfileSheet({
   tz: string;
   onChange: (me: MeProfile) => void;
   onSignedOut: (message: string) => void;
-  onOpenEvent: (id: string) => void;
+  onOpenEvent: (id: string, section?: "comments") => void;
   onAnnounce: () => void;
   toast: (m: string) => void;
 }) {
@@ -254,6 +254,8 @@ const INBOX_GLYPH: Record<InboxItem["kind"], string> = {
   "starting-soon": "◷",
   "friend-here": "●",
   claim: "◇",
+  reply: "↳",
+  comment: "❝",
 };
 
 /** Notifications, newest first. Tapping one goes where it's about. */
@@ -266,7 +268,7 @@ function InboxList({
 }: {
   inbox: Inbox | null;
   tz: string;
-  onOpenEvent: (id: string) => void;
+  onOpenEvent: (id: string, section?: "comments") => void;
   onFriends: () => void;
   onOpenPage: (p: { kind: "artist" | "venue"; slug: string }) => void;
 }) {
@@ -277,7 +279,7 @@ function InboxList({
   const now = new Date();
   const go = (t: InboxItem["target"]) => {
     if (!t) return;
-    if (t.type === "event") onOpenEvent(t.id);
+    if (t.type === "event") onOpenEvent(t.id, t.section);
     else if (t.type === "friends") onFriends();
     else onOpenPage({ kind: t.kind, slug: t.slug });
   };

@@ -94,6 +94,8 @@ export interface EventDetail extends EventSummary {
   flyerDownloads?: boolean;
   /** Absent when reactions are switched off. */
   reactions?: Reactions;
+  /** Live comments, replies included. Absent when comments are switched off. */
+  commentCount?: number;
   flyerKey: string | null;
   createdAt: string;
   updatedAt: string;
@@ -130,6 +132,7 @@ export interface Features {
   friends: boolean;
   checkin: boolean;
   reactions: boolean;
+  comments: boolean;
 }
 
 export interface ServerConfig {
@@ -407,7 +410,7 @@ export interface PageClaim {
 }
 
 /* ---------- Notifications (under the avatar) ---------- */
-export type InboxKind = "friend-request" | "invite" | "cancelled" | "updated" | "starting-soon" | "friend-here" | "claim";
+export type InboxKind = "friend-request" | "invite" | "cancelled" | "updated" | "starting-soon" | "friend-here" | "claim" | "reply" | "comment";
 
 export interface InboxItem {
   /** Stable per item, so the app can key lists. */
@@ -419,7 +422,7 @@ export interface InboxItem {
   /** One line under the title. */
   body: string;
   /** Where tapping goes. */
-  target: { type: "event"; id: string } | { type: "friends" } | { type: "page"; kind: "artist" | "venue"; slug: string } | null;
+  target: { type: "event"; id: string; section?: "comments" } | { type: "friends" } | { type: "page"; kind: "artist" | "venue"; slug: string } | null;
   person?: { displayName: string; avatarUrl: string | null };
 }
 
@@ -443,4 +446,42 @@ export interface Reactions {
   counts: Partial<Record<ReactionKind, number>>;
   /** Which ones you've added. */
   mine: ReactionKind[];
+}
+
+/* ---------- Comments ---------- */
+export const COMMENT_MAX = 500;
+export const COMMENT_REPORT_REASONS = [
+  { id: "harassment", label: "Harassment" },
+  { id: "hate", label: "Hate" },
+  { id: "spam", label: "Spam or scam" },
+  { id: "private-info", label: "Shares private info" },
+  { id: "other", label: "Something else" },
+] as const;
+
+export interface EventComment {
+  id: string;
+  /** Set on replies; replies are one level deep. */
+  parentId: string | null;
+  /** Empty when removed. */
+  body: string;
+  /** live; hidden after reports (only the author and staff see it); removed (a placeholder kept for its replies). */
+  status: "live" | "hidden" | "removed";
+  createdAt: string;
+  author: { id: string; displayName: string; avatarUrl: string | null } | null;
+  /** The author hosts this event. */
+  host: boolean;
+  /** The author is a verified organizer. */
+  verified: boolean;
+  pinned: boolean;
+  mine: boolean;
+  canDelete: boolean;
+}
+
+export interface CommentThread {
+  comments: EventComment[];
+  canComment: boolean;
+  /** Why not, when canComment is false. */
+  note: string | null;
+  /** Host or moderator: can pin and remove. */
+  canModerate: boolean;
 }

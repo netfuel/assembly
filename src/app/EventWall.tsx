@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Label, Skeleton, Tag } from "../components/ui";
+import { ago } from "../lib/time";
 import { api, ApiError, postWallPhoto } from "../lib/api";
 import { MediaError, preparePhoto } from "../lib/media";
 import type { EventSummary, MeProfile, WallPost, WallState } from "../../shared/types";
@@ -15,14 +16,6 @@ const REPORT_REASONS: { id: string; label: string }[] = [
   { id: "other", label: "Something else" },
 ];
 
-const ago = (iso: string) => {
-  const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m} min ago`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h} hr ago`;
-  return `${Math.round(h / 24)} d ago`;
-};
 
 /**
  * The event wall: photos from people who checked in, newest first. People who RSVP'd see everything;

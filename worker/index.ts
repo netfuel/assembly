@@ -26,6 +26,7 @@ import { pageModeration, pages } from "./pages";
 import { live } from "./live";
 import { inbox } from "./inbox";
 import { reactions } from "./reactions";
+import { commentActions, eventComments } from "./comments";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -116,6 +117,8 @@ app.route("/push", push);
 app.route("/events", checkins);
 app.route("/events", live);
 app.route("/events", reactions);
+app.route("/events", eventComments);
+app.route("/comments", commentActions);
 app.route("/events", eventFriendVisibility);
 app.route("/friends", friends);
 app.route("/events", eventWall);

@@ -27,6 +27,8 @@ import type {
   PageKind,
   PageProfile,
   ReactionKind,
+  CommentThread,
+  EventComment,
   Reactions,
 } from "../../shared/types";
 
@@ -135,6 +137,13 @@ export const api = {
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   inbox: () => request<Inbox>("/api/me/inbox"),
   react: (id: string, kind: ReactionKind, on: boolean) => request<Reactions>(`/api/events/${enc(id)}/react`, { method: "POST", body: JSON.stringify({ kind, on }) }),
+  comments: (id: string) => request<CommentThread>(`/api/events/${enc(id)}/comments`),
+  comment: (id: string, body: string, parentId: string | null) =>
+    request<{ comment: EventComment; thread: CommentThread }>(`/api/events/${enc(id)}/comments`, { method: "POST", body: JSON.stringify({ body, parentId }) }),
+  removeComment: (id: string) => request<CommentThread>(`/api/comments/${enc(id)}`, { method: "DELETE" }),
+  pinComment: (id: string, pinned: boolean) => request<CommentThread>(`/api/comments/${enc(id)}/pin`, { method: "POST", body: JSON.stringify({ pinned }) }),
+  reportComment: (id: string, reason: string, note: string) =>
+    request<{ ok: true; hidden: boolean }>(`/api/comments/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   inboxSeen: () => request<{ ok: true }>("/api/me/inbox/seen", { method: "POST" }),
   setLive: (id: string, action: "end" | "extend") =>
     request<{ endsAt: string; endedEarly: boolean }>(`/api/events/${encodeURIComponent(id)}/live`, { method: "POST", body: JSON.stringify({ action }) }),

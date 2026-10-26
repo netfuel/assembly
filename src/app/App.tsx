@@ -425,9 +425,12 @@ export function App() {
   }, [loadState, selectedId, events, extra, toast, me]);
 
 
-  const openEvent = (id: string) => {
+  // A notification about a reply opens the event straight to its comments.
+  const [openSection, setOpenSection] = useState<"comments" | null>(null);
+  const openEvent = (id: string, section?: "comments") => {
     setSheet(null);
     setExtra(null);
+    setOpenSection(section ?? null);
     setSelectedId(id);
     const ev = events.find((e) => e.id === id);
     if (ev) setFocus({ lng: ev.lng, lat: ev.lat, key: Date.now() });
@@ -495,6 +498,7 @@ export function App() {
     (id: string | null, fromMap = false) => {
       // Cards fly into the event page; a pin tap has no card to fly from.
       if (id && !fromMap) markFlipOrigin(id);
+      setOpenSection(null);
       setSelectedId(id);
       const ev = id ? events.find((e) => e.id === id) : null;
       if (ev) setFocus({ lng: ev.lng, lat: ev.lat, key: Date.now() });
@@ -825,6 +829,7 @@ export function App() {
         <EventSheet
           key={`${selected.id}:${detailVersion}`}
           summary={selected}
+          initialSection={openSection}
           friends={friendsAt[selected.id] ?? []}
           friendsOn={friendsOn}
           myFriends={friendsState?.friends ?? []}
