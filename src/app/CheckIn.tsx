@@ -3,6 +3,7 @@ import { Button, Label } from "../components/ui";
 import { QrCode } from "../components/ShareSheet";
 import { api, ApiError } from "../lib/api";
 import type { EventSummary, MeProfile, Presence } from "../../shared/types";
+import { reducedMotion } from "../lib/motion";
 
 /** Metres between two points (haversine). Runs on the phone; the coordinates never leave it. */
 function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -91,7 +92,7 @@ export function CheckIn({
       setCode("");
       toast("You're checked in. Have a good night.");
       stampEl.current?.animate?.([{ transform: "scale(1.6) rotate(-8deg)", opacity: 0 }, { transform: "scale(1) rotate(-3deg)", opacity: 1 }], {
-        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320,
+        duration: reducedMotion() ? 0 : 320,
         easing: "cubic-bezier(.2,.8,.2,1)",
       });
     } catch (err) {

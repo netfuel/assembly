@@ -4,6 +4,8 @@
  * events are in and MIN_MS has passed, waiting up to MAP_GRACE_MS more for the map's first full draw so
  * the A doesn't linger. HARD_CAP_MS reveals regardless, and a tap anywhere skips straight to the reveal.
  */
+import { reducedMotion } from "./motion";
+
 const MIN_MS = 2100;
 const MAP_GRACE_MS = 400;
 const HARD_CAP_MS = 6000;
@@ -22,7 +24,7 @@ function reveal() {
   const splash = el();
   if (revealed || !splash) return;
   revealed = true;
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduce = reducedMotion();
   splash.classList.add("is-reveal");
   window.setTimeout(() => splash.classList.add("is-done"), reduce ? 0 : ZOOM_MS);
   window.setTimeout(() => splash.remove(), reduce ? 400 : REMOVE_MS);

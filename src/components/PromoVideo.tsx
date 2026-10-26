@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { videoPlayerUrl, videoThumbnailUrl } from "../lib/api";
+import { reducedMotion } from "../lib/motion";
 
 /**
  * Promo video that plays muted while it's on screen, like a story.
@@ -10,7 +11,7 @@ export function PromoVideo({ uid, customerCode, title }: { uid: string; customer
   const box = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   const [tapped, setTapped] = useState(false);
-  const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduce = reducedMotion();
 
   useEffect(() => {
     const el = box.current;

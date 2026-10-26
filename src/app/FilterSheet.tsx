@@ -1,33 +1,28 @@
 import { useEffect, useState } from "react";
-import { Button, Chip, Label, Segmented, Sheet } from "../components/ui";
+import { Button, Chip, Disclosure, Label, Segmented, Sheet } from "../components/ui";
 import { POLICY_TAGS, SCENES, VENUE_TYPES, type SceneId } from "../../shared/types";
 import { DEFAULT_FILTERS, PRESETS, PRICES, activeCount, type Filters, type PriceId } from "../lib/filters";
-import { dateHeading, tonightDate, type WindowId } from "../lib/time";
-
-const WHEN: { id: WindowId; label: string }[] = [
-  { id: "tonight", label: "Tonight" },
-  { id: "weekend", label: "Weekend" },
-  { id: "week", label: "7 days" },
-  { id: "all", label: "All" },
-  { id: "date", label: "Date" },
-];
 
 // Door policies people filter on. "No photos" and BYOB are info, not something to search by.
 const POLICY_FILTERS = ["all-ages", "18+", "21+", "sliding-scale", "accessible-entrance", "sober-friendly", "harm-reduction"];
 
+type Group = "door" | "price" | "venue";
+
 const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 const same = (a: Filters, b: Partial<Filters>) =>
   (Object.keys(b) as (keyof Filters)[]).every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]));
+const summary = (labels: string[]) => (labels.length ? labels.join(", ") : "Any");
 
 /**
- * Every filter in one sheet: when, scene, door policy, price, venue type. Changes are a draft until Apply,
+ * What isn't the time window: scene, door policy, price, venue type. The time window is the date pill's job, so it
+ * isn't repeated here. Scene is open because it's the filter people reach for; Door, Price and Venue are one quiet row
+ * each, and a row with something set starts open so nothing that's on is hidden. Changes are a draft until Apply,
  * which shows how many events match. Bottom sheet on phones (swipe down to close), side panel on wide screens.
  */
 export function FilterSheet({
   open,
   onClose,
   filters,
-  tz,
   friendsOn = false,
   count,
   onApply,
@@ -35,20 +30,25 @@ export function FilterSheet({
   open: boolean;
   onClose: () => void;
   filters: Filters;
-  tz: string;
   /** Show the Friends filter (only when friends are on). */
   friendsOn?: boolean;
   count: (f: Filters) => number;
   onApply: (f: Filters) => void;
 }) {
   const [draft, setDraft] = useState(filters);
+  const [rows, setRows] = useState<Record<Group, boolean>>({ door: false, price: false, venue: false });
   // Start each visit from what's applied now.
   useEffect(() => {
-    if (open) setDraft(filters);
+    if (!open) return;
+    setDraft(filters);
+    setRows({ door: filters.policies.length > 0, price: filters.price !== "any", venue: filters.venueTypes.length > 0 });
   }, [open, filters]);
   const set = (patch: Partial<Filters>) => setDraft((d) => ({ ...d, ...patch }));
+  const flip = (g: Group) => setRows((r) => ({ ...r, [g]: !r[g] }));
   const n = count(draft);
-  const today = tonightDate(new Date(), tz);
+  // Clear all leaves the time window where the date pill has it.
+  const cleared: Filters = { ...DEFAULT_FILTERS, windowId: draft.windowId, date: draft.date };
+  const dirty = activeCount({ ...draft, windowId: "tonight" }) > 0;
 
   return (
     <Sheet open={open} onClose={onClose} label="Filters" modal className="sheet-filters">
@@ -73,22 +73,6 @@ export function FilterSheet({
               </Chip>
             ))}
           </div>
-        </fieldset>
-
-        <fieldset className="filter-group" data-reveal>
-          <legend className="field-label">When</legend>
-          <Segmented
-            label="When"
-            options={WHEN.map((w) => ({ id: w.id, label: w.id === "date" && draft.windowId === "date" && draft.date ? dateHeading(draft.date) : w.label }))}
-            value={draft.windowId}
-            onChange={(id) => set({ windowId: id, date: id === "date" ? (draft.date ?? today) : draft.date })}
-          />
-          {draft.windowId === "date" && (
-            <label className="field filter-date">
-              <span className="field-label">Date</span>
-              <input type="date" value={draft.date ?? today} min={today} onChange={(e) => e.target.value && set({ date: e.target.value })} />
-            </label>
-          )}
         </fieldset>
 
         {friendsOn && (
@@ -119,37 +103,42 @@ export function FilterSheet({
           <p className="note">Any of these.</p>
         </fieldset>
 
-        <fieldset className="filter-group" data-reveal>
-          <legend className="field-label">Door</legend>
-          <div className="chip-row">
-            {POLICY_FILTERS.map((id) => (
-              <Chip key={id} pressed={draft.policies.includes(id)} onClick={() => set({ policies: toggle(draft.policies, id) })}>
-                {POLICY_TAGS[id]}
-              </Chip>
-            ))}
-          </div>
-          <p className="note">All of these.</p>
-        </fieldset>
+        <div className="filter-more" data-reveal>
+          <Disclosure id="door" title="Door" summary={summary(draft.policies.map((p) => POLICY_TAGS[p]))} open={rows.door} onToggle={() => flip("door")}>
+            <div className="chip-row">
+              {POLICY_FILTERS.map((id) => (
+                <Chip key={id} pressed={draft.policies.includes(id)} onClick={() => set({ policies: toggle(draft.policies, id) })}>
+                  {POLICY_TAGS[id]}
+                </Chip>
+              ))}
+            </div>
+            <p className="note">All of these.</p>
+          </Disclosure>
 
-        <fieldset className="filter-group" data-reveal>
-          <legend className="field-label">Price</legend>
-          <Segmented label="Price" options={PRICES} value={draft.price} onChange={(price: PriceId) => set({ price })} />
-          {draft.price !== "any" && <p className="note">Events without a listed price are left out.</p>}
-        </fieldset>
+          <Disclosure
+            id="price"
+            title="Price"
+            summary={draft.price === "any" ? "Any" : (PRICES.find((p) => p.id === draft.price)?.label ?? "Any")}
+            open={rows.price}
+            onToggle={() => flip("price")}
+          >
+            <Segmented label="Price" options={PRICES} value={draft.price} onChange={(price: PriceId) => set({ price })} />
+            {draft.price !== "any" && <p className="note">Events without a listed price are left out.</p>}
+          </Disclosure>
 
-        <fieldset className="filter-group" data-reveal>
-          <legend className="field-label">Venue</legend>
-          <div className="chip-row">
-            {Object.entries(VENUE_TYPES).map(([id, label]) => (
-              <Chip key={id} pressed={draft.venueTypes.includes(id)} onClick={() => set({ venueTypes: toggle(draft.venueTypes, id) })}>
-                {label}
-              </Chip>
-            ))}
-          </div>
-        </fieldset>
+          <Disclosure id="venue" title="Venue" summary={summary(draft.venueTypes.map((v) => VENUE_TYPES[v]))} open={rows.venue} onToggle={() => flip("venue")}>
+            <div className="chip-row">
+              {Object.entries(VENUE_TYPES).map(([id, label]) => (
+                <Chip key={id} pressed={draft.venueTypes.includes(id)} onClick={() => set({ venueTypes: toggle(draft.venueTypes, id) })}>
+                  {label}
+                </Chip>
+              ))}
+            </div>
+          </Disclosure>
+        </div>
 
         <div className="filter-actions">
-          <Button type="button" variant="ghost" onClick={() => setDraft({ ...DEFAULT_FILTERS, date: draft.date })} disabled={activeCount(draft) === 0}>
+          <Button type="button" variant="ghost" onClick={() => setDraft(cleared)} disabled={!dirty}>
             Clear all
           </Button>
           <Button type="submit" variant="primary" size="lg" aria-live="polite">
@@ -158,35 +147,5 @@ export function FilterSheet({
         </div>
       </form>
     </Sheet>
-  );
-}
-
-/** The filters that are on, as chips under the Filters button. Tap one to remove it. Nothing shows by default. */
-export function FilterChips({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
-  const chips: { key: string; label: string; remove: Partial<Filters> }[] = [];
-  if (filters.q) chips.push({ key: "q", label: `“${filters.q}”`, remove: { q: null } });
-  if (filters.friends) chips.push({ key: "friends", label: "Friends going", remove: { friends: false } });
-  if (filters.windowId !== "tonight") {
-    const label = filters.windowId === "date" && filters.date ? dateHeading(filters.date) : WHEN.find((w) => w.id === filters.windowId)!.label;
-    chips.push({ key: "when", label, remove: { windowId: "tonight" } });
-  }
-  for (const s of filters.scenes)
-    chips.push({ key: `s-${s}`, label: SCENES.find((x) => x.id === s)!.label, remove: { scenes: filters.scenes.filter((x) => x !== s) } });
-  for (const p of filters.policies) chips.push({ key: `p-${p}`, label: POLICY_TAGS[p], remove: { policies: filters.policies.filter((x) => x !== p) } });
-  if (filters.price !== "any") chips.push({ key: "price", label: PRICES.find((p) => p.id === filters.price)!.label, remove: { price: "any" } });
-  for (const v of filters.venueTypes) chips.push({ key: `v-${v}`, label: VENUE_TYPES[v], remove: { venueTypes: filters.venueTypes.filter((x) => x !== v) } });
-  if (!chips.length) return null;
-  return (
-    <>
-      {chips.map((c) => (
-        <button key={c.key} type="button" className="chip chip-remove" aria-label={`Remove filter: ${c.label}`} onClick={() => onChange({ ...filters, ...c.remove })}>
-          {c.key === "s-queer" && <span className="marker" style={{ background: "var(--color-uv)" }} aria-hidden="true" />}
-          {c.label}
-          <span aria-hidden="true" className="chip-x">
-            ×
-          </span>
-        </button>
-      ))}
-    </>
   );
 }

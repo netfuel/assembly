@@ -50,6 +50,22 @@
 .chip[aria-pressed="true"] { color: var(--color-fg); border-color: var(--color-line-strong); background: var(--color-surface-raised); }
 .marker { width: 7px; height: 7px; flex: none; }
 
+/* Disclosure: one quiet row each, a hairline between them; the open one shows its content (same look as the event page's sections). */
+.disc { border-top: 1px solid var(--color-line); }
+.disc:last-of-type { border-bottom: 1px solid var(--color-line); }
+.disc-h { margin: 0; font: inherit; }
+.disc-row {
+  display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--tap); padding: var(--space-3) 0;
+  border: 0; background: transparent; color: var(--color-fg); text-align: left; font: inherit;
+}
+.disc-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.disc-title { font-family: var(--font-serif); font-variation-settings: var(--vary-display); font-size: var(--text-md); line-height: var(--leading-title); letter-spacing: -0.01em; }
+.disc-summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-xs); color: var(--color-faint); }
+.disc-chev { flex: none; color: var(--color-faint); transition: transform var(--dur-fast) var(--ease-out); }
+.disc.is-open .disc-chev { transform: rotate(180deg); }
+.disc-body { display: grid; gap: var(--space-2); padding-bottom: var(--space-4); }
+@media (prefers-reduced-motion: reduce) { .disc-chev { transition: none; } }
+
 /* Tags */
 .tag {
   display: inline-flex;
@@ -161,11 +177,11 @@
 }
 .sheet-close {
   position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
+  top: var(--space-2);
+  right: var(--space-2);
   z-index: 2;
-  width: 28px;
-  height: 28px;
+  width: var(--tap);
+  height: var(--tap);
   display: grid;
   place-items: center;
   border-radius: var(--radius-xs);

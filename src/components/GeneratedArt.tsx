@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { artFallback, artParams } from "../lib/flyerArt";
 import { registerArt } from "../lib/liquidRenderer";
-import { prefersReducedMotion } from "../lib/motion";
+import { reducedMotion } from "../lib/motion";
 
 /**
  * Generated flyer for an event without uploaded art: seeded pixel liquid (lib/flyerArt.ts, drawn by
@@ -34,7 +34,7 @@ export function GeneratedArt({
     const el = host.current;
     const cv = canvas.current;
     if (!el || !cv) return;
-    const art = registerArt(cv, params, compact || prefersReducedMotion());
+    const art = registerArt(cv, params, compact || reducedMotion());
     if (!art.supported()) {
       el.dataset.fallback = "true";
       return art.dispose;

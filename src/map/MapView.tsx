@@ -4,6 +4,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { mapPalette, mapStyle, type MapTheme } from "./mapStyle";
 import { isLive } from "../lib/time";
+import { reducedMotion } from "../lib/motion";
 import type { EventSummary, FriendAt } from "../../shared/types";
 import { FriendMarkers } from "./friendMarkers";
 import { hasThumb, syncThumbs, thumbImageId } from "./thumbPins";
@@ -302,7 +303,7 @@ export function MapView({
       map.easeTo({
         center: (f.geometry as GeoJSON.Point).coordinates as [number, number],
         zoom: zoom + 0.25,
-        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500,
+        duration: reducedMotion() ? 0 : 500,
       });
     });
     for (const layer of ["event-halo", "event-core", "event-thumb", "cluster"]) {
@@ -312,7 +313,7 @@ export function MapView({
 
     // Live pins breathe. Skipped when the viewer prefers reduced motion.
     let raf = 0;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = reducedMotion();
     if (!reduce) {
       const tick = (t: number) => {
         if (ready.current && map.getLayer("event-halo")) {
@@ -376,7 +377,7 @@ export function MapView({
       map.easeTo({
         center: [e.lng, e.lat],
         padding: { top: 120, bottom: 220, left: 0, right: 0 },
-        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450,
+        duration: reducedMotion() ? 0 : 450,
       });
     }
   }, [highlight?.id, highlight?.follow]);
@@ -390,7 +391,7 @@ export function MapView({
       zoom: Math.max(map.getZoom(), 14),
       // Keep the pin visible beside the side panel or above the bottom sheet.
       padding: wide ? { right: 440, left: 0, top: 0, bottom: 0 } : { bottom: window.innerHeight * 0.45, top: 0, left: 0, right: 0 },
-      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
+      duration: reducedMotion() ? 0 : 700,
     });
   }, [focus]);
 
@@ -410,7 +411,7 @@ export function MapView({
         maxZoom: fit.minZoom ?? 15,
         // Clear of the top bar and the rail of cards.
         padding: wide ? { top: 140, bottom: 260, left: 80, right: 80 } : { top: 200, bottom: window.innerHeight * 0.4, left: 40, right: 40 },
-        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
+        duration: reducedMotion() ? 0 : 700,
       },
     );
   }, [fit?.key]);
@@ -426,7 +427,7 @@ export function MapView({
       if (!followMe) followed.current = false;
       return;
     }
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = reducedMotion();
     const wide = window.matchMedia("(min-width: 900px)").matches;
     const padding = wide ? { top: 120, bottom: 220, left: 0, right: 0 } : { top: 160, bottom: 240, left: 0, right: 0 };
     if (!followed.current) {

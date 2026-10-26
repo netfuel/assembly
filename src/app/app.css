@@ -485,8 +485,13 @@
 .filter-group legend { padding: 0; margin-bottom: var(--space-2); }
 .chip-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .chip-row .chip { min-height: 36px; padding: 0 var(--space-3); font-size: var(--text-xs); }
-.filter-group .segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-.filter-date { max-width: 220px; }
+/* In the Filters sheet, fingers come first: chips and the price options are full 44 px targets, 8 px apart. */
+.filter-sheet .chip-row .chip { min-height: var(--tap); min-width: var(--tap); justify-content: center; }
+.filter-group .segmented, .filter-more .segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.filter-sheet .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; }
+.filter-sheet .segmented button { min-height: var(--tap); padding: 0 var(--space-2); }
+/* Door, Price and Venue are stacked rows with hairlines between them, not spaced-out groups. */
+.filter-more { display: block; }
 .filter-actions {
   position: sticky;
   /* Pinned to the very bottom of the sheet, covering the sheet's own bottom padding. */

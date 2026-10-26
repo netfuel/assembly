@@ -18,7 +18,7 @@ import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilt
 import { FilterSheet } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
 import { clock, dayLabel, isLive, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
-import { revealCards, revealChildren } from "../lib/motion";
+import { revealCards, revealChildren, useGSAP } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 import { clearUserCaches, saveForOffline, saveProfileForOffline, useOnline } from "../lib/offline";
 import { EventSheet } from "./EventSheet";
@@ -428,12 +428,20 @@ export function App() {
   }, [selectedId, shown]);
 
   // Cards slide in whenever the set changes.
-  useEffect(() => {
-    if (!selected) revealCards(railRef.current);
-  }, [shown, selected]);
-  useEffect(() => {
-    if (sheet) requestAnimationFrame(() => revealChildren(document.querySelector(".sheet-center .sheet-body")));
-  }, [sheet]);
+  useGSAP(
+    () => {
+      if (!selected) revealCards(railRef.current);
+    },
+    { dependencies: [shown, selected] },
+  );
+  useGSAP(
+    (_, contextSafe) => {
+      if (!sheet) return;
+      const frame = requestAnimationFrame(contextSafe!(() => revealChildren(document.querySelector(".sheet-center .sheet-body"))));
+      return () => cancelAnimationFrame(frame);
+    },
+    { dependencies: [sheet] },
+  );
 
   const select = useCallback(
     (id: string | null) => {
@@ -865,7 +873,6 @@ export function App() {
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
         filters={filters}
-        tz={city.timezone}
         friendsOn={friendsOn}
         count={(f) => matching(f).length}
         onApply={(f) => {

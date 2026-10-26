@@ -16,7 +16,7 @@ import { saveForOffline } from "../lib/offline";
 import { PushPrompt } from "../components/PushControl";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
-import { countTo, revealChildren, stamp } from "../lib/motion";
+import { countTo, reducedMotion, revealChildren, stamp, useGSAP } from "../lib/motion";
 import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type FriendPerson, type HerePerson, type PresenceVisibility, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 
@@ -110,7 +110,7 @@ export function EventSheet({
   const [checkInSignal, setCheckInSignal] = useState(0);
   const reveal = (key: string) => {
     setOpen((o) => ({ ...o, [key]: true }));
-    requestAnimationFrame(() => sectionRefs.current[key]?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
+    requestAnimationFrame(() => sectionRefs.current[key]?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" }));
   };
   // Tags people decide on at a glance stay visible; the rest fold into Details.
   const KEY_TAGS = ["queer-centered", "all-ages", "18+", "21+", "accessible-entrance", "harm-reduction"];
@@ -119,13 +119,20 @@ export function EventSheet({
   const baseGoing = e.goingCount - (detail?.viewerRsvp === "going" ? 1 : 0);
   const going = baseGoing + (rsvp === "going" ? 1 : 0);
 
-  useEffect(() => {
-    revealChildren(root.current);
-  }, [summary.id]);
-
-  useEffect(() => {
-    countTo(goingEl.current, going);
-  }, [going]);
+  // Tweens made here are reverted if the page closes mid-animation. The stamp runs from a click, so it goes through contextSafe.
+  const { contextSafe } = useGSAP(
+    () => {
+      revealChildren(root.current);
+    },
+    { scope: root, dependencies: [summary.id] },
+  );
+  useGSAP(
+    () => {
+      countTo(goingEl.current, going);
+    },
+    { scope: root, dependencies: [going] },
+  );
+  const stampRsvp = contextSafe(() => stamp(rsvpBtn.current));
 
   useEffect(() => {
     let cancelled = false;
@@ -149,7 +156,7 @@ export function EventSheet({
     const next = rsvp === status ? null : status;
     const prev = rsvp;
     setRsvp(next);
-    if (next === "going") stamp(rsvpBtn.current);
+    if (next === "going") stampRsvp();
     setBusy(true);
     try {
       await api.rsvp(e.id, next);

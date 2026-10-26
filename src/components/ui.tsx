@@ -41,6 +41,45 @@ export function Chip({
   );
 }
 
+/**
+ * One quiet row that opens to show more. Closed, it says what's set inside ("Free", "DIY space, Bar"); open, the
+ * summary steps aside. The caller owns `open`, so a group with something set can start open.
+ */
+export function Disclosure({
+  id,
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  id: string;
+  title: string;
+  summary: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`disc ${open ? "is-open" : ""}`}>
+      <h3 className="disc-h">
+        <button type="button" id={`disc-${id}`} className="disc-row" aria-expanded={open} aria-controls={`disc-${id}-body`} onClick={onToggle}>
+          <span className="disc-title">{title}</span>
+          <span className="disc-summary">{open ? "" : summary}</span>
+          <svg className="disc-chev" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true">
+            <path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </button>
+      </h3>
+      {open && (
+        <div id={`disc-${id}-body`} className="disc-body" role="region" aria-labelledby={`disc-${id}`}>
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** Small bordered label, like save.design's "▷ Preview" tags. */
 export function Tag({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "accent" | "strong" }) {
   return <span className={`tag tag-${tone}`}>{children}</span>;

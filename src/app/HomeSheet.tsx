@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { currentY, setY, slideTo } from "../lib/sheetMotion";
+import { currentY, setY, slideTo, stopMotion } from "../lib/motion";
 
 export type Detent = "peek" | "half" | "full";
 
@@ -70,6 +70,12 @@ export function HomeSheet({
     const on = () => setVh(window.innerHeight);
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
+  }, []);
+
+  // If the sheet goes away mid-slide, stop the tween.
+  useEffect(() => {
+    const node = el.current;
+    return () => stopMotion(node);
   }, []);
 
   // Place the sheet without animation on first paint and on resize; animate on detent changes.
