@@ -23,6 +23,22 @@
     <meta property="og:image:alt" content="Assembly: underground music, DIY shows, raves, and queer nights on one live map." />
     <meta name="twitter:card" content="summary_large_image" />
     <script>
+      // Self-heal a stale app shell: if the app's own script can't load (an old cached page pointing at files a
+      // newer deploy removed), drop the service worker and its caches and reload once from the network.
+      (function () {
+        var healed = false;
+        window.addEventListener("error", function (e) {
+          var el = e.target;
+          if (healed || !el || el.tagName !== "SCRIPT" || !/\/assets\//.test(el.src || "")) return;
+          healed = true;
+          try { if (sessionStorage.getItem("assembly-healed") === "1") return; sessionStorage.setItem("assembly-healed", "1"); } catch (x) {}
+          var regs = navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : Promise.resolve([]);
+          var keys = window.caches ? caches.keys() : Promise.resolve([]);
+          Promise.all([regs, keys]).then(function (r) {
+            return Promise.all(r[0].map(function (g) { return g.unregister(); }).concat(r[1].map(function (k) { return caches.delete(k); })));
+          }).finally(function () { location.reload(); });
+        }, true);
+      })();
       // Set the theme before first paint so there's no flash. Dark unless the visitor chose light.
       // The choice lives under a new key since dark became the default; the old key is ignored and cleared.
       (function () {

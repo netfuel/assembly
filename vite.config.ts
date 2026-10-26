@@ -42,13 +42,26 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         // Fonts are served from R2 by the Worker and cached at runtime below, not precached.
-        globPatterns: ["**/*.{js,mjs,css,html,svg,png}"],
-        navigateFallback: "/index.html",
+        // The HTML shell is not precached: it's fetched network-first below, so a page can never be an older
+        // build than the scripts it asks for (a precached index.html from a half-propagated deploy blanked the app).
+        globPatterns: ["**/*.{js,mjs,css,svg,png}"],
+        navigateFallback: null,
         // Push notifications: public/push-sw.js adds the push and notificationclick handlers.
         importScripts: ["/push-sw.js"],
         navigateFallbackDenylist: [/^\/api\//, /^\/feeds\//, /^\/sitemap\.xml$/],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
+          {
+            // Pages: always the newest from the network; the last copy only when offline or very slow.
+            urlPattern: ({ request, url, sameOrigin }) => sameOrigin && (request as unknown as { mode: string }).mode === "navigate" && !/^\/(api|feeds)\//.test(url.pathname),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pages-v1",
+              networkTimeoutSeconds: 4,
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 40, maxAgeSeconds: 30 * 24 * 3600 },
+            },
+          },
           {
             // Our own font route only (the tile host also has /fonts/ paths, for map glyphs).
             // Cache only real WOFF2 responses, so an error page can never be stored as a font.

@@ -4,7 +4,7 @@
 // tests/security.test.ts fails if they drift.
 
 /** Hash of the inline theme script in index.html (it sets light or dark before first paint). */
-export const THEME_SCRIPT_HASH = "'sha256-oT9a3iK2/fnCZ5F44yMgMsCfutPt6TTqGEqnCxuuh74='";
+export const THEME_SCRIPT_HASH = "'sha256-D7Pyz/SiVuPiRsqcComXKTGm4u7mjfTnp+RnkW9D32o='";
 
 const STREAM = ["https://iframe.videodelivery.net", "https://videodelivery.net", "https://upload.videodelivery.net", "https://*.cloudflarestream.com"];
 
