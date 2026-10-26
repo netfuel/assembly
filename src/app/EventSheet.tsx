@@ -6,6 +6,7 @@ import { ShareSheet } from "../components/ShareSheet";
 import { FlyerViewer } from "../components/FlyerViewer";
 import { CheckIn } from "./CheckIn";
 import { EventWall } from "./EventWall";
+import { Faces } from "../components/Faces";
 import { api, ApiError } from "../lib/api";
 import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
@@ -14,7 +15,7 @@ import { PushPrompt } from "../components/PushControl";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, revealChildren, stamp } from "../lib/motion";
-import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
+import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
 
 
 const LINK_LABELS: Record<string, string> = {
@@ -33,6 +34,8 @@ export function eventUrl(id: string) {
 
 export function EventSheet({
   summary,
+  friends = [],
+  friendsOn = false,
   tz,
   me,
   onClose,
@@ -43,6 +46,9 @@ export function EventSheet({
   toast,
 }: {
   summary: EventSummary;
+  /** Friends going to or at this event (only when your friends are on). */
+  friends?: FriendAt[];
+  friendsOn?: boolean;
   tz: string;
   me: MeProfile | null;
   onClose: () => void;
@@ -292,6 +298,10 @@ export function EventSheet({
         </div>
 
         {!cancelled && <CheckIn event={e} me={me} onNeedSignIn={onNeedSignIn} onChange={onPresence} toast={toast} />}
+
+        {friendsOn && !cancelled && (friends.length > 0 || rsvp === "going" || checkedIn) && (
+          <FriendsHere eventId={e.id} friends={friends} showToggle={rsvp === "going" || checkedIn} toast={toast} />
+        )}
 
         {e.videoId && (
           <section aria-label="Promo video" data-reveal>
@@ -641,5 +651,65 @@ function FlyerImage({ src, alt }: { src: string; alt: string }) {
         onError={() => setLoaded(true)}
       />
     </div>
+  );
+}
+
+/**
+ * Friends at this event, and your own choice for this night: whether friends see that you're going or here.
+ */
+function FriendsHere({ eventId, friends, showToggle, toast }: { eventId: string; friends: FriendAt[]; showToggle: boolean; toast: (m: string) => void }) {
+  const [visibility, setVisibility] = useState<"friends" | "me" | null>(null);
+  useEffect(() => {
+    if (!showToggle) return;
+    api
+      .friendVisibility(eventId)
+      .then((r) => setVisibility(r.visibility))
+      .catch(() => setVisibility(null));
+  }, [eventId, showToggle]);
+  const here = friends.filter((f) => f.state === "here");
+  const going = friends.filter((f) => f.state === "going");
+  return (
+    <section className="friends-here" aria-label="Friends" data-reveal>
+      <Label glyph="◎">Friends</Label>
+      {friends.length > 0 ? (
+        <>
+          <Faces people={friends} size={28} label={false} />
+          <p className="friends-here-names">
+            {here.length > 0 && (
+              <>
+                <strong>Here now:</strong> {here.map((f) => f.displayName).join(", ")}.{" "}
+              </>
+            )}
+            {going.length > 0 && (
+              <>
+                <strong>Going:</strong> {going.map((f) => f.displayName).join(", ")}.
+              </>
+            )}
+          </p>
+        </>
+      ) : (
+        <p className="note">None of your friends are going yet.</p>
+      )}
+      {showToggle && visibility && (
+        <label className="friends-toggle">
+          <input
+            type="checkbox"
+            checked={visibility === "friends"}
+            onChange={async (ev) => {
+              const next = ev.target.checked ? "friends" : "me";
+              setVisibility(next);
+              try {
+                await api.setFriendVisibility(eventId, next);
+                toast(next === "friends" ? "Friends can see you're going." : "This night is just for you now.");
+              } catch (err) {
+                setVisibility(next === "friends" ? "me" : "friends");
+                toast(err instanceof ApiError ? err.message : "Couldn't change that.");
+              }
+            }}
+          />
+          Friends can see I'm going
+        </label>
+      )}
+    </section>
   );
 }

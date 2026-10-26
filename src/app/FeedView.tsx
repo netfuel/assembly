@@ -3,7 +3,8 @@ import { Button, Skeleton, Tag } from "../components/ui";
 import { PromoVideo } from "../components/PromoVideo";
 import { GeneratedArt } from "../components/GeneratedArt";
 import { ShareSheet } from "../components/ShareSheet";
-import { SCENES, type EventSummary, type RsvpStatus, type ServerConfig } from "../../shared/types";
+import { Faces } from "../components/Faces";
+import { SCENES, type EventSummary, type FriendAt, type RsvpStatus, type ServerConfig } from "../../shared/types";
 import { dayLabel, isLive, timeRange } from "../lib/time";
 import { eventUrl } from "./EventSheet";
 
@@ -33,6 +34,7 @@ export function FeedView({
   tz,
   config,
   rsvps,
+  friendsAt = {},
   emptyNote,
   onOpen,
   onShowOnMap,
@@ -49,6 +51,7 @@ export function FeedView({
   tz: string;
   config: ServerConfig;
   rsvps: Record<string, RsvpStatus>;
+  friendsAt?: Record<string, FriendAt[]>;
   emptyNote: React.ReactNode;
   onOpen: (id: string) => void;
   onShowOnMap: (id: string) => void;
@@ -133,6 +136,7 @@ export function FeedView({
                     tz={tz}
                     config={config}
                     rsvp={rsvps[e.id] ?? null}
+                    friends={friendsAt[e.id] ?? []}
                     onOpen={() => onOpen(e.id)}
                     onShowOnMap={() => onShowOnMap(e.id)}
                     onRsvp={() => onRsvp(e.id)}
@@ -165,6 +169,7 @@ function FeedCard({
   tz,
   config,
   rsvp,
+  friends,
   onOpen,
   onShowOnMap,
   onRsvp,
@@ -177,6 +182,7 @@ function FeedCard({
   tz: string;
   config: ServerConfig;
   rsvp: RsvpStatus | null;
+  friends: FriendAt[];
   onOpen: () => void;
   onShowOnMap: () => void;
   onRsvp: () => void;
@@ -239,6 +245,7 @@ function FeedCard({
             {labels.join(" / ")}
           </p>
         )}
+        {friends.length > 0 && <Faces people={friends} />}
         <div className="feed-actions">
           <Button size="sm" variant={rsvp === "going" ? "confirmed" : "primary"} onClick={onRsvp} disabled={cancelled} aria-pressed={rsvp === "going"}>
             {rsvp === "going" ? "Going ✓" : "RSVP"}

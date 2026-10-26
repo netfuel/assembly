@@ -694,3 +694,47 @@
   .door-code .share-qr { width: 200px; height: 200px; }
   .door-code-value { font-size: 1.75rem; letter-spacing: 0.18em; }
 }
+
+/* Friends */
+.avatar { position: relative; }
+.avatar-dot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); border: 2px solid var(--color-ground); }
+.profile-row { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-line); cursor: pointer; font-size: var(--text-sm); }
+.profile-row > span:first-child { flex: 1; }
+.profile-row:hover { border-color: var(--color-line-strong); }
+.profile-row:focus-visible { outline: 2px solid var(--color-accent); }
+.friends { display: grid; gap: var(--space-5); }
+.friends-explain { margin: 0; padding: 0 0 0 1.1em; display: grid; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-muted); }
+.friends-explain strong { color: var(--color-fg); font-weight: 500; }
+.friend-avatar { flex: none; display: inline-grid; place-items: center; border-radius: 50%; overflow: hidden; background: var(--color-surface-raised); border: 1px solid var(--color-line-strong); color: var(--color-fg); font-size: 13px; font-weight: 600; }
+.friend-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.friend-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.friend-list li, .friend-found { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
+.friend-name { flex: 1; min-width: 0; display: grid; font-size: var(--text-sm); overflow-wrap: anywhere; }
+.friend-name .dim { font-size: var(--text-2xs); }
+.friend-hidden { font-size: var(--text-2xs); color: var(--color-faint); }
+.friend-menu { position: relative; }
+.friend-menu summary { list-style: none; cursor: pointer; padding: 4px 10px; color: var(--color-muted); border: 1px solid var(--color-line); }
+.friend-menu summary::-webkit-details-marker { display: none; }
+.friend-menu-items { position: absolute; right: 0; top: calc(100% + 4px); z-index: 3; min-width: 220px; display: grid; background: var(--color-surface-raised); border: 1px solid var(--color-line-strong); box-shadow: 0 12px 30px rgb(0 0 0 / 0.3); }
+.friend-menu-items button { all: unset; padding: 10px 12px; cursor: pointer; font-size: var(--text-sm); }
+.friend-menu-items button:hover, .friend-menu-items button:focus-visible { background: var(--color-surface); }
+.friends-invite-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-3); align-items: start; }
+.username-field { display: flex; align-items: center; gap: 6px; }
+.username-field input { flex: 1; min-width: 0; }
+.friends-blocked summary { cursor: pointer; font-size: var(--text-xs); color: var(--color-muted); }
+.invite { justify-items: start; }
+.invite-person { display: grid; justify-items: start; gap: var(--space-2); }
+
+/* Friends at events: stacked faces */
+.faces { display: inline-flex; align-items: center; }
+.faces .friend-avatar { margin-left: -6px; border: 2px solid var(--color-surface); }
+.faces .friend-avatar:first-child { margin-left: 0; }
+.faces .friend-avatar.is-here { border-color: var(--color-accent); }
+.faces-more { margin-left: 6px; font-size: var(--text-2xs); color: var(--color-muted); }
+.faces > .face { display: inline-flex; margin-left: -6px; } .faces > .face:first-child { margin-left: 0; } .faces .friend-avatar { margin: 0; } .faces .is-here-wrap .friend-avatar { border-color: var(--color-accent); }
+.friends-here { display: grid; gap: var(--space-2); }
+.friends-here-names { margin: 0; font-size: var(--text-sm); }
+.friends-here-names strong { font-weight: 500; }
+.friends-toggle { display: flex; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--color-muted); }
+.card-friends { display: flex; }
+.card-friends .faces-more { font-size: 10px; }

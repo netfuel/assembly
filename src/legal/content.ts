@@ -31,6 +31,7 @@ export const PRIVACY: LegalDoc = {
           "RSVPs: which events you marked going or interested.",
           "Check-ins: which events you checked in to, when, how (location or door code), and when you checked out. Never where you were.",
           "Wall photos you post, their captions, and whether you posted without your name.",
+          "Friends: your username if you choose one, who you're friends with, requests, people you block or hide your nights from, and whether friends see a given night.",
           "Notifications: if you turn them on, the push address your browser gives us for this device.",
           "Reports you send, and reports others send about events or accounts.",
           "Basic technical logs (time, page requested, IP address, browser) kept by our host for security and debugging.",
@@ -45,6 +46,7 @@ export const PRIVACY: LegalDoc = {
         "Reports are private. The person or organizer reported doesn't see who sent them.",
         "Event walls: photos are visible to the host and to people who RSVP'd or checked in to that event. The host can pick a few as highlights, which anyone with the event link can see. If you post without your name, other people (the host included) don't see who posted it; moderators can, to handle abuse.",
         "Check-ins: others see only how many people are checked in, not who.",
+        "Friends: only after you turn friends on, your friends (people you both accepted) see the events you RSVP'd Going to or checked in to. You can keep any night just for you, hide your nights from one friend, or turn friends off, which hides you from everyone at once. Friends never see a location, only the event. Nobody, including other friends and hosts, can see your friend list. Blocking someone ends the friendship and they aren't told.",
       ],
     },
     {

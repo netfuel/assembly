@@ -28,6 +28,7 @@ export function FilterSheet({
   onClose,
   filters,
   tz,
+  friendsOn = false,
   count,
   onApply,
 }: {
@@ -35,6 +36,8 @@ export function FilterSheet({
   onClose: () => void;
   filters: Filters;
   tz: string;
+  /** Show the Friends filter (only when friends are on). */
+  friendsOn?: boolean;
   count: (f: Filters) => number;
   onApply: (f: Filters) => void;
 }) {
@@ -87,6 +90,17 @@ export function FilterSheet({
             </label>
           )}
         </fieldset>
+
+        {friendsOn && (
+          <fieldset className="filter-group" data-reveal>
+            <legend className="field-label">Friends</legend>
+            <div className="chip-row">
+              <Chip pressed={draft.friends} onClick={() => set({ friends: !draft.friends })}>
+                ◎ Friends going
+              </Chip>
+            </div>
+          </fieldset>
+        )}
 
         <fieldset className="filter-group" data-reveal>
           <legend className="field-label">Scene</legend>
@@ -151,6 +165,7 @@ export function FilterSheet({
 export function FilterChips({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
   const chips: { key: string; label: string; remove: Partial<Filters> }[] = [];
   if (filters.q) chips.push({ key: "q", label: `“${filters.q}”`, remove: { q: null } });
+  if (filters.friends) chips.push({ key: "friends", label: "Friends going", remove: { friends: false } });
   if (filters.windowId !== "tonight") {
     const label = filters.windowId === "date" && filters.date ? dateHeading(filters.date) : WHEN.find((w) => w.id === filters.windowId)!.label;
     chips.push({ key: "when", label, remove: { windowId: "tonight" } });

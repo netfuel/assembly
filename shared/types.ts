@@ -256,3 +256,34 @@ export interface WallState {
   /** Posts you can't see until you RSVP. */
   hiddenCount: number;
 }
+
+export interface FriendPerson {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  username: string | null;
+}
+
+export interface FriendsState {
+  me: {
+    username: string | null;
+    /** Turned friends on (saw the explainer). Off: nobody sees your presence, and you don't see theirs. */
+    friendsOn: boolean;
+    /** What friends see for a new Going or check-in. */
+    presenceDefault: "friends" | "me";
+  };
+  friends: (FriendPerson & { hidden: boolean })[];
+  incoming: FriendPerson[];
+  outgoing: FriendPerson[];
+  blocked: FriendPerson[];
+}
+
+/** A friend at an event: going (RSVP'd) or here (checked in now). */
+export interface FriendAt {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  state: "going" | "here";
+}
+
+export type UserRelation = "self" | "none" | "friends" | "incoming" | "outgoing";

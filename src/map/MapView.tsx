@@ -4,7 +4,8 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { mapPalette, mapStyle, type MapTheme } from "./mapStyle";
 import { isLive } from "../lib/time";
-import type { EventSummary } from "../../shared/types";
+import type { EventSummary, FriendAt } from "../../shared/types";
+import { FriendMarkers } from "./friendMarkers";
 import { hasThumb, syncThumbs, thumbImageId } from "./thumbPins";
 import { MyLocationMarker } from "./myLocation";
 import type { Position } from "../lib/location";
@@ -63,9 +64,12 @@ export function MapView({
   highlight = null,
   fit = null,
   myPosition = null,
+  friends = {},
   followMe = false,
   onUnfollow,
 }: {
+  /** Friends going to or at events: faces above those pins. */
+  friends?: Record<string, FriendAt[]>;
   /** The viewer's own position (stays on the device): drawn as a dot. */
   myPosition?: Position | null;
   /** Keep the map centered on the viewer's dot until they pan away. */
@@ -87,6 +91,9 @@ export function MapView({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibre | null>(null);
+  const friendMarkers = useRef<FriendMarkers | null>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
   const ready = useRef(false);
   const loadThumbsRef = useRef<(() => void) | null>(null);
   const latest = useRef({ events, selectedId, onSelect, theme, highlight, onUnfollow });
@@ -428,6 +435,20 @@ export function MapView({
       map.easeTo({ center: [myPosition.lng, myPosition.lat], padding, duration: reduce ? 0 : 600 });
     }
   }, [followMe, myPosition]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    friendMarkers.current ??= new FriendMarkers(map);
+    friendMarkers.current.update(events, friends, (id) => onSelectRef.current(id));
+  }, [events, friends]);
+  useEffect(
+    () => () => {
+      friendMarkers.current?.destroy();
+      friendMarkers.current = null;
+    },
+    [],
+  );
 
   return <div ref={container} className="map" role="region" aria-label="Map of events" />;
 }

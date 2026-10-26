@@ -3,7 +3,7 @@ import { Button, Chip, Label, Tag, Skeleton } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { MediaError, prepareAvatar } from "../lib/media";
 import { clock, dayLabel } from "../lib/time";
-import { SCENES, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
+import { SCENES, type FriendsState, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
 import { PushControl } from "../components/PushControl";
 import { VarsityMark } from "./EventSheet";
 import "./announce.css";
@@ -34,9 +34,14 @@ export function ProfileSheet({
   onOpenEvent,
   onAnnounce,
   onModerate,
+  friends,
+  onFriends,
   config,
   toast,
 }: {
+  /** Null when friends aren't available on this server yet. */
+  friends: FriendsState | null;
+  onFriends: () => void;
   config: ServerConfig;
   me: MeProfile;
   onModerate: () => void;
@@ -117,6 +122,23 @@ export function ProfileSheet({
         )}
         <span className="note">{me.showAttendance ? "You show up on who's going lists." : "Your RSVPs are private."}</span>
       </div>
+
+      {friends && (
+        <section className="stack" data-reveal aria-label="Friends">
+          <Label glyph="◎">Friends</Label>
+          <button className="profile-row" onClick={onFriends}>
+            <span>
+              {!friends.me.friendsOn
+                ? "See which nights your friends are going to"
+                : friends.friends.length
+                  ? `${friends.friends.length} friend${friends.friends.length === 1 ? "" : "s"}${friends.me.username ? ` · @${friends.me.username}` : ""}`
+                  : "Invite your first friend"}
+            </span>
+            {friends.incoming.length > 0 && <Tag tone="accent">{friends.incoming.length} new</Tag>}
+            <span aria-hidden="true">→</span>
+          </button>
+        </section>
+      )}
 
       {config.push && (
         <section className="stack" data-reveal aria-label="Notifications">

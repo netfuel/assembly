@@ -33,3 +33,14 @@
 @keyframes me-pulse { 0% { transform: scale(1); opacity: 0.8; border-color: var(--grad-pink); } 100% { transform: scale(3.4); opacity: 0; border-color: var(--grad-green); } }
 @keyframes me-drop { from { transform: translateY(-14px) scale(0.6); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .me-pulse { animation: none; opacity: 0; } .me-marker.is-new .me-dot { animation: none; } .me-acc { transition: none; } }
+
+/* Friends' faces above event pins */
+.friend-pin { all: unset; cursor: pointer; display: inline-flex; align-items: center; padding: 2px; border-radius: 999px; background: var(--color-surface-raised, #1a1b1e); border: 1px solid var(--color-line-strong, #3a3c42); box-shadow: 0 4px 12px rgb(0 0 0 / 0.35); }
+.friend-pin.is-hidden { display: none; }
+.friend-pin-face { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; margin-left: -6px; background: var(--color-surface, #121315); color: var(--color-fg, #ededee); font: 600 11px/1 system-ui, sans-serif; border: 2px solid var(--color-surface-raised, #1a1b1e); }
+.friend-pin-face:first-child { margin-left: 0; }
+.friend-pin-face.is-here { border-color: var(--color-accent, #ff3df2); }
+.friend-pin-face img { width: 100%; height: 100%; object-fit: cover; }
+.friend-pin-more { margin: 0 4px 0 3px; font: 600 10px/1 system-ui, sans-serif; color: var(--color-muted, #9a9da4); }
+.friend-pin:focus-visible { outline: 2px solid var(--color-accent, #ff3df2); outline-offset: 2px; }
+.friend-pin { z-index: 2; }

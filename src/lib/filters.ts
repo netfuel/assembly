@@ -20,9 +20,11 @@ export interface Filters {
   venueTypes: string[];
   /** A search from the search sheet, applied to the map and feed. Not remembered between visits. */
   q: string | null;
+  /** Only nights a friend is going to or at. */
+  friends: boolean;
 }
 
-export const DEFAULT_FILTERS: Filters = { windowId: "tonight", date: null, scenes: [], policies: [], price: "any", venueTypes: [], q: null };
+export const DEFAULT_FILTERS: Filters = { windowId: "tonight", date: null, scenes: [], policies: [], price: "any", venueTypes: [], q: null, friends: false };
 
 const WINDOWS: WindowId[] = ["tonight", "weekend", "week", "all", "date"];
 const KEY = "assembly:filters";
@@ -38,6 +40,7 @@ interface Raw {
   price?: string | null;
   venue?: string | null;
   q?: string | null;
+  friends?: string | null;
 }
 
 function clean(raw: Raw): Filters | null {
@@ -47,17 +50,18 @@ function clean(raw: Raw): Filters | null {
   const venueTypes = list(raw.venue, (s) => s in VENUE_TYPES);
   const price = PRICES.some((p) => p.id === raw.price) ? (raw.price as PriceId) : "any";
   const q = raw.q?.trim().slice(0, 80) || null;
-  if (!when && !scenes.length && !policies.length && !venueTypes.length && price === "any" && !q) return null;
+  const friends = raw.friends === "1";
+  if (!when && !scenes.length && !policies.length && !venueTypes.length && price === "any" && !q && !friends) return null;
   const date = isDate(raw.date) ? raw.date : null;
   // "date" without a valid date falls back to tonight.
   // A search link without a time window looks at everything coming up.
   const fallback: WindowId = q ? "all" : "tonight";
-  return { windowId: when === "date" && !date ? fallback : (when ?? fallback), date, scenes, policies, price, venueTypes, q };
+  return { windowId: when === "date" && !date ? fallback : (when ?? fallback), date, scenes, policies, price, venueTypes, q, friends };
 }
 
 export function filtersFromUrl(search: string): Filters | null {
   const p = new URLSearchParams(search);
-  return clean({ when: p.get("when"), date: p.get("date"), scene: p.get("scene"), policy: p.get("policy"), price: p.get("price"), venue: p.get("venue"), q: p.get("q") });
+  return clean({ when: p.get("when"), date: p.get("date"), scene: p.get("scene"), policy: p.get("policy"), price: p.get("price"), venue: p.get("venue"), q: p.get("q"), friends: p.get("friends") });
 }
 
 /** The URL query for these filters, empty for the default (tonight, everything). */
@@ -70,13 +74,14 @@ export function filtersQuery(f: Filters): string {
   if (f.policies.length) p.set("policy", f.policies.join(","));
   if (f.price !== "any") p.set("price", f.price);
   if (f.venueTypes.length) p.set("venue", f.venueTypes.join(","));
+  if (f.friends) p.set("friends", "1");
   const s = p.toString().replace(/%2C/g, ","); // "+" stays %2B: a bare + reads as a space
   return s ? `?${s}` : "";
 }
 
 /** How many filters are on, for the badge on the Filters button. The time window counts when it isn't Tonight. */
 export function activeCount(f: Filters) {
-  return (f.q ? 1 : 0) + (f.windowId !== "tonight" ? 1 : 0) + f.scenes.length + f.policies.length + (f.price !== "any" ? 1 : 0) + f.venueTypes.length;
+  return (f.q ? 1 : 0) + (f.windowId !== "tonight" ? 1 : 0) + f.scenes.length + f.policies.length + (f.price !== "any" ? 1 : 0) + f.venueTypes.length + (f.friends ? 1 : 0);
 }
 
 export function saveFilters(f: Filters, today: string) {
@@ -100,6 +105,7 @@ export function savedFilters(today: string): Filters | null {
       policy: (raw.policies ?? []).join(","),
       price: raw.price,
       venue: (raw.venueTypes ?? []).join(","),
+      friends: raw.friends ? "1" : null,
     });
     if (!f) return null;
     if (raw.day !== today) {

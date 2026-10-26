@@ -10,6 +10,8 @@ import { hideSplash } from "../lib/splash";
 import { announceGoing } from "../lib/install";
 import { FeedView } from "./FeedView";
 import { SearchSheet } from "./SearchSheet";
+import { FriendsSheet, InviteSheet } from "./FriendsSheet";
+import { Faces } from "../components/Faces";
 import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilters, saveFilters, type Filters } from "../lib/filters";
 import { FilterSheet, FilterChips } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
@@ -22,7 +24,7 @@ import { AnnounceForm } from "./AnnounceForm";
 import { ProfileSheet } from "./ProfileSheet";
 import { SignInSheet } from "./SignInSheet";
 import { ModerationSheet } from "./ModerationSheet";
-import { type AuthProviders, type RsvpStatus, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
+import { type AuthProviders, type FriendAt, type FriendsState, type RsvpStatus, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
 import "./app.css";
 
 const WINDOWS: { id: WindowId; label: string; heading: string }[] = [
@@ -88,11 +90,16 @@ export function App() {
   };
   // Your RSVPs, so feed cards can show "Going" and toggle it.
   const [rsvps, setRsvps] = useState<Record<string, RsvpStatus>>({});
+  // Friends: null until loaded (or when the server doesn't have friends yet).
+  const [friendsState, setFriendsState] = useState<FriendsState | null>(null);
+  const [friendsAt, setFriendsAt] = useState<Record<string, FriendAt[]>>({});
+  // A friend's invite link (/f/<token>) opened this page.
+  const [inviteToken] = useState(() => location.pathname.match(/^\/f\/([\w-]{8,64})/)?.[1] ?? null);
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [me, setMe] = useState<MeProfile | null>(null);
   const [providers, setProviders] = useState<AuthProviders>({ google: false, apple: false });
   const [providersFailed, setProvidersFailed] = useState(false);
-  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation" | "subscribe">(null);
+  const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation" | "subscribe" | "friends" | "invite">(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<ServerConfig>({ video: false, streamCustomerCode: null });
   const [editing, setEditing] = useState<EventDetail | null>(null);
@@ -146,6 +153,25 @@ export function App() {
     if (!meId) return;
     saveProfileForOffline();
   }, [meId]);
+  useEffect(() => {
+    if (!meId) return setFriendsState(null);
+    api.friends().then(setFriendsState).catch(() => setFriendsState(null));
+  }, [meId]);
+  const friendsOn = !!friendsState?.me.friendsOn;
+  // Friends' nights: on load, whenever an event sheet closes (you may have RSVP'd), and every two minutes.
+  const loadFriendsAt = useCallback(() => api.friendsAt().then(setFriendsAt).catch(() => undefined), []);
+  useEffect(() => {
+    if (!meId || !friendsOn) return setFriendsAt({});
+    void loadFriendsAt();
+    const t = setInterval(() => document.visibilityState === "visible" && void loadFriendsAt(), 120000);
+    return () => clearInterval(t);
+  }, [meId, friendsOn, friendsState?.friends.length, loadFriendsAt]);
+  useEffect(() => {
+    if (meId && friendsOn && !selectedId) void loadFriendsAt();
+  }, [selectedId, meId, friendsOn, loadFriendsAt]);
+  useEffect(() => {
+    if (inviteToken) setSheet("invite");
+  }, [inviteToken]);
   // Saved for the door, and the feed's Going state. Re-read when an event sheet closes, since you may have RSVP'd there.
   useEffect(() => {
     if (!meId) return setRsvps({});
@@ -287,9 +313,11 @@ export function App() {
       if (f.q && f.windowId === "all") range.to = new Date(now.getTime() + 400 * 86400e3);
       // While a search is loading, show nothing rather than everything.
       const ids = f.q ? (searchHits?.q === f.q ? searchHits.ids : new Set<string>()) : null;
-      return events.filter((e) => (!ids || ids.has(e.id)) && overlaps(e.startsAt, e.endsAt, range) && matchesFilters(e, f));
+      return events.filter(
+        (e) => (!ids || ids.has(e.id)) && (!f.friends || !!friendsAt[e.id]?.length) && overlaps(e.startsAt, e.endsAt, range) && matchesFilters(e, f),
+      );
     },
-    [events, now, city.timezone, searchHits],
+    [events, now, city.timezone, searchHits, friendsAt],
   );
   const shown = useMemo(() => matching(filters), [matching, filters]);
   // Frame the results on the map once a search lands.
@@ -419,7 +447,8 @@ export function App() {
   );
   const heading = windowId === "date" ? `${dateHeading(pickedDate)}.` : WINDOWS.find((w) => w.id === windowId)!.heading;
   const [signInIntent, setSignInIntent] = useState<"post" | null>(null);
-  const returnTo = signInIntent === "post" ? "/?compose=1" : selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
+  const returnTo =
+    signInIntent === "post" ? "/?compose=1" : sheet === "invite" && inviteToken ? `/f/${inviteToken}` : selectedId ? `/e/${encodeURIComponent(selectedId)}` : "/";
   // RSVP from a feed card: Going on, or off again. Optimistic, like the event page.
   async function feedRsvp(id: string) {
     if (!me) return openSignIn();
@@ -465,6 +494,7 @@ export function App() {
   return (
     <div className="app">
       <MapView
+        friends={friendsAt}
         fit={fit}
         // While following the viewer's dot, cards still ring their pin but don't pull the map away.
         highlight={selectedId ? null : followMe && highlight ? { ...highlight, follow: false } : highlight}
@@ -524,6 +554,7 @@ export function App() {
           {me ? (
             <button className="avatar" onClick={() => setSheet("profile")} aria-label="Your profile">
               {me.avatarUrl ? <img src={me.avatarUrl} alt="" referrerPolicy="no-referrer" /> : me.displayName.slice(0, 1).toUpperCase()}
+              {!!friendsState?.incoming.length && <span className="avatar-dot" aria-label={`${friendsState.incoming.length} friend requests`} />}
             </button>
           ) : (
             <Button size="sm" variant="solid" onClick={() => openSignIn()}>
@@ -566,6 +597,7 @@ export function App() {
           tz={city.timezone}
           config={config}
           rsvps={rsvps}
+          friendsAt={friendsAt}
           emptyNote={emptyNote}
           onOpen={select}
           onShowOnMap={showOnMap}
@@ -661,6 +693,11 @@ export function App() {
                       {dayLabel(e.startsAt, now, city.timezone)} / {clock(e.startsAt, city.timezone)}
                       {myPos && <span className="dim"> / {distanceTo(e)}</span>}
                     </span>
+                    {friendsAt[e.id] && (
+                      <span className="card-friends">
+                        <Faces people={friendsAt[e.id]} size={18} />
+                      </span>
+                    )}
                     <span className="card-meta">
                       <span className="card-venue">{e.venueName ?? e.neighborhood}</span>
                       <span className="num">{e.hereNow ? `${e.hereNow} here · ` : ""}{e.goingCount} going</span>
@@ -677,6 +714,8 @@ export function App() {
         <EventSheet
           key={`${selected.id}:${detailVersion}`}
           summary={selected}
+          friends={friendsAt[selected.id] ?? []}
+          friendsOn={friendsOn}
           tz={city.timezone}
           me={me}
           config={config}
@@ -700,7 +739,7 @@ export function App() {
             setMe(user);
             toast(isNew ? `Welcome, ${user.displayName}.` : "You're signed in.");
             // Came from the Post button: go straight to the form.
-            setSheet(signInIntent === "post" ? "announce" : null);
+            setSheet(signInIntent === "post" ? "announce" : inviteToken ? "invite" : null);
           }}
         />
       </Sheet>
@@ -745,6 +784,8 @@ export function App() {
               setSheet("announce");
             }}
             onModerate={() => setSheet("moderation")}
+            friends={friendsState}
+            onFriends={() => setSheet("friends")}
             config={config}
             onSignedOut={(message) => {
               clearUserCaches();
@@ -752,6 +793,26 @@ export function App() {
               setSheet(null);
               setSelectedId(null);
               toast(message);
+            }}
+            toast={toast}
+          />
+        )}
+      </Sheet>
+
+      <Sheet open={sheet === "friends" && !!me} onClose={() => setSheet("profile")} label="Friends" modal center>
+        <FriendsSheet state={friendsState} onState={setFriendsState} toast={toast} />
+      </Sheet>
+
+      <Sheet open={sheet === "invite" && !!inviteToken} onClose={() => setSheet(null)} label="Friend invite" modal center>
+        {inviteToken && (
+          <InviteSheet
+            token={inviteToken}
+            signedIn={!!me}
+            onNeedSignIn={() => openSignIn()}
+            onDone={(st) => {
+              if (st) setFriendsState(st);
+              // Not on yet: show the explainer next, so the new friendship means something.
+              setSheet(st && !st.me.friendsOn ? "friends" : null);
             }}
             toast={toast}
           />
@@ -783,6 +844,7 @@ export function App() {
         onClose={() => setFiltersOpen(false)}
         filters={filters}
         tz={city.timezone}
+        friendsOn={friendsOn}
         count={(f) => matching(f).length}
         onApply={(f) => {
           setFilters(f);
