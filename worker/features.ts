@@ -5,7 +5,7 @@ import type { Features } from "../shared/types";
 /** The beta modules from the design review. Each can be switched off without a deploy of new code. */
 export function features(env: Pick<Env, "FEATURES_OFF">): Features {
   const off = new Set((env.FEATURES_OFF ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
-  return { wall: !off.has("wall"), friends: !off.has("friends"), checkin: !off.has("checkin"), reactions: !off.has("reactions") };
+  return { wall: !off.has("wall"), friends: !off.has("friends"), checkin: !off.has("checkin"), reactions: !off.has("reactions"), comments: !off.has("comments") };
 }
 
 /** Which module an API path belongs to, if any. Paths are as the API app sees them (no /api prefix). */
@@ -14,6 +14,7 @@ export function moduleFor(path: string): keyof Features | null {
   if (path.startsWith("/friends") || /^\/events\/[^/]+\/(friend-visibility|invite|invites|here)(\/|$)/.test(path)) return "friends";
   if (/^\/events\/[^/]+\/(checkin|presence|door-code)(\/|$)/.test(path)) return "checkin";
   if (/^\/events\/[^/]+\/react$/.test(path)) return "reactions";
+  if (/^\/events\/[^/]+\/comments(-mode)?$/.test(path) || /^\/mod\/comments(\/|$)/.test(path) || /^\/comments(\/|$)/.test(path)) return "comments";
   return null;
 }
 

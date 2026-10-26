@@ -6,6 +6,7 @@ import { organizerSlug, venueSlug } from "./pages";
 import { endedEarly, markEnded } from "./live";
 import { flyerDownloadsOn } from "./posting";
 import { reactionsFor } from "./reactions";
+import { commentSummary } from "./comments";
 import { features } from "./features";
 import type { EventDetail, EventSummary, LineupSlot, RsvpStatus, SceneId } from "../shared/types";
 
@@ -167,6 +168,7 @@ events.get("/:id", async (c) => {
     endedEarly: (await endedEarly(c.env, [row.id])).has(row.id) || undefined,
     flyerDownloads: await flyerDownloadsOn(c.env.DB, row.id),
     reactions: features(c.env).reactions ? await reactionsFor(c.env, row.id, userId) : undefined,
+    ...(features(c.env).comments ? await commentSummary(c.env, row.id).then((s) => ({ commentCount: s.count, commentsMode: s.mode })) : {}),
     description: row.description,
     gettingThere: row.getting_there,
     lineup,

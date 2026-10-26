@@ -27,6 +27,11 @@ import type {
   PageKind,
   PageProfile,
   ReactionKind,
+  CommentThread,
+  CommentMode,
+  ModCommentItem,
+  BlockedPerson,
+  EventComment,
   Reactions,
 } from "../../shared/types";
 
@@ -135,6 +140,20 @@ export const api = {
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   inbox: () => request<Inbox>("/api/me/inbox"),
   react: (id: string, kind: ReactionKind, on: boolean) => request<Reactions>(`/api/events/${enc(id)}/react`, { method: "POST", body: JSON.stringify({ kind, on }) }),
+  comments: (id: string) => request<CommentThread>(`/api/events/${enc(id)}/comments`),
+  comment: (id: string, body: string, parentId: string | null) =>
+    request<{ comment: EventComment; thread: CommentThread }>(`/api/events/${enc(id)}/comments`, { method: "POST", body: JSON.stringify({ body, parentId }) }),
+  editComment: (id: string, body: string) => request<CommentThread>(`/api/comments/${enc(id)}`, { method: "PATCH", body: JSON.stringify({ body }) }),
+  commentsMode: (eventId: string, mode: CommentMode) => request<CommentThread>(`/api/events/${enc(eventId)}/comments-mode`, { method: "PUT", body: JSON.stringify({ mode }) }),
+  modComments: () => request<{ items: ModCommentItem[] }>("/api/mod/comments").then((r) => r.items),
+  modComment: (id: string, action: "restore" | "remove") => request<{ ok: true }>(`/api/mod/comments/${enc(id)}`, { method: "POST", body: JSON.stringify({ action }) }),
+  blocks: () => request<{ people: BlockedPerson[] }>("/api/me/blocks").then((r) => r.people),
+  blockPerson: (userId: string, kind: "mute" | "block") => request<{ ok: true }>(`/api/me/blocks/${enc(userId)}`, { method: "PUT", body: JSON.stringify({ kind }) }),
+  unblock: (userId: string) => request<{ ok: true }>(`/api/me/blocks/${enc(userId)}`, { method: "DELETE" }),
+  removeComment: (id: string) => request<CommentThread>(`/api/comments/${enc(id)}`, { method: "DELETE" }),
+  pinComment: (id: string, pinned: boolean) => request<CommentThread>(`/api/comments/${enc(id)}/pin`, { method: "POST", body: JSON.stringify({ pinned }) }),
+  reportComment: (id: string, reason: string, note: string) =>
+    request<{ ok: true; hidden: boolean }>(`/api/comments/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   inboxSeen: () => request<{ ok: true }>("/api/me/inbox/seen", { method: "POST" }),
   setLive: (id: string, action: "end" | "extend") =>
     request<{ endsAt: string; endedEarly: boolean }>(`/api/events/${encodeURIComponent(id)}/live`, { method: "POST", body: JSON.stringify({ action }) }),

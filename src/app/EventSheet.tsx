@@ -6,6 +6,7 @@ import { ShareSheet } from "../components/ShareSheet";
 import { FlyerViewer } from "../components/FlyerViewer";
 import { CheckIn } from "./CheckIn";
 import { ReactionBar } from "./Reactions";
+import { Comments } from "./Comments";
 import { EventWall } from "./EventWall";
 import { Faces } from "../components/Faces";
 import { FriendAvatar } from "./FriendsSheet";
@@ -45,13 +46,13 @@ function liveLine(endsAt: string, now: Date) {
   return `Live now · ${h}h${m ? ` ${m}m` : ""} left`;
 }
 
-type SectionKey = "details" | "here" | "wall" | "people";
+type SectionKey = "details" | "here" | "wall" | "people" | "comments";
 /** What comes first depends on the night: before, the details; during, who's here and the wall; after, the wall. */
 const SECTION_ORDER: Record<"cancelled" | "upcoming" | "live" | "past", SectionKey[]> = {
-  upcoming: ["details", "people"],
-  live: ["here", "wall", "details"],
-  past: ["wall", "details"],
-  cancelled: ["details"],
+  upcoming: ["details", "comments", "people"],
+  live: ["here", "wall", "details", "comments"],
+  past: ["wall", "comments", "details"],
+  cancelled: ["details", "comments"],
 };
 
 export function EventSheet({
@@ -64,6 +65,7 @@ export function EventSheet({
   onClose,
   onNeedSignIn,
   onEdit,
+  initialSection,
   onChanged,
   onOpenPage,
   config,
@@ -81,6 +83,8 @@ export function EventSheet({
   me: MeProfile | null;
   onClose: () => void;
   onNeedSignIn: () => void;
+  /** Open on this section (a reply notification opens the comments). */
+  initialSection?: "comments" | null;
   onEdit: (detail: EventDetail) => void;
   /** Something about the event changed (a new host): reload it. */
   onChanged: () => void;
@@ -115,7 +119,7 @@ export function EventSheet({
   // Ended early by mistake? The organizer can reopen it for an hour afterwards.
   const reopenable = !!e.endedEarly && phase === "past" && nowMs < Date.parse(e.endsAt) + 3600e3;
   // Beta modules can be switched off on the server (FEATURES_OFF); their sections and actions go with them.
-  const feat = config.features ?? { wall: true, friends: true, checkin: true, reactions: true };
+  const feat = config.features ?? { wall: true, friends: true, checkin: true, reactions: true, comments: true };
   const canCheckIn = feat.checkin && phase === "live";
   const hasWall = feat.wall && !photoFree;
   const [open, setOpen] = useState<Record<string, boolean>>(() => ({
@@ -123,13 +127,22 @@ export function EventSheet({
     here: phase === "live",
     wall: phase === "past" || (phase === "live" && !photoFree),
     people: false,
+    comments: initialSection === "comments",
   }));
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [commentTotal, setCommentTotal] = useState<number | null>(null);
   const [checkInSignal, setCheckInSignal] = useState(0);
   const reveal = (key: string) => {
     setOpen((o) => ({ ...o, [key]: true }));
     requestAnimationFrame(() => sectionRefs.current[key]?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" }));
   };
+  useEffect(() => {
+    if (!initialSection) return;
+    const t = setTimeout(() => reveal(initialSection), 450);
+    return () => clearTimeout(t);
+    // Once, when the sheet opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Tags people decide on at a glance stay visible; the rest fold into Details.
   const KEY_TAGS = ["queer-centered", "all-ages", "18+", "21+", "accessible-entrance", "harm-reduction"];
   const keyTags = e.policyTags.filter((t) => KEY_TAGS.includes(t));
@@ -431,6 +444,31 @@ export function EventSheet({
           />
               </EvSection>
             ) : null;
+          if (key === "comments") {
+            if (!feat.comments) return null;
+            const mode = detail?.commentsMode ?? "on";
+            const staff = !!(detail?.viewerIsHost || detail?.viewerCanEdit);
+            // Off hides the thread from everyone but the host and moderators.
+            if (mode === "off" && !staff) return null;
+            const n = commentTotal ?? detail?.commentCount ?? 0;
+            return (
+              <EvSection
+                key={key}
+                id="comments"
+                title="Comments"
+                summary={
+                  mode === "off"
+                    ? "Off"
+                    : [n ? `${n} ${n === 1 ? "comment" : "comments"}` : null, mode === "locked" || cancelled ? "read only" : n ? null : "Ask a question, say you're coming"].filter(Boolean).join(" · ")
+                }
+                open={open.comments}
+                onToggle={toggle}
+                refs={sectionRefs}
+              >
+                <Comments eventId={e.id} me={me} tz={tz} onNeedSignIn={onNeedSignIn} toast={toast} onCount={setCommentTotal} />
+              </EvSection>
+            );
+          }
           if (key === "wall")
             return !hasWall ? null : (
               <EvSection key={key} id="wall" title="Wall" summary={phase === "past" ? "Photos from the night" : "Photos from the room"} open={open.wall} onToggle={toggle} refs={sectionRefs}>

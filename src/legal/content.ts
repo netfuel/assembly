@@ -31,6 +31,7 @@ export const PRIVACY: LegalDoc = {
           "RSVPs: which events you marked going or interested.",
           "Check-ins: which events you checked in to, when, how (location or door code), and when you checked out. Never where you were.",
           "Wall photos you post, their captions, and whether you posted without your name.",
+          "Comments you post on event pages, when you posted or edited them, and the people you mute or block from comments.",
           "Friends: your username if you choose one, who you're friends with, requests, people you block or hide your nights from, and whether friends see a given night.",
           "Notifications: if you turn them on, the push address your browser gives us for this device.",
           "Reports you send, and reports others send about events or accounts.",
@@ -45,6 +46,7 @@ export const PRIVACY: LegalDoc = {
         "Private by default: your RSVPs, your email, and everything else on your profile. Your RSVPs only count toward an event's total unless you turn on \"Show me on who's going lists\" in your profile.",
         "Reports are private. The person or organizer reported doesn't see who sent them.",
         "Event walls: photos are visible to the host and to people who RSVP'd or checked in to that event. The host can pick a few as highlights, which anyone with the event link can see. If you post without your name, other people (the host included) don't see who posted it; moderators can, to handle abuse.",
+        "Comments: anyone who can see the event can read its comments, with your name and photo, unless the host turned comments off. Hosts and moderators can remove comments. Nobody is told when you mute or block them.",
         "Check-ins: others see only how many people are checked in, not who.",
         "Friends: only after you turn friends on, your friends (people you both accepted) see the events you RSVP'd Going to or checked in to. You can keep any night just for you, hide your nights from one friend, or turn friends off, which hides you from everyone at once. Friends never see a location, only the event. Nobody, including other friends and hosts, can see your friend list. Blocking someone ends the friendship and they aren't told.",
         "\"Everyone here\" for a night: besides friends, people checked in to the same event see your name and photo while you're both there. Only people checked in can see that list.",
@@ -84,7 +86,7 @@ export const PRIVACY: LegalDoc = {
     {
       heading: "How long we keep it",
       body: [
-        "Removed wall photos are deleted from storage right away. Your account and content stay until you delete them. Sign-in codes expire after 10 minutes. Server logs are kept for a short time by our host. Promo videos may be removed some time after an event to keep storage costs down.",
+        "Removed wall photos are deleted from storage right away. A removed comment's words are deleted right away; a placeholder stays if others replied to it. Your account and content stay until you delete them. Sign-in codes expire after 10 minutes. Server logs are kept for a short time by our host. Promo videos may be removed some time after an event to keep storage costs down.",
       ],
     },
     {
@@ -92,6 +94,7 @@ export const PRIVACY: LegalDoc = {
       body: [
         [
           "Edit your profile or remove your photo any time.",
+          "Edit or remove your own comments, and see or undo who you muted or blocked, in your profile.",
           "Turn notifications off in your profile or your browser settings.",
           "Delete your account in your profile. That removes your profile, sign-in methods, RSVPs, photos, and events you host alone, and signs you out everywhere.",
           `Ask for a copy of your data, or for anything else, at ${CONTACT}.`,
@@ -158,6 +161,13 @@ export const TERMS: LegalDoc = {
       ],
     },
     {
+      heading: "Comments",
+      body: [
+        "Anyone signed in can comment on an event page while its host has comments open. Keep it about the event. The host can pin a comment, remove comments, or set comments to read only or off.",
+        "Comments reported by three different people are hidden until a moderator reviews them. You can edit or remove your own comments; edits are marked.",
+      ],
+    },
+    {
       heading: "Tickets and payments",
       body: [
         "Assembly doesn't sell tickets or handle money. Ticket links go to other services (like RA, DICE, Eventbrite, or Venmo) and their terms apply. Refunds, entry, and disputes are between you and the organizer.",
@@ -178,7 +188,7 @@ export const TERMS: LegalDoc = {
     {
       heading: "Moderation",
       body: [
-        "We may remove content or suspend accounts that break these terms or put people at risk, with or without notice. Events reported by several people are hidden until a moderator reviews them. If you think we got it wrong, write to us.",
+        "We may remove content or suspend accounts that break these terms or put people at risk, with or without notice. Events, comments, and wall photos reported by several people are hidden until a moderator reviews them. If you think we got it wrong, write to us.",
       ],
     },
     {
@@ -241,7 +251,8 @@ export const GUIDELINES: LegalDoc = {
           "Sexual services or explicit sexual content.",
           "Fake events, bait-and-switch lineups, scams, and spam.",
           "Pretending to be another organizer, artist, or venue.",
-          "Sharing someone's private information.",
+          "Sharing someone's private information, in an event, a comment, or anywhere else.",
+          "Comments that pile on, bait, or follow someone from event to event.",
           "Wall photos of people who didn't agree to be posted, of anyone under age, of nudity or drug use, or taken in private areas like bathrooms and backstage.",
         ],
       ],
@@ -256,6 +267,7 @@ export const GUIDELINES: LegalDoc = {
       heading: "Reporting",
       body: [
         "Use \"Report this event\" or \"Report the organizer\" on any event page. Reports are private. An event reported by three different people is hidden until a moderator reviews it, and we aim to respond within 12 hours on weekends.",
+        "On a comment, tap ⋯ then Report. Three reports hide it until a moderator looks. You can also mute someone (you stop seeing their comments) or block them (they also can't reply to you or comment on your events). They aren't told.",
         "On a wall photo, tap Report. If you're in the photo and want it gone, choose \"I'm in this photo\": it comes down right away.",
         "If someone is in danger, call 911 first.",
       ],

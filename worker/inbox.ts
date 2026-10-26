@@ -26,7 +26,7 @@ export async function buildInbox(env: Env, userId: string): Promise<Inbox> {
   const iso = (ms: number) => new Date(ms).toISOString();
   const items: InboxItem[] = [];
 
-  const [requests, invites, changed, soon, here, claims] = await Promise.all([
+  const [requests, invites, changed, soon, here, claims, replies, onMine] = await Promise.all([
     safe(
       db
         .prepare(
@@ -88,8 +88,50 @@ export async function buildInbox(env: Env, userId: string): Promise<Inbox> {
         .all<{ id: string; target_type: "artist" | "venue"; status: string; decided_at: string; name: string | null; slug: string | null }>(),
       { results: [] } as never,
     ),
+    // Replies to your comments in the last two weeks.
+    safe(
+      db
+        .prepare(
+          `SELECT r.id, r.created_at, r.body, e.id AS event_id, e.title, u.display_name, u.avatar_url
+           FROM comments r JOIN comments p ON p.id = r.parent_id JOIN events e ON e.id = r.event_id JOIN users u ON u.id = r.user_id
+           WHERE p.user_id = ?1 AND r.user_id <> ?1 AND r.status = 'live' AND r.created_at > ?2
+             AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.user_id = ?1 AND b.blocked_id = r.user_id)
+           ORDER BY r.created_at DESC LIMIT 20`,
+        )
+        .bind(userId, iso(now - 14 * DAY))
+        .all<{ id: string; created_at: string; body: string; event_id: string; title: string; display_name: string; avatar_url: string | null }>(),
+      { results: [] } as never,
+    ),
+    // New top-level comments on events you host, one item per event.
+    safe(
+      db
+        .prepare(
+          `SELECT e.id AS event_id, e.title, COUNT(*) AS n, MAX(c.created_at) AS at,
+             (SELECT u.display_name FROM comments c2 JOIN users u ON u.id = c2.user_id
+              WHERE c2.event_id = e.id AND c2.parent_id IS NULL AND c2.user_id <> ?1 AND c2.status = 'live' ORDER BY c2.created_at DESC LIMIT 1) AS display_name
+           FROM event_hosts h JOIN events e ON e.id = h.event_id
+           JOIN comments c ON c.event_id = e.id AND c.parent_id IS NULL AND c.user_id <> ?1 AND c.status = 'live' AND c.created_at > ?2
+             AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.user_id = ?1 AND b.blocked_id = c.user_id)
+           WHERE h.user_id = ?1 GROUP BY e.id ORDER BY at DESC LIMIT 10`,
+        )
+        .bind(userId, iso(now - 14 * DAY))
+        .all<{ event_id: string; title: string; n: number; at: string; display_name: string | null }>(),
+      { results: [] } as never,
+    ),
   ]);
 
+  const clip = (t: string) => (t.length > 90 ? `${t.slice(0, 88).trimEnd()}…` : t);
+  for (const r of replies.results ?? [])
+    items.push({ id: `reply:${r.id}`, kind: "reply", at: r.created_at, title: `${r.display_name} replied on ${r.title}`, body: clip(r.body), target: { type: "event", id: r.event_id, section: "comments" }, person: { displayName: r.display_name, avatarUrl: r.avatar_url } });
+  for (const r of onMine.results ?? [])
+    items.push({
+      id: `cmt:${r.event_id}:${r.at}`,
+      kind: "comment",
+      at: r.at,
+      title: r.n > 1 ? `${r.n} new comments on ${r.title}` : `${r.display_name ?? "Someone"} commented on ${r.title}`,
+      body: "Your event.",
+      target: { type: "event", id: r.event_id, section: "comments" },
+    });
   for (const r of requests.results ?? [])
     items.push({ id: `req:${r.id}`, kind: "friend-request", at: r.created_at, title: `${r.display_name} wants to be friends`, body: "Accept to see each other's nights.", target: { type: "friends" }, person: { displayName: r.display_name, avatarUrl: r.avatar_url } });
   for (const r of invites.results ?? [])

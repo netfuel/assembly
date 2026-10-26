@@ -26,6 +26,7 @@ import { pageModeration, pages } from "./pages";
 import { live } from "./live";
 import { inbox } from "./inbox";
 import { reactions } from "./reactions";
+import { blocks, commentActions, commentModeration, eventComments } from "./comments";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -108,6 +109,7 @@ app.get("/media/:key{.+}", async (c) => {
 app.route("/auth/email", emailAuth);
 app.route("/auth", auth);
 app.route("/me/inbox", inbox);
+app.route("/me/blocks", blocks);
 app.route("/me", profile);
 app.route("/uploads", uploads);
 app.route("/", posting);
@@ -116,11 +118,14 @@ app.route("/push", push);
 app.route("/events", checkins);
 app.route("/events", live);
 app.route("/events", reactions);
+app.route("/events", eventComments);
+app.route("/comments", commentActions);
 app.route("/events", eventFriendVisibility);
 app.route("/friends", friends);
 app.route("/events", eventWall);
 app.route("/wall", wallPosts);
 app.route("/", wallModeration);
+app.route("/", commentModeration);
 app.route("/events", events);
 app.route("/search", searchRoute);
 app.route("/pages", pages);

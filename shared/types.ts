@@ -94,6 +94,9 @@ export interface EventDetail extends EventSummary {
   flyerDownloads?: boolean;
   /** Absent when reactions are switched off. */
   reactions?: Reactions;
+  /** Live comments, replies included. Absent when comments are switched off. */
+  commentCount?: number;
+  commentsMode?: CommentMode;
   flyerKey: string | null;
   createdAt: string;
   updatedAt: string;
@@ -130,6 +133,7 @@ export interface Features {
   friends: boolean;
   checkin: boolean;
   reactions: boolean;
+  comments: boolean;
 }
 
 export interface ServerConfig {
@@ -407,7 +411,7 @@ export interface PageClaim {
 }
 
 /* ---------- Notifications (under the avatar) ---------- */
-export type InboxKind = "friend-request" | "invite" | "cancelled" | "updated" | "starting-soon" | "friend-here" | "claim";
+export type InboxKind = "friend-request" | "invite" | "cancelled" | "updated" | "starting-soon" | "friend-here" | "claim" | "reply" | "comment";
 
 export interface InboxItem {
   /** Stable per item, so the app can key lists. */
@@ -419,7 +423,7 @@ export interface InboxItem {
   /** One line under the title. */
   body: string;
   /** Where tapping goes. */
-  target: { type: "event"; id: string } | { type: "friends" } | { type: "page"; kind: "artist" | "venue"; slug: string } | null;
+  target: { type: "event"; id: string; section?: "comments" } | { type: "friends" } | { type: "page"; kind: "artist" | "venue"; slug: string } | null;
   person?: { displayName: string; avatarUrl: string | null };
 }
 
@@ -443,4 +447,73 @@ export interface Reactions {
   counts: Partial<Record<ReactionKind, number>>;
   /** Which ones you've added. */
   mine: ReactionKind[];
+}
+
+/* ---------- Comments ---------- */
+export const COMMENT_MAX = 500;
+export const COMMENT_REPORT_REASONS = [
+  { id: "harassment", label: "Harassment" },
+  { id: "hate", label: "Hate" },
+  { id: "spam", label: "Spam or scam" },
+  { id: "private-info", label: "Shares private info" },
+  { id: "other", label: "Something else" },
+] as const;
+
+export interface EventComment {
+  id: string;
+  /** Set on replies; replies are one level deep. */
+  parentId: string | null;
+  /** Empty when removed. */
+  body: string;
+  /**
+   * live; hidden after reports (only the author and staff see it); removed, or muted (from someone you muted or
+   * blocked): placeholders kept above their replies.
+   */
+  status: "live" | "hidden" | "removed" | "muted";
+  /** The author changed it after posting. */
+  edited: boolean;
+  createdAt: string;
+  author: { id: string; displayName: string; avatarUrl: string | null } | null;
+  /** The author hosts this event. */
+  host: boolean;
+  /** The author is a verified organizer. */
+  verified: boolean;
+  pinned: boolean;
+  mine: boolean;
+  canDelete: boolean;
+}
+
+export interface CommentThread {
+  comments: EventComment[];
+  canComment: boolean;
+  /** Why not, when canComment is false. */
+  note: string | null;
+  /** Host or moderator: can pin, remove, and switch comments on, to read only, or off. */
+  canModerate: boolean;
+  mode: CommentMode;
+}
+
+/** on: open. locked: read only. off: hidden from everyone but the host and moderators. */
+export type CommentMode = "on" | "locked" | "off";
+
+export interface ModCommentItem {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  body: string;
+  status: "live" | "hidden";
+  createdAt: string;
+  author: { id: string; displayName: string };
+  reasons: string[];
+  notes: string | null;
+  firstReportAt: string | null;
+  /** How many of this person's comments have been hidden or removed, this one included. */
+  strikes: number;
+}
+
+export interface BlockedPerson {
+  id: string;
+  kind: "mute" | "block";
+  displayName: string;
+  avatarUrl: string | null;
 }

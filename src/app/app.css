@@ -1039,3 +1039,61 @@
 .inbox-when { font-size: var(--text-2xs); color: var(--color-faint); }
 /* New since you last looked: a dot by the time, no color fill. */
 .inbox-item.is-new .inbox-when::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--color-accent); vertical-align: 1px; }
+
+/* Comments: avatar, name and badges on one line, the words in the body serif-free sans, actions as small text
+   buttons that are still 44 px tall. Replies indent under a hairline. */
+.comments { display: grid; gap: var(--space-4); }
+.comment-list, .comment-replies { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.comment-replies { margin: var(--space-3) 0 0 16px; padding-left: var(--space-3); border-left: 1px solid var(--color-line); }
+.comment { display: grid; grid-template-columns: 32px 1fr; gap: var(--space-3); align-items: start; }
+.comment.is-removed { display: block; }
+.comment.is-pinned { padding: var(--space-3); border: 1px solid var(--color-line-strong); border-radius: var(--radius-xs); }
+.comment.is-hidden .comment-body { color: var(--color-muted); }
+.comment-main { min-width: 0; }
+.comment-head { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--text-xs); }
+.comment-name { color: var(--color-fg); font-weight: 600; }
+.comment-time { color: var(--color-faint); }
+.comment-flag { margin: 2px 0 0; font-size: var(--text-xs); color: var(--color-muted); }
+.comment-flag.is-warn { color: var(--color-warn); }
+.comment-body { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+.comment-actions { display: flex; flex-wrap: wrap; margin: 0 0 0 -8px; }
+.comment-action {
+  min-height: 44px; padding: 0 8px; border: 0; background: none; font: inherit; font-size: var(--text-xs);
+  color: var(--color-muted); cursor: pointer;
+}
+.comment-action:hover { color: var(--color-fg); }
+.comment-action.is-danger { color: var(--color-danger); }
+.comment-more { min-width: 44px; font-size: var(--text-sm); letter-spacing: 0.05em; }
+.comment-action-note { display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; font-size: var(--text-xs); color: var(--color-faint); }
+.comment-report { display: grid; gap: var(--space-2); margin-top: var(--space-1); }
+.comment-skel { display: grid; grid-template-columns: 32px 1fr; gap: var(--space-3); }
+.comment-compose { display: grid; gap: var(--space-2); }
+.comment-compose.is-reply { margin: var(--space-3) 0 0 16px; padding-left: var(--space-3); border-left: 1px solid var(--color-line); }
+.comment-compose textarea {
+  width: 100%; min-height: 64px; resize: vertical; padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line-strong); border-radius: var(--radius-xs); background: var(--color-surface);
+  color: var(--color-fg); font: inherit; font-size: var(--text-sm);
+}
+.comment-compose textarea:focus { border-color: var(--color-fg); outline: none; }
+.comment-compose-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.comment-compose-actions { display: flex; gap: var(--space-2); }
+.comment-left { font-size: var(--text-xs); color: var(--color-muted); }
+.comment-left.is-over { color: var(--color-danger); }
+.comment-signin { justify-self: start; }
+.comment-mode { display: grid; gap: var(--space-1); justify-items: start; padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-line); }
+.comment .comment-compose { margin-top: var(--space-2); }
+
+/* Profile: muted and blocked people, folded by default. */
+.muted-list { display: grid; gap: var(--space-2); }
+.muted-toggle {
+  display: flex; justify-content: space-between; align-items: center; min-height: var(--tap); padding: 0;
+  border: 0; border-top: 1px solid var(--color-line); background: none; color: var(--color-fg); font: inherit; cursor: pointer;
+}
+.muted-people { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.muted-people li { display: grid; grid-template-columns: 32px 1fr auto; gap: var(--space-3); align-items: center; }
+.muted-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Moderation: the comment queue. */
+.mod-comments { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.mod-comment { display: grid; gap: var(--space-1); padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-line); }
+.mod-comment-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

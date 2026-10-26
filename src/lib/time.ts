@@ -188,3 +188,13 @@ export function liveFirst<T extends { startsAt: string; endsAt: string; status?:
   const on = (e: T) => (e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now, e.endedEarly) ? 0 : 1);
   return [...list].sort((a, b) => on(a) - on(b) || a.startsAt.localeCompare(b.startsAt));
 }
+
+/** "just now", "12 min ago", "3 hr ago", "2 d ago": for posts and comments. */
+export function ago(iso: string, now = Date.now()): string {
+  const m = Math.round((now - Date.parse(iso)) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  return `${Math.round(h / 24)} d ago`;
+}
