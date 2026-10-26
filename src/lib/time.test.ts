@@ -111,3 +111,22 @@ describe("liveFirst", () => {
     expect(liveFirst(list, now).map((e) => e.id)).toEqual(["live", "earlier-done", "cancelled-live", "later"]);
   });
 });
+
+describe("live window", () => {
+  it("runs 30 minutes past the end, unless the organizer ended it", async () => {
+    const { isLive } = await import("./time");
+    const start = "2026-10-26T22:00:00Z";
+    const end = "2026-10-27T02:00:00Z";
+    expect(isLive(start, end, new Date("2026-10-26T21:59:00Z"))).toBe(false);
+    expect(isLive(start, end, new Date("2026-10-27T01:00:00Z"))).toBe(true);
+    expect(isLive(start, end, new Date("2026-10-27T02:20:00Z"))).toBe(true);
+    expect(isLive(start, end, new Date("2026-10-27T02:31:00Z"))).toBe(false);
+    expect(isLive(start, end, new Date("2026-10-27T02:20:00Z"), true)).toBe(false);
+  });
+  it("gives an event with no end time six hours, and crosses midnight", () => {
+    const blank = fromInputs("2026-10-30", "22:00", "", "America/Chicago")!;
+    expect(Date.parse(blank.endsAt) - Date.parse(blank.startsAt)).toBe(6 * 3600e3);
+    const late = fromInputs("2026-10-30", "22:00", "03:00", "America/Chicago")!;
+    expect(Date.parse(late.endsAt) - Date.parse(late.startsAt)).toBe(5 * 3600e3);
+  });
+});

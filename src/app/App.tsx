@@ -22,7 +22,7 @@ import { DEFAULT_FILTERS, activeCount, filtersQuery, initialFilters, matchesFilt
 import { FilterSheet } from "./FilterSheet";
 import { api, ApiError } from "../lib/api";
 import { clock, dayLabel, isLive, liveFirst, nightRange, overlaps, tonightDate, windowRange, type WindowId } from "../lib/time";
-import { flipOut, markFlipOrigin, revealCards, revealChildren, useGSAP } from "../lib/motion";
+import { flipOut, markFlipOrigin, reducedMotion, revealCards, revealChildren, useGSAP } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 import { clearUserCaches, saveForOffline, saveProfileForOffline, useOnline } from "../lib/offline";
 import { EventSheet } from "./EventSheet";
@@ -58,6 +58,14 @@ function eventIdFromPath(): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+
+/** Bring an event's card into view in the rail and the feed (whichever are on screen). */
+function scrollToCard(id: string) {
+  const sel = `[data-id="${CSS.escape(id)}"]`;
+  const behavior: ScrollBehavior = reducedMotion() ? "auto" : "smooth";
+  document.querySelector(`.rail .card${sel}`)?.scrollIntoView({ behavior, block: "nearest", inline: "start" });
+  document.querySelector(`.feed-card${sel}`)?.scrollIntoView({ behavior, block: "start" });
+}
 
 /** "Around you": nights within this distance count as close enough to frame with your dot. */
 const NEAR_MILES = 6;
@@ -470,8 +478,9 @@ export function App() {
   );
 
   const select = useCallback(
-    (id: string | null) => {
-      if (id) markFlipOrigin(id);
+    (id: string | null, fromMap = false) => {
+      // Cards fly into the event page; a pin tap has no card to fly from.
+      if (id && !fromMap) markFlipOrigin(id);
       setSelectedId(id);
       const ev = id ? events.find((e) => e.id === id) : null;
       if (ev) setFocus({ lng: ev.lng, lat: ev.lat, key: Date.now() });
@@ -575,7 +584,11 @@ export function App() {
         center={city.center}
         zoom={city.zoom}
         selectedId={selectedId}
-        onSelect={select}
+        onSelect={(id) => {
+          select(id, true);
+          // The list follows the map: its card scrolls into view behind the event, so closing lands on it.
+          if (id) scrollToCard(id);
+        }}
         focus={focus}
         theme={theme}
         myPosition={myPos}
@@ -683,7 +696,7 @@ export function App() {
             {shown.map((e) => {
               const queer = e.scenes.includes("queer");
               const cancelled = e.status === "cancelled";
-              const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
+              const live = !cancelled && isLive(e.startsAt, e.endsAt, now, e.endedEarly);
               return (
                 <button
                   key={e.id}
@@ -813,7 +826,10 @@ export function App() {
             setEditing(d);
             setSheet("announce");
           }}
-          onChanged={() => setDetailVersion((v) => v + 1)}
+          onChanged={() => {
+            setDetailVersion((v) => v + 1);
+            void loadEvents(true);
+          }}
           onOpenPage={(p) => {
             flipOut(selected.id, document.querySelector<HTMLElement>(".event-hero"));
             setSelectedId(null);

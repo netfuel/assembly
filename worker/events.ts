@@ -3,6 +3,8 @@ import type { AppContext } from "./env";
 import { isModerator } from "./moderation";
 import { hereNowCounts } from "./checkins";
 import { organizerSlug, venueSlug } from "./pages";
+import { endedEarly, markEnded } from "./live";
+import { flyerDownloadsOn } from "./posting";
 import type { EventDetail, EventSummary, LineupSlot, RsvpStatus, SceneId } from "../shared/types";
 
 export interface EventRow {
@@ -107,7 +109,7 @@ events.get("/", async (c) => {
   // How many people are checked in, for events that are on now.
   const here = await hereNowCounts(c.env, results.filter((r) => Date.parse(r.starts_at) - 30 * 60e3 < now && Date.parse(r.ends_at) + 2 * 3600e3 > now).map((r) => r.id));
   c.header("Cache-Control", "public, max-age=30");
-  return c.json({ events: results.map((r) => ({ ...toSummary(r), hereNow: here.get(r.id) ?? 0 })) });
+  return c.json({ events: await markEnded(c.env, results.map((r) => ({ ...toSummary(r), hereNow: here.get(r.id) ?? 0 }))) });
 });
 
 events.get("/:id", async (c) => {
@@ -160,6 +162,8 @@ events.get("/:id", async (c) => {
 
   const detail: EventDetail = {
     ...toSummary(row),
+    endedEarly: (await endedEarly(c.env, [row.id])).has(row.id) || undefined,
+    flyerDownloads: await flyerDownloadsOn(c.env.DB, row.id),
     description: row.description,
     gettingThere: row.getting_there,
     lineup,

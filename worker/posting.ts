@@ -101,7 +101,8 @@ posting.post("/events", async (c) => {
     return c.json({ error: "You've posted a lot in the last hour. Try again a little later." }, 429);
   }
   const city = c.env.DEFAULT_CITY;
-  const result = validateEvent(await c.req.json().catch(() => null), { now: new Date(), bounds: await cityBounds(c.env.DB, city), userId });
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const result = validateEvent(body, { now: new Date(), bounds: await cityBounds(c.env.DB, city), userId });
   if (!result.ok) return c.json({ error: "Some details need another look.", fields: result.errors }, 400);
   const v = result.value;
   if (v.videoId && !(await ownsVideo(c.env.SESSIONS, v.videoId, userId))) {
@@ -129,6 +130,7 @@ posting.post("/events", async (c) => {
     db.prepare("INSERT INTO event_hosts (event_id, user_id, role) VALUES (?, ?, 'owner')").bind(id, userId),
     ...(await lineupStatements(db, id, v.lineup)),
   ]);
+  await setFlyerDownloads(c.env.DB, id, body?.flyerDownloads !== false);
   return c.json({ id, status }, 201);
 });
 
@@ -202,6 +204,7 @@ posting.patch("/events/:id", async (c) => {
       );
     }
   }
+  if (typeof raw.flyerDownloads === "boolean") await setFlyerDownloads(c.env.DB, id, raw.flyerDownloads);
   return c.json({ id });
 });
 
@@ -335,3 +338,21 @@ posting.get("/geocode", async (c) => {
     return c.json({ results: [], error: "Address search isn't responding. Place the pin by hand." });
   }
 });
+
+/** Flyer downloads are on by default; a row in flyer_downloads_off turns them off. Quiet before migration 0009. */
+export async function setFlyerDownloads(db: D1Database, eventId: string, on: boolean) {
+  try {
+    if (on) await db.prepare("DELETE FROM flyer_downloads_off WHERE event_id = ?").bind(eventId).run();
+    else await db.prepare("INSERT OR IGNORE INTO flyer_downloads_off (event_id) VALUES (?)").bind(eventId).run();
+  } catch (err) {
+    if (!(err instanceof Error && /no such table/i.test(err.message))) throw err;
+  }
+}
+
+export async function flyerDownloadsOn(db: D1Database, eventId: string): Promise<boolean> {
+  try {
+    return !(await db.prepare("SELECT 1 FROM flyer_downloads_off WHERE event_id = ?").bind(eventId).first());
+  } catch {
+    return true;
+  }
+}

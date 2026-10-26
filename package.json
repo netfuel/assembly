@@ -21,7 +21,8 @@
     "push:keys": "node scripts/push-keys.mjs",
     "headers": "node --experimental-strip-types --no-warnings scripts/write-headers.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
-    "prebuild": "node scripts/sync-theme-hash.mjs"
+    "prebuild": "node scripts/sync-theme-hash.mjs",
+    "check:tags": "node scripts/check-tags.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

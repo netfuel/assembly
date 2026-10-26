@@ -44,7 +44,7 @@ export function SearchSheet({
   onApply,
 }: {
   /** An artist or venue result opens its page. */
-  onOpenPage: (p: { kind: "artist" | "venue"; slug: string }) => void;
+  onOpenPage: (p: { kind: "artist" | "venue" | "organizer"; slug: string }) => void;
   open: boolean;
   onClose: () => void;
   initial: string;
@@ -103,8 +103,9 @@ export function SearchSheet({
     remember(value);
     onApply(value.trim());
   };
-  const total = results ? results.events.length + results.artists.length + results.venues.length : 0;
-  const status = !results ? "" : total === 0 ? "No results" : `${results.events.length} events, ${results.artists.length} artists, ${results.venues.length} venues`;
+  const orgs = results?.organizers ?? [];
+  const total = results ? results.events.length + results.artists.length + results.venues.length + orgs.length : 0;
+  const status = !results ? "" : total === 0 ? "No results" : `${results.events.length} events, ${results.artists.length} artists, ${results.venues.length} venues, ${orgs.length} organizers`;
 
   return (
     <Sheet open={open} onClose={onClose} label="Search" modal className="sheet-search">
@@ -244,8 +245,9 @@ export function SearchSheet({
           <PlaceGroup label="Artists" places={results.artists} now={now} tz={tz} onPick={(p) => onOpenPage({ kind: "artist", slug: p.slug })} />
         )}
         {results && results.venues.length > 0 && <PlaceGroup label="Venues" places={results.venues} now={now} tz={tz} onPick={(p) => onOpenPage({ kind: "venue", slug: p.slug })} />}
+        {orgs.length > 0 && <PlaceGroup label="Organizers" places={orgs} now={now} tz={tz} onPick={(p) => onOpenPage({ kind: "organizer", slug: p.slug })} />}
 
-        {results && total > 0 && (
+        {results && results.eventIds.length > 0 && (
           <Button className="search-apply" size="lg" variant="primary" onClick={() => apply(results.q)}>
             Show {results.eventIds.length} {results.eventIds.length === 1 ? "night" : "nights"} on the map and feed
           </Button>
@@ -268,7 +270,7 @@ function PlaceGroup({ label, places, now, tz, onPick }: { label: string; places:
           <li key={p.id}>
             <button className="search-item" onClick={() => onPick(p)}>
               <span className={`search-thumb search-thumb-glyph`} aria-hidden="true">
-                {label === "Artists" ? "♫" : "⌖"}
+                {label === "Artists" ? "♫" : label === "Organizers" ? "◇" : "⌖"}
               </span>
               <span className="search-text">
                 <span className="search-name">{p.name}</span>

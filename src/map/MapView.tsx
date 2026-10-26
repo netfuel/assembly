@@ -47,7 +47,7 @@ function toGeoJSON(events: EventSummary[], now: Date): GeoJSON.FeatureCollection
         title: e.title,
         queer: e.scenes.includes("queer"),
         cancelled: e.status === "cancelled",
-        live: e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now),
+        live: e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now, e.endedEarly),
         going: e.goingCount,
         here: e.hereNow ?? 0,
         // Empty until the thumbnail has loaded; the symbol layer only draws pins that have one.
@@ -64,7 +64,7 @@ let pulsing = 0;
 function liveNearCenter(map: MapLibre, events: EventSummary[], now: Date): GeoJSON.FeatureCollection {
   const c = map.getCenter();
   const live = events
-    .filter((e) => e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now))
+    .filter((e) => e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now, e.endedEarly))
     .map((e) => ({ e, d: (e.lng - c.lng) ** 2 + (e.lat - c.lat) ** 2 }))
     .sort((a, b) => a.d - b.d)
     .slice(0, MAX_PULSES);

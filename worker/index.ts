@@ -23,6 +23,7 @@ import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
 import { featureGate, features } from "./features";
 import { pageModeration, pages } from "./pages";
+import { live } from "./live";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -110,6 +111,7 @@ app.route("/", posting);
 app.route("/", moderation);
 app.route("/push", push);
 app.route("/events", checkins);
+app.route("/events", live);
 app.route("/events", eventFriendVisibility);
 app.route("/friends", friends);
 app.route("/events", eventWall);

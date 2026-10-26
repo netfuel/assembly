@@ -95,8 +95,14 @@ export function overlaps(startsAt: string, endsAt: string, range: { from: Date; 
   return Date.parse(endsAt) > range.from.getTime() && Date.parse(startsAt) < range.to.getTime();
 }
 
-export function isLive(startsAt: string, endsAt: string, now: Date): boolean {
-  return now.getTime() >= Date.parse(startsAt) && now.getTime() < Date.parse(endsAt);
+/** Events stay live a little past their end time: doors and last sets run late. Not when the organizer ended it. */
+export const LIVE_GRACE_MS = 30 * 60e3;
+/** An event posted without an end time runs this long. */
+export const DEFAULT_LENGTH_H = 6;
+
+export function isLive(startsAt: string, endsAt: string, now: Date, endedEarly = false): boolean {
+  const t = now.getTime();
+  return t >= Date.parse(startsAt) && t < Date.parse(endsAt) + (endedEarly ? 0 : LIVE_GRACE_MS);
 }
 
 function nightKey(date: Date, tz: string) {
@@ -145,11 +151,13 @@ export function fromInputs(date: string, start: string, end: string, tz: string)
   const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   const s = /^(\d{1,2}):(\d{2})$/.exec(start);
   const e = /^(\d{1,2}):(\d{2})$/.exec(end);
-  if (!d || !s || !e) return null;
+  if (!d || !s) return null;
   const [y, m, day] = [Number(d[1]), Number(d[2]), Number(d[3])];
+  const startsAt = zonedTime(y, m, day, Number(s[1]), tz, Number(s[2]));
+  // No end time: assume a full night.
+  if (!e) return { startsAt: startsAt.toISOString(), endsAt: new Date(startsAt.getTime() + DEFAULT_LENGTH_H * 3600e3).toISOString() };
   const startMin = Number(s[1]) * 60 + Number(s[2]);
   const endMin = Number(e[1]) * 60 + Number(e[2]);
-  const startsAt = zonedTime(y, m, day, Number(s[1]), tz, Number(s[2]));
   const endsAt = zonedTime(y, m, day + (endMin <= startMin ? 1 : 0), Number(e[1]), tz, Number(e[2]));
   return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 }
@@ -176,7 +184,7 @@ export function dateHeading(date: string): string {
 }
 
 /** Live first, then by start time: what's on right now leads the rail and the feed. */
-export function liveFirst<T extends { startsAt: string; endsAt: string; status?: string }>(list: T[], now: Date): T[] {
-  const on = (e: T) => (e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now) ? 0 : 1);
+export function liveFirst<T extends { startsAt: string; endsAt: string; status?: string; endedEarly?: boolean }>(list: T[], now: Date): T[] {
+  const on = (e: T) => (e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now, e.endedEarly) ? 0 : 1);
   return [...list].sort((a, b) => on(a) - on(b) || a.startsAt.localeCompare(b.startsAt));
 }

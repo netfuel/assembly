@@ -51,6 +51,7 @@ interface FormState {
   flyer: { key: string; url: string } | null;
   video: { uid: string; seconds: number | null } | null;
   lineup: Row[];
+  flyerDownloads: boolean;
 }
 
 let rowSeq = 0;
@@ -80,6 +81,7 @@ function emptyState(tz: string): FormState {
     flyer: null,
     video: null,
     lineup: [newRow()],
+    flyerDownloads: true,
   };
 }
 
@@ -106,6 +108,7 @@ function fromEvent(e: EventDetail, tz: string): FormState {
     policyTags: [...e.policyTags],
     flyer: e.flyerKey && e.flyerUrl ? { key: e.flyerKey, url: e.flyerUrl } : null,
     video: e.videoId ? { uid: e.videoId, seconds: null } : null,
+    flyerDownloads: e.flyerDownloads !== false,
     lineup: e.lineup.length
       ? e.lineup.map((l) =>
           newRow({
@@ -195,7 +198,7 @@ const FIELD_SECTION: Record<string, string> = {
 const STEPS = [
   { id: "essentials", label: "Essentials", sections: ["what", "when", "where", "scene"], optional: false },
   { id: "details", label: "Details", sections: ["flyer", "pitch", "tickets", "lineup"], optional: true },
-  { id: "more", label: "More", sections: ["about", "door", "video"], optional: true },
+  { id: "more", label: "More", sections: ["about", "door", "sharing", "video"], optional: true },
 ];
 const stepOf = (section: string) => Math.max(0, STEPS.findIndex((st) => st.sections.includes(section)));
 
@@ -271,7 +274,7 @@ export function AnnounceForm({
   function clientCheck(): Record<string, string> {
     const e: Record<string, string> = {};
     if (!s.title.trim()) e.title = "Give the event a name.";
-    if (!times) e.startsAt = "Pick a date and start and end times.";
+    if (!times) e.startsAt = "Pick a date and a start time.";
     if (s.where === "venue" && !s.venueId) e.venueId = "Pick the venue, or switch to Address.";
     if (s.where === "address") {
       if (!s.address.trim()) e.address = "Add the address so people can find it.";
@@ -334,6 +337,7 @@ export function AnnounceForm({
       policyTags: s.policyTags,
       flyerKey: s.flyer?.key ?? null,
       videoId: s.video?.uid ?? null,
+      flyerDownloads: s.flyerDownloads,
       lineup: s.lineup
         .filter((r) => r.name.trim())
         .map((r) => ({ artistId: r.artistId, name: r.name, links: r.links, setStart: r.setStart, room: r.room, note: r.note })),
@@ -417,7 +421,7 @@ export function AnnounceForm({
           <Field label="Doors">
             <input type="time" value={s.start} step={900} onChange={(e) => set("start", e.target.value)} />
           </Field>
-          <Field label="Ends" error={errors.endsAt}>
+          <Field label="Ends" hint="Optional: 6 hours if blank" error={errors.endsAt}>
             <input type="time" value={s.end} step={900} onChange={(e) => set("end", e.target.value)} />
           </Field>
         </div>
@@ -492,6 +496,15 @@ export function AnnounceForm({
             ))}
           </div>
         </div>
+        </Section>
+        <Section n="" title="Sharing" id="sharing">
+          <label className="toggle">
+            <input type="checkbox" checked={s.flyerDownloads} onChange={(e) => set("flyerDownloads", e.target.checked)} />
+            <span>
+              <strong>Let people download the flyer</strong>
+              <span className="field-hint">On by default, so people can repost it. You can always download your own.</span>
+            </span>
+          </label>
         </Section>
         <Section n="" title="Promo video" id="video">
         <VideoField enabled={config.video} customerCode={config.streamCustomerCode} value={s.video} onChange={(v) => set("video", v)} error={errors.video ?? errors.videoId} />

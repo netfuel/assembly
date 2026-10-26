@@ -16,7 +16,7 @@ function byDay(events: EventSummary[], now: Date, tz: string) {
   const groups: { label: string; events: EventSummary[] }[] = [];
   for (const e of events) {
     // What's on right now leads, under its own header, whatever night it started.
-    const label = e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now) ? "Live now" : dayLabel(e.startsAt, now, tz);
+    const label = e.status !== "cancelled" && isLive(e.startsAt, e.endsAt, now, e.endedEarly) ? "Live now" : dayLabel(e.startsAt, now, tz);
     const last = groups[groups.length - 1];
     if (last?.label === label) last.events.push(e);
     else groups.push({ label, events: [e] });
@@ -204,7 +204,7 @@ export function FeedCard({
 }) {
   const queer = e.scenes.includes("queer");
   const cancelled = e.status === "cancelled";
-  const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
+  const live = !cancelled && isLive(e.startsAt, e.endsAt, now, e.endedEarly);
   const [loaded, setLoaded] = useState(false);
   const labels = e.scenes.map((s) => SCENES.find((x) => x.id === s)?.label).filter(Boolean) as string[];
   const age = e.policyTags.includes("all-ages") ? "All ages" : e.policyTags.includes("21+") ? "21+" : e.policyTags.includes("18+") ? "18+" : null;

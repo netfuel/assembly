@@ -14,7 +14,7 @@ import { PromoVideo } from "../components/PromoVideo";
 import { Avatar } from "./ProfileSheet";
 import { saveForOffline } from "../lib/offline";
 import { PushPrompt } from "../components/PushControl";
-import { dayLabel, isLive, timeRange } from "../lib/time";
+import { dayLabel, isLive, LIVE_GRACE_MS, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, flipIn, hasFlipOrigin, reducedMotion, revealChildren, stamp, useGSAP } from "../lib/motion";
 import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type FriendPerson, type HerePerson, type PresenceVisibility, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
@@ -97,18 +97,22 @@ export function EventSheet({
   const e = detail ?? summary;
   const queer = e.scenes.includes("queer");
   const cancelled = e.status === "cancelled";
-  const live = !cancelled && isLive(e.startsAt, e.endsAt, now);
+  const live = !cancelled && isLive(e.startsAt, e.endsAt, now, e.endedEarly);
   const directions = directionsLinks(e);
   // One state, one primary action (design review): upcoming → RSVP, doors open → Check in, after → See the wall.
   const nowMs = now.getTime();
   const phase: "cancelled" | "upcoming" | "live" | "past" = cancelled
     ? "cancelled"
-    : nowMs > Date.parse(e.endsAt) + 30 * 60e3
+    : nowMs >= Date.parse(e.endsAt) + (e.endedEarly ? 0 : LIVE_GRACE_MS)
       ? "past"
       : nowMs >= Date.parse(e.startsAt) - 30 * 60e3
         ? "live"
         : "upcoming";
   const photoFree = e.policyTags.includes("no-photos");
+  // Organizers can switch flyer downloads off; they can always download their own.
+  const canDownload = !!e.flyerUrl && (detail?.flyerDownloads !== false || !!detail?.viewerCanEdit);
+  // Ended early by mistake? The organizer can reopen it for an hour afterwards.
+  const reopenable = !!e.endedEarly && phase === "past" && nowMs < Date.parse(e.endsAt) + 3600e3;
   // Beta modules can be switched off on the server (FEATURES_OFF); their sections and actions go with them.
   const feat = config.features ?? { wall: true, friends: true, checkin: true };
   const canCheckIn = feat.checkin && phase === "live";
@@ -206,11 +210,15 @@ export function EventSheet({
   };
 
   const [story, setStory] = useState<null | "working" | { url: string; file: File }>(null);
-  async function makeStory() {
-    setStory("working");
+  const [storyLayout, setStoryLayout] = useState<"details" | "flyer">("details");
+  async function makeStory(layout = storyLayout) {
+    setStory((cur) => {
+      if (cur && cur !== "working") URL.revokeObjectURL(cur.url);
+      return "working";
+    });
     try {
       const { renderStoryCard } = await import("../lib/storyCard");
-      const blob = await renderStoryCard(e, `${eventUrl(e.id)}?ref=story`, tz);
+      const blob = await renderStoryCard(e, `${eventUrl(e.id)}?ref=story`, tz, layout);
       const file = new File([blob], `assembly-${e.id}.png`, { type: "image/png" });
       setStory({ url: URL.createObjectURL(blob), file });
     } catch {
@@ -243,10 +251,31 @@ export function EventSheet({
 
   return (
     <>
-    <Sheet open={!!story && story !== "working"} onClose={closeStory} label="Story card" modal center className="story-sheet">
+    <Sheet open={!!story} onClose={closeStory} label="Story card" modal center className="story-sheet">
+      {story && (
+        <div className="story-layout">
+          <Label glyph="▣">Story card</Label>
+          <Segmented
+            label="Layout"
+            value={storyLayout}
+            onChange={(l) => {
+              setStoryLayout(l);
+              void makeStory(l);
+            }}
+            options={[
+              { id: "details", label: "Flyer and details" },
+              { id: "flyer", label: "Flyer only" },
+            ]}
+          />
+        </div>
+      )}
+      {story === "working" && (
+        <div className="story-preview" role="status" aria-label="Making the story card">
+          <Skeleton w="min(100%, 300px)" h={533} />
+        </div>
+      )}
       {story && story !== "working" && (
         <div className="story-preview">
-          <Label glyph="▣">Story card</Label>
           <img src={story.url} alt={`Story card for ${e.title}`} />
           <div className="story-actions">
             <Button variant="primary" size="lg" onClick={() => shareStory(story.file)}>
@@ -296,12 +325,19 @@ export function EventSheet({
             <Button size="sm" onClick={() => onEdit(detail)}>
               Edit
             </Button>
+            {(phase === "live" || reopenable) && <LiveControls id={e.id} live={phase === "live"} onChanged={onChanged} toast={toast} />}
           </div>
         )}
 
         {detail && detail.viewerCanEdit && !detail.viewerIsHost && (
           <div data-reveal>
             <ModBar detail={detail} onEdit={() => onEdit(detail)} onHanded={onChanged} toast={toast} />
+            {(phase === "live" || reopenable) && (
+              <div className="host-bar">
+                <span className="dim">{phase === "live" ? "While it's on" : "Ended early"}</span>
+                <LiveControls id={e.id} live={phase === "live"} onChanged={onChanged} toast={toast} />
+              </div>
+            )}
           </div>
         )}
 
@@ -610,20 +646,27 @@ export function EventSheet({
       onClose={() => setSharing(false)}
       toast={toast}
       extra={
-        <Button
-          size="lg"
-          onClick={() => {
-            setSharing(false);
-            void makeStory();
-          }}
-          disabled={story === "working"}
-        >
-          {story === "working" ? "Making the card…" : "Story card for Instagram"}
-        </Button>
+        <>
+          <Button
+            size="lg"
+            onClick={() => {
+              setSharing(false);
+              void makeStory();
+            }}
+            disabled={story === "working"}
+          >
+            {story === "working" ? "Making the card…" : "Story card for Instagram"}
+          </Button>
+          {canDownload && (
+            <Button size="lg" onClick={() => void downloadFlyer(e.flyerUrl!, e.title, toast)}>
+              Download flyer
+            </Button>
+          )}
+        </>
       }
     />
     {viewing && e.flyerUrl && (
-      <FlyerViewer src={e.flyerUrl} title={e.title} url={eventUrl(e.id)} credit={detail?.host?.displayName ?? null} onClose={() => setViewing(false)} toast={toast} />
+      <FlyerViewer src={e.flyerUrl} title={e.title} url={eventUrl(e.id)} credit={detail?.host?.displayName ?? null} canDownload={canDownload} onClose={() => setViewing(false)} toast={toast} />
     )}
     </>
   );
@@ -1046,6 +1089,51 @@ function InviteFriends({ eventId, friends, onClose, toast }: { eventId: string; 
       </form>
     </div>,
     document.body,
+  );
+}
+
+/** Save the flyer image itself, named after the event. */
+async function downloadFlyer(src: string, title: string, toast: (m: string) => void) {
+  try {
+    const res = await fetch(src);
+    if (!res.ok) throw new Error(String(res.status));
+    const b = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = `${title.replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "flyer"}-assembly.${b.type.split("/")[1] ?? "jpg"}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch {
+    toast("Couldn't download the flyer. Try again.");
+  }
+}
+
+/** For the organizer while it's on: end the night now, or keep it going an hour longer. */
+function LiveControls({ id, live, onChanged, toast }: { id: string; live: boolean; onChanged: () => void; toast: (m: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const act = async (action: "end" | "extend") => {
+    setBusy(true);
+    try {
+      await api.setLive(id, action);
+      toast(action === "end" ? "Ended. It's off the live map." : live ? "An hour more. Still live." : "Reopened for an hour.");
+      onChanged();
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "That didn't go through. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="host-live">
+      {live && (
+        <Button size="sm" onClick={() => act("end")} disabled={busy}>
+          End now
+        </Button>
+      )}
+      <Button size="sm" onClick={() => act("extend")} disabled={busy}>
+        {live ? "Still going: +1 h" : "Reopen"}
+      </Button>
+    </span>
   );
 }
 

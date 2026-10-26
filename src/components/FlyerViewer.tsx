@@ -13,7 +13,10 @@ export function FlyerViewer({
   credit,
   onClose,
   toast,
+  canDownload = true,
 }: {
+  /** The organizer allows downloads (hosts always can). Off: view only, share the link instead of the file. */
+  canDownload?: boolean;
   src: string;
   title: string;
   url: string;
@@ -159,12 +162,34 @@ export function FlyerViewer({
       <div className="flyer-viewer-bar">
         <span className="flyer-viewer-credit">{credit ? `Posted by ${credit}` : title}</span>
         <span className="spacer" />
-        <Button size="sm" onClick={save}>
-          Save
-        </Button>
-        <Button size="sm" variant="solid" onClick={share}>
-          Share flyer
-        </Button>
+        {canDownload ? (
+          <>
+            <Button size="sm" onClick={save}>
+              Download
+            </Button>
+            <Button size="sm" variant="solid" onClick={share}>
+              Share flyer
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="solid"
+            onClick={async () => {
+              try {
+                if (navigator.share) await navigator.share({ title, text: caption, url });
+                else {
+                  await navigator.clipboard.writeText(url);
+                  toast("Link copied.");
+                }
+              } catch (err) {
+                if ((err as DOMException)?.name !== "AbortError") toast("Couldn't share. Try again.");
+              }
+            }}
+          >
+            Share link
+          </Button>
+        )}
         <Button ref={closeBtn} size="sm" onClick={onClose} aria-label="Close flyer">
           Close
         </Button>

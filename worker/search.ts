@@ -63,13 +63,46 @@ async function likeHits(env: Env, q: string, city: string): Promise<Hit[]> {
 
 const inList = (n: number) => Array.from({ length: n }, () => "?").join(",");
 
+/** Organizers by name or username, only people with upcoming public events in the city. */
+async function organizerHits(env: Env, q: string, city: string): Promise<SearchPlace[]> {
+  const like = `%${q.replace(/[%_\\]/g, (m) => `\\${m}`).slice(0, 60)}%`;
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT u.id, u.display_name AS name, COALESCE(u.username, u.id) AS slug, COUNT(e.id) AS upcoming,
+         MIN(e.starts_at) AS next_start,
+         (SELECT e2.id FROM event_hosts h2 JOIN events e2 ON e2.id = h2.event_id WHERE h2.user_id = u.id AND e2.status = 'live' AND e2.ends_at > ?3 ORDER BY e2.starts_at LIMIT 1) AS next_id,
+         (SELECT e2.title FROM event_hosts h2 JOIN events e2 ON e2.id = h2.event_id WHERE h2.user_id = u.id AND e2.status = 'live' AND e2.ends_at > ?3 ORDER BY e2.starts_at LIMIT 1) AS next_title
+       FROM users u JOIN event_hosts h ON h.user_id = u.id JOIN events e ON e.id = h.event_id
+       WHERE e.city_id = ?2 AND e.status = 'live' AND e.ends_at > ?3 AND e.is_sample = 0
+         AND (u.display_name LIKE ?1 ESCAPE '\\' OR u.username LIKE ?1 ESCAPE '\\')
+       GROUP BY u.id ORDER BY upcoming DESC LIMIT 6`,
+    )
+      .bind(like, city, new Date().toISOString())
+      .all<{ id: string; name: string; slug: string; upcoming: number; next_start: string | null; next_id: string | null; next_title: string | null }>();
+    return results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      address: null,
+      neighborhood: null,
+      type: null,
+      upcoming: r.upcoming,
+      next: r.next_id && r.next_title && r.next_start ? { id: r.next_id, title: r.next_title, startsAt: r.next_start } : null,
+    }));
+  } catch (err) {
+    console.error("search organizers", err instanceof Error ? err.message : String(err));
+    return [];
+  }
+}
+
 export async function search(env: Env, q: string, city: string): Promise<SearchResults> {
   const trimmed = q.trim().slice(0, 80);
-  const empty: SearchResults = { q: trimmed, events: [], artists: [], venues: [], eventIds: [] };
+  const empty: SearchResults = { q: trimmed, events: [], artists: [], venues: [], organizers: [], eventIds: [] };
   if (trimmed.length < 2) return empty;
+  const organizersP = organizerHits(env, trimmed, city);
   let hits = await ftsHits(env, trimmed, city);
   if (!hits || hits.length === 0) hits = await likeHits(env, trimmed, city);
-  if (!hits.length) return empty;
+  if (!hits.length) return { ...empty, organizers: await organizersP };
 
   const now = new Date().toISOString();
   const ids = (kind: Hit["kind"]) => hits!.filter((h) => h.kind === kind).map((h) => h.ref_id);
@@ -144,8 +177,8 @@ export async function search(env: Env, q: string, city: string): Promise<SearchR
       })
       .sort((a, b) => b.upcoming - a.upcoming || (score.get(`${kind}:${a.id}`) ?? 0) - (score.get(`${kind}:${b.id}`) ?? 0));
   };
-  const [artists, venues] = await Promise.all([places("artist", artistIds), places("venue", venueIds)]);
-  return { q: trimmed, events, artists: artists.slice(0, 8), venues: venues.slice(0, 8), eventIds: all.map((e) => e.id) };
+  const [artists, venues, organizers] = await Promise.all([places("artist", artistIds), places("venue", venueIds), organizersP]);
+  return { q: trimmed, events, artists: artists.slice(0, 8), venues: venues.slice(0, 8), organizers, eventIds: all.map((e) => e.id) };
 }
 
 export const searchRoute = new Hono<AppContext>();
@@ -157,7 +190,7 @@ searchRoute.get("/", async (c) => {
   const city = c.req.query("city") ?? c.env.DEFAULT_CITY;
   const results = await search(c.env, q, city);
   // Zero-result searches are logged without anyone's details, to find missing artists and venues.
-  if (q.trim().length >= 2 && !results.events.length && !results.artists.length && !results.venues.length) console.log("search: no results", { q: q.trim().slice(0, 80) });
+  if (q.trim().length >= 2 && !results.events.length && !results.artists.length && !results.venues.length && !results.organizers.length) console.log("search: no results", { q: q.trim().slice(0, 80) });
   c.header("Cache-Control", "public, max-age=60");
   return c.json(results);
 });

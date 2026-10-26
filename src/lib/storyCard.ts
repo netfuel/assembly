@@ -158,7 +158,43 @@ async function generatedFlyer(ctx: CanvasRenderingContext2D, e: EventSummary, x:
   ctx.fillText(`GEN ${p.number}`, x + 32, y + 52);
 }
 
-export async function renderStoryCard(e: EventSummary, url: string, tz: string): Promise<Blob> {
+/** The flyer whole inside a printed frame, over a blurred copy of itself; generated art when there's no flyer. */
+async function drawFlyer(ctx: CanvasRenderingContext2D, e: EventSummary, fx: number, fy: number, fw: number, fh: number, cancelled: boolean) {
+  ctx.fillStyle = C.surface;
+  ctx.fillRect(fx, fy, fw, fh);
+  let drew = false;
+  if (e.flyerUrl) {
+    try {
+      const img = await loadImage(e.flyerUrl);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(fx, fy, fw, fh);
+      ctx.clip();
+      // The flyer itself, whole; behind it the same flyer blown up, blurred and dimmed, so the box never shows bars.
+      const cover = Math.max(fw / img.width, fh / img.height) * 1.1;
+      ctx.filter = "blur(36px) brightness(0.45) saturate(1.3)";
+      ctx.drawImage(img, fx + (fw - img.width * cover) / 2, fy + (fh - img.height * cover) / 2, img.width * cover, img.height * cover);
+      ctx.filter = "none";
+      const s = Math.min(fw / img.width, fh / img.height);
+      ctx.drawImage(img, fx + (fw - img.width * s) / 2, fy + (fh - img.height * s) / 2, img.width * s, img.height * s);
+      ctx.restore();
+      drew = true;
+    } catch {
+      // Fall through to the generated flyer.
+    }
+  }
+  if (!drew) await generatedFlyer(ctx, e, fx, fy, fw, fh);
+  if (cancelled) {
+    ctx.fillStyle = "rgba(10,10,11,0.55)";
+    ctx.fillRect(fx, fy, fw, fh);
+  }
+  printedFrame(ctx, fx, fy, fw, fh, cancelled ? C.muted : C.fg, cancelled ? C.line : C.accent);
+}
+
+/** "details": flyer, title, time, venue and a QR code. "flyer": the flyer as big as the safe area allows, one line under it. */
+export type StoryLayout = "details" | "flyer";
+
+export async function renderStoryCard(e: EventSummary, url: string, tz: string, layout: StoryLayout = "details"): Promise<Blob> {
   await Promise.all([
     document.fonts.load(`300 120px ${SERIF}`),
     document.fonts.load(`400 40px ${SERIF}`),
@@ -204,6 +240,26 @@ export async function renderStoryCard(e: EventSummary, url: string, tz: string):
   ctx.textAlign = "left";
   track(ctx, 0, 0);
 
+  if (layout === "flyer") {
+    // The flyer, whole and as large as it fits, with one line under it: where to RSVP.
+    const fx = pad;
+    const fy = SAFE_TOP + 70;
+    const fw = W - pad * 2 - 14;
+    const fh = SAFE_BOTTOM - 150 - fy;
+    await drawFlyer(ctx, e, fx, fy, fw, fh, cancelled);
+    ctx.font = mono(30);
+    track(ctx, 0.2, 30);
+    ctx.fillStyle = cancelled ? C.muted : C.fg;
+    const line = cancelled ? "CANCELLED" : `${dayLabel(e.startsAt, new Date(), tz).toUpperCase()} · ${clock(e.startsAt, tz).toUpperCase()}`;
+    ctx.fillText(line, pad, SAFE_BOTTOM - 62);
+    ctx.fillStyle = C.accent;
+    ctx.textAlign = "right";
+    ctx.fillText(url.replace(/^https?:\/\//, "").replace(/\/e\/.+$/, "").toUpperCase(), W - pad, SAFE_BOTTOM - 62);
+    ctx.textAlign = "left";
+    track(ctx, 0, 0);
+    return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("canvas"))), "image/png"));
+  }
+
   // Laid out from the bottom up: QR row, venue, when, title; the flyer takes whatever height is left.
   const qrSize = 200;
   const qy = SAFE_BOTTOM - qrSize - 12;
@@ -226,35 +282,7 @@ export async function renderStoryCard(e: EventSummary, url: string, tz: string):
   const fy = SAFE_TOP + 70;
   const fw = W - pad * 2 - 14;
   const fh = firstTitleY - size * 0.72 - 72 - fy;
-  ctx.fillStyle = C.surface;
-  ctx.fillRect(fx, fy, fw, fh);
-  let drew = false;
-  if (e.flyerUrl) {
-    try {
-      const img = await loadImage(e.flyerUrl);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(fx, fy, fw, fh);
-      ctx.clip();
-      // The flyer itself, whole; behind it the same flyer blown up, blurred and dimmed, so the box never shows bars.
-      const cover = Math.max(fw / img.width, fh / img.height) * 1.1;
-      ctx.filter = "blur(36px) brightness(0.45) saturate(1.3)";
-      ctx.drawImage(img, fx + (fw - img.width * cover) / 2, fy + (fh - img.height * cover) / 2, img.width * cover, img.height * cover);
-      ctx.filter = "none";
-      const s = Math.min(fw / img.width, fh / img.height);
-      ctx.drawImage(img, fx + (fw - img.width * s) / 2, fy + (fh - img.height * s) / 2, img.width * s, img.height * s);
-      ctx.restore();
-      drew = true;
-    } catch {
-      // Fall through to the generated flyer.
-    }
-  }
-  if (!drew) await generatedFlyer(ctx, e, fx, fy, fw, fh);
-  if (cancelled) {
-    ctx.fillStyle = "rgba(10,10,11,0.55)";
-    ctx.fillRect(fx, fy, fw, fh);
-  }
-  printedFrame(ctx, fx, fy, fw, fh, cancelled ? C.muted : C.fg, cancelled ? C.line : C.accent);
+  await drawFlyer(ctx, e, fx, fy, fw, fh, cancelled);
 
   // Title in the display serif.
   ctx.fillStyle = C.fg;

@@ -82,6 +82,8 @@ export interface EventDraft {
   policyTags: string[];
   flyerKey: string | null;
   videoId: string | null;
+  /** On unless the organizer turns it off. */
+  flyerDownloads?: boolean;
   lineup: {
     artistId?: string;
     name: string;
@@ -128,6 +130,8 @@ export const api = {
     request<{ ok: true }>(`/api/events/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
   reportUser: (id: string, reason: string, note: string) =>
     request<{ ok: true }>(`/api/users/${enc(id)}/report`, { method: "POST", body: JSON.stringify({ reason, note }) }),
+  setLive: (id: string, action: "end" | "extend") =>
+    request<{ endsAt: string; endedEarly: boolean }>(`/api/events/${encodeURIComponent(id)}/live`, { method: "POST", body: JSON.stringify({ action }) }),
   page: (kind: PageKind, slug: string) => request<PageProfile>(pagePath(kind, slug)),
   pageEvents: (kind: PageKind, slug: string, when: "upcoming" | "past", cursor?: string | null) =>
     request<PageEvents>(`${pagePath(kind, slug)}/events?when=${when}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),

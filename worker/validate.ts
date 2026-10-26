@@ -110,7 +110,8 @@ export function validateEvent(
   if (!title) errors.title = "Give the event a name.";
 
   const startsMs = typeof r.startsAt === "string" ? Date.parse(r.startsAt) : NaN;
-  const endsMs = typeof r.endsAt === "string" ? Date.parse(r.endsAt) : NaN;
+  // No end time given: assume a full night (6 hours), as the posting form does.
+  const endsMs = typeof r.endsAt === "string" && r.endsAt ? Date.parse(r.endsAt) : Number.isNaN(startsMs) ? NaN : startsMs + 6 * 3600e3;
   if (Number.isNaN(startsMs)) errors.startsAt = "Pick a date and start time.";
   if (Number.isNaN(endsMs)) errors.endsAt = "Pick an end time.";
   if (!errors.startsAt && !errors.endsAt) {

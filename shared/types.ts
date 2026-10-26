@@ -53,6 +53,8 @@ export interface EventSummary {
   pitch: string | null;
   startsAt: string;
   endsAt: string;
+  /** The organizer ended it early: it's over at endsAt, with no grace period. */
+  endedEarly?: boolean;
   venueName: string | null;
   venueType: string | null;
   address: string;
@@ -88,6 +90,8 @@ export interface EventDetail extends EventSummary {
   venueId: string | null;
   /** For the link to /v/<slug>. */
   venueSlug?: string | null;
+  /** The organizer lets people download the flyer (on unless they turned it off). */
+  flyerDownloads?: boolean;
   flyerKey: string | null;
   createdAt: string;
   updatedAt: string;
@@ -224,6 +228,8 @@ export interface SearchResults {
   events: EventSummary[];
   artists: SearchPlace[];
   venues: SearchPlace[];
+  /** People who post nights here, by name or username. */
+  organizers: SearchPlace[];
   /** Ids of every upcoming event that matches, including ones by a matching artist or at a matching venue. */
   eventIds: string[];
 }

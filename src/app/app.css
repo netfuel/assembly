@@ -989,3 +989,7 @@
 /* Names that open a page: plain until you aim at them. */
 .page-link { cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color var(--dur-fast); }
 .page-link:hover, .page-link:focus-visible { text-decoration-color: currentColor; }
+
+.host-bar { flex-wrap: wrap; }
+.host-live { display: inline-flex; flex-wrap: wrap; gap: var(--space-2); }
+.story-layout { display: grid; gap: var(--space-3); justify-items: start; margin-bottom: var(--space-4); }

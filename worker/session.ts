@@ -1,3 +1,4 @@
+import { TERMS_VERSION } from "../shared/legal";
 import type { Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { AppContext } from "./env";
@@ -26,6 +27,13 @@ function isSecure(c: Context<AppContext>) {
 
 /** Creates a session for a user and sets the cookie. Only the token's hash is stored. */
 export async function startSession(c: Context<AppContext>, userId: string) {
+  // Signing in is agreeing to the Terms and Privacy policy ("By continuing you agree…"): record which version.
+  await c.env.DB.prepare("UPDATE users SET terms_version = ?, terms_accepted_at = ? WHERE id = ? AND (terms_version IS NULL OR terms_version <> ?)")
+    .bind(TERMS_VERSION, new Date().toISOString(), userId, TERMS_VERSION)
+    .run()
+    .catch((err: unknown) => {
+      if (!(err instanceof Error && /no such column/i.test(err.message))) console.error("terms version", err);
+    });
   const token = randomToken();
   const hash = await hashToken(token);
   await c.env.SESSIONS.put(`session:${hash}`, JSON.stringify({ userId }), {

@@ -39,7 +39,8 @@ async function render(c: Context<{ Bindings: Env }>, k: "a" | "v" | "o") {
   const description = [t.bio ? t.bio.replace(/\s+/g, " ").slice(0, 160) : place || `${NOUN[kind]} on Assembly.`, nextLine].join(" ").slice(0, 280);
   const title = t.name;
   // A page photo if there is one; otherwise the next show's designed preview; otherwise the site default stays.
-  const image = t.photo ? new URL(t.photo, origin).toString() : next ? `${origin}/api/og/e/${encodeURIComponent(next.id)}.png` : null;
+  const image = t.photo ? new URL(t.photo, origin).toString() : next ? `${origin}/api/og/e/${encodeURIComponent(next.id)}.png` : `${origin}/icons/og.png`;
+  const designed = !t.photo;
 
   const ld: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -47,7 +48,7 @@ async function render(c: Context<{ Bindings: Env }>, k: "a" | "v" | "o") {
     name: t.name,
     url,
     ...(t.bio ? { description: t.bio.slice(0, 500) } : {}),
-    ...(image ? { image } : {}),
+    image,
     sameAs: Object.values(t.links).filter(Boolean),
     ...(t.venue
       ? { address: t.venue.address, geo: { "@type": "GeoCoordinates", latitude: t.venue.lat, longitude: t.venue.lng } }
@@ -69,8 +70,10 @@ async function render(c: Context<{ Bindings: Env }>, k: "a" | "v" | "o") {
     `<meta property="og:title" content="${esc(title)}">`,
     `<meta property="og:description" content="${esc(description)}">`,
     `<meta property="og:url" content="${esc(url)}">`,
-    ...(image ? [`<meta property="og:image" content="${esc(image)}">`, `<meta property="og:image:alt" content="${esc(t.name)}">`] : []),
-    `<meta name="twitter:card" content="${image && !t.photo ? "summary_large_image" : "summary"}">`,
+    `<meta property="og:image" content="${esc(image)}">`,
+    ...(designed ? [`<meta property="og:image:width" content="1200">`, `<meta property="og:image:height" content="630">`] : []),
+    `<meta property="og:image:alt" content="${esc(t.name)}">`,
+    `<meta name="twitter:card" content="${designed ? "summary_large_image" : "summary"}">`,
     `<link rel="canonical" href="${esc(url)}">`,
     `<link rel="alternate" type="application/atom+xml" title="${esc(`${t.name} on Assembly`)}" href="${esc(feed)}">`,
     `<script type="application/ld+json">${json(ld)}</script>`,

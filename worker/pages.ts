@@ -7,6 +7,7 @@ import type { AppContext, Env } from "./env";
 import { EVENT_SELECT, toSummary, type EventRow } from "./events";
 import { isModerator } from "./moderation";
 import { notMigrated } from "./checkins";
+import { markEnded } from "./live";
 import { rateLimit } from "./posting";
 import { PAGE_LIMITS, sniffImage, validatePageEdit } from "./validate";
 import type { ArtistLinks, PageClaim, PageEvent, PageEvents, PageKind, PageProfile, SceneId } from "../shared/types";
@@ -170,7 +171,7 @@ export async function pageEvents(env: Env, t: Target, when: "upcoming" | "past",
     .all<EventRow & { set_start?: string | null; room?: string | null }>();
   const page = results.slice(0, limit);
   const events: PageEvent[] = page.map((r) => ({ ...toSummary(r), ...(t.kind === "artist" ? { setStart: r.set_start ?? null, room: r.room ?? null } : {}) }));
-  return { events, next: results.length > limit ? page[page.length - 1].starts_at : null };
+  return { events: await markEnded(env, events), next: results.length > limit ? page[page.length - 1].starts_at : null };
 }
 
 export const pages = new Hono<AppContext>();

@@ -221,11 +221,22 @@ function etagFor(events: FeedEvent[], kind: string) {
   return `W/"${kind}-${events.length}-${newest.replace(/\D/g, "")}-${new Date().toISOString().slice(0, 13)}"`;
 }
 
-function respond(c: Context<{ Bindings: Env }>, body: string, type: string, etag: string) {
-  if (c.req.header("If-None-Match") === etag) return c.body(null, 304, { ETag: etag });
+/** The newest edit, or the top of this hour (events drop off the feed as they end), whichever is later. */
+function lastModified(events: FeedEvent[]) {
+  const newest = events.reduce((m, e) => Math.max(m, Date.parse(e.updated_at) || 0), 0);
+  const hour = Math.floor(Date.now() / 3600e3) * 3600e3;
+  return new Date(Math.max(newest, hour)).toUTCString();
+}
+
+function respond(c: Context<{ Bindings: Env }>, body: string, type: string, etag: string, events: FeedEvent[]) {
+  const lm = lastModified(events);
+  const since = Date.parse(c.req.header("If-Modified-Since") ?? "");
+  if (c.req.header("If-None-Match") === etag || (!c.req.header("If-None-Match") && since && since >= Date.parse(lm)))
+    return c.body(null, 304, { ETag: etag, "Last-Modified": lm });
   return c.body(body, 200, {
     "Content-Type": type,
     ETag: etag,
+    "Last-Modified": lm,
     "Cache-Control": "public, max-age=900",
     "Access-Control-Allow-Origin": "*",
   });
@@ -252,9 +263,9 @@ feeds.get("/:a/:b?", async (c) => {
     const home = `${origin}/${a}/${encodeURIComponent(page.slug)}`;
     const o = { origin, self: `${origin}${c.req.path}`, title: `Assembly: ${page.name}`, tz, home };
     const etag = etagFor(events, `${format}-${a}-${page.id}-${(page.updatedAt ?? "").replace(/\D/g, "")}`);
-    if (format === "xml") return respond(c, atom(events, o), "application/atom+xml; charset=utf-8", etag);
-    if (format === "json") return respond(c, JSON.stringify(jsonFeed(events, o)), "application/feed+json; charset=utf-8", etag);
-    return respond(c, calendar(events, o), "text/calendar; charset=utf-8", etag);
+    if (format === "xml") return respond(c, atom(events, o), "application/atom+xml; charset=utf-8", etag, events);
+    if (format === "json") return respond(c, JSON.stringify(jsonFeed(events, o)), "application/feed+json; charset=utf-8", etag, events);
+    return respond(c, calendar(events, o), "text/calendar; charset=utf-8", etag, events);
   }
   const citySlug = b ? a : m[1];
   const scene = b ? m[1] : null;
@@ -268,9 +279,9 @@ feeds.get("/:a/:b?", async (c) => {
   const self = `${origin}${c.req.path}`;
   const o = { origin, self, title, tz: city.timezone, home: origin };
   const etag = etagFor(events, `${format}-${scene ?? "all"}`);
-  if (format === "xml") return respond(c, atom(events, o), "application/atom+xml; charset=utf-8", etag);
-  if (format === "json") return respond(c, JSON.stringify(jsonFeed(events, o)), "application/feed+json; charset=utf-8", etag);
-  return respond(c, calendar(events, o), "text/calendar; charset=utf-8", etag);
+  if (format === "xml") return respond(c, atom(events, o), "application/atom+xml; charset=utf-8", etag, events);
+  if (format === "json") return respond(c, JSON.stringify(jsonFeed(events, o)), "application/feed+json; charset=utf-8", etag, events);
+  return respond(c, calendar(events, o), "text/calendar; charset=utf-8", etag, events);
 });
 
 /** /sitemap.xml: the home page, policy pages, and every upcoming public event. */
