@@ -1,6 +1,5 @@
 // Check-in: "I'm here" for an event that's on. The phone compares its own location with the event's and sends
-// only whether it's close; we store who, which event, when, and how, never coordinates. A door code (or its QR)
-// from the host is the fallback for warehouses, basements, and bad GPS.
+// only whether it's close; we store who, which event, when, and how, never coordinates. Hosts are always let in.
 import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import { isModerator } from "./moderation";
@@ -21,11 +20,6 @@ export function checkinWindow(startsAt: string, endsAt: string) {
 /** True when the error is a missing table or column: the database hasn't had migration 0005 yet. */
 export function notMigrated(err: unknown) {
   return err instanceof Error && /no such (table|column)/i.test(err.message);
-}
-
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-export function newDoorCode() {
-  return [...crypto.getRandomValues(new Uint8Array(6))].map((b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
 }
 
 export async function canHost(env: Env, eventId: string, userId: string | null) {
@@ -60,7 +54,6 @@ interface EventTimes {
   starts_at: string;
   ends_at: string;
   status: string;
-  door_code: string | null;
 }
 
 async function presence(env: Env, e: EventTimes, userId: string | null): Promise<Presence> {
@@ -86,7 +79,7 @@ async function presence(env: Env, e: EventTimes, userId: string | null): Promise
 export const checkins = new Hono<AppContext>();
 
 async function loadEvent(env: Env, id: string) {
-  return env.DB.prepare("SELECT id, starts_at, ends_at, status, door_code FROM events WHERE id = ? AND status IN ('live', 'cancelled')")
+  return env.DB.prepare("SELECT id, starts_at, ends_at, status FROM events WHERE id = ? AND status IN ('live', 'cancelled')")
     .bind(id)
     .first<EventTimes>();
 }
@@ -104,7 +97,7 @@ checkins.get("/:id/presence", async (c) => {
 });
 
 /**
- * Check in. Body: { method: "gps", near: true } after the phone's own distance check, or { method: "code", code }.
+ * Check in. Body: { method: "gps", near: true } after the phone's own distance check.
  * Hosts can always check in (method "host").
  */
 checkins.post("/:id/checkin", async (c) => {
@@ -120,18 +113,12 @@ checkins.post("/:id/checkin", async (c) => {
     if (now < opens) return c.json({ error: "Check-in opens 30 minutes before the start." }, 409);
     if (now > closes) return c.json({ error: "Check-in for this one has closed." }, 409);
 
-    const body = (await c.req.json().catch(() => ({}))) as { method?: string; near?: boolean; code?: string };
-    let method: "gps" | "code" | "host";
+    const body = (await c.req.json().catch(() => ({}))) as { method?: string; near?: boolean };
+    let method: "gps" | "host";
     if (await canHost(c.env, e.id, userId)) method = "host";
     else if (body.method === "gps") {
-      if (body.near !== true) return c.json({ error: "You don't look close enough yet. Use the door code instead." }, 400);
+      if (body.near !== true) return c.json({ error: "You don't look close enough yet. Try again near the entrance." }, 400);
       method = "gps";
-    } else if (body.method === "code") {
-      // Codes are short, so tries are limited per event as well as per person.
-      if (!(await rateLimit(c.env.SESSIONS, `doorcode:${e.id}:${userId}`, 8, 900))) return c.json({ error: "Too many wrong codes. Ask the door for help." }, 429);
-      const code = (body.code ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (!e.door_code || code !== e.door_code) return c.json({ error: "That code doesn't match. Check it at the door." }, 400);
-      method = "code";
     } else return c.json({ error: "Choose how to check in." }, 400);
 
     await c.env.DB.prepare(
@@ -164,24 +151,3 @@ checkins.delete("/:id/checkin", async (c) => {
   }
 });
 
-/** The door code for hosts (made on first ask). POST rotates it, for when it's been shared too widely. */
-async function doorCode(c: import("hono").Context<AppContext>, rotate: boolean) {
-  const userId = c.get("userId");
-  try {
-    const e = await loadEvent(c.env, c.req.param("id") ?? "");
-    if (!e) return c.json({ error: "We couldn't find that event." }, 404);
-    if (!(await canHost(c.env, e.id, userId))) return c.json({ error: "Only the host can see the door code." }, 403);
-    let code = e.door_code;
-    if (!code || rotate) {
-      code = newDoorCode();
-      await c.env.DB.prepare("UPDATE events SET door_code = ? WHERE id = ?").bind(code, e.id).run();
-    }
-    c.header("Cache-Control", "private, no-store");
-    return c.json({ code });
-  } catch (err) {
-    if (notMigrated(err)) return c.json({ error: "Check-in isn't set up on this server yet." }, 503);
-    throw err;
-  }
-}
-checkins.get("/:id/door-code", (c) => doorCode(c, false));
-checkins.post("/:id/door-code", (c) => doorCode(c, true));

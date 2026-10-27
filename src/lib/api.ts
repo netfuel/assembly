@@ -182,10 +182,9 @@ export const api = {
   setVerified: (id: string, verified: boolean) =>
     request<{ ok: true; verified: boolean }>(`/api/mod/users/${enc(id)}/verified`, { method: "PUT", body: JSON.stringify({ verified }) }),
   presence: (id: string) => request<Presence>(`/api/events/${enc(id)}/presence`),
-  checkIn: (id: string, body: { method: "gps"; near: true } | { method: "code"; code: string } | { method: "host" }) =>
+  checkIn: (id: string, body: { method: "gps"; near: true } | { method: "host" }) =>
     request<Presence>(`/api/events/${enc(id)}/checkin`, { method: "POST", body: JSON.stringify(body) }),
   checkOut: (id: string) => request<Presence>(`/api/events/${enc(id)}/checkin`, { method: "DELETE" }),
-  doorCode: (id: string, rotate = false) => request<{ code: string }>(`/api/events/${enc(id)}/door-code`, { method: rotate ? "POST" : "GET" }),
   wall: (id: string) => request<WallState>(`/api/events/${enc(id)}/wall`),
   setWallEnabled: (id: string, enabled: boolean) => request<WallState>(`/api/events/${enc(id)}/wall`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
   setHighlight: (postId: string, highlight: boolean) => request<{ ok: true }>(`/api/wall/${enc(postId)}`, { method: "PATCH", body: JSON.stringify({ highlight }) }),

@@ -714,14 +714,7 @@
 .checkin-count { display: inline-flex; align-items: center; gap: 8px; font-size: var(--text-xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-muted); }
 .checkin-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-live) 25%, transparent); }
 .checkin-stamp { display: inline-block; padding: 2px 8px; border: 1.5px solid var(--color-live); color: var(--color-live-text); font-size: var(--text-xs); font-weight: 600; letter-spacing: var(--tracking-label); text-transform: uppercase; transform: rotate(-3deg); }
-.checkin-panel { display: grid; gap: var(--space-3); }
-.checkin-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-2); }
-.checkin-code { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: end; }
 .code-input { letter-spacing: 0.3em; font-size: 18px !important; text-transform: uppercase; }
-.checkin-host { border-top: 1px solid var(--color-line); padding-top: var(--space-3); }
-.door-code { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: var(--space-4); align-items: start; }
-.door-code .share-qr { width: 140px; height: 140px; }
-.door-code-value { font-size: 2rem; letter-spacing: 0.25em; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .checkin-dot { animation: none; } }
 
 /* Event wall */
@@ -771,10 +764,7 @@
 .mod-wall-item img { width: 88px; height: 88px; object-fit: cover; }
 .mod-wall-item .tags { display: flex; flex-wrap: wrap; gap: 4px; }
 @media (max-width: 599px) {
-  .door-code { grid-template-columns: minmax(0, 1fr); justify-items: start; }
-  .door-code .share-qr { width: 200px; height: 200px; }
-  .door-code-value { font-size: 1.75rem; letter-spacing: 0.18em; }
-}
+      }
 
 /* Friends */
 .avatar { position: relative; }

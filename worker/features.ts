@@ -12,7 +12,7 @@ export function features(env: Pick<Env, "FEATURES_OFF">): Features {
 export function moduleFor(path: string): keyof Features | null {
   if (/^\/events\/[^/]+\/wall(\/|$)/.test(path) || path.startsWith("/wall/") || path.startsWith("/mod/wall")) return "wall";
   if (path.startsWith("/friends") || /^\/events\/[^/]+\/(friend-visibility|invite|invites|here)(\/|$)/.test(path)) return "friends";
-  if (/^\/events\/[^/]+\/(checkin|presence|door-code)(\/|$)/.test(path)) return "checkin";
+  if (/^\/events\/[^/]+\/(checkin|presence)(\/|$)/.test(path)) return "checkin";
   if (/^\/events\/[^/]+\/react$/.test(path)) return "reactions";
   if (/^\/events\/[^/]+\/comments(-mode)?$/.test(path) || /^\/mod\/comments(\/|$)/.test(path) || /^\/comments(\/|$)/.test(path)) return "comments";
   return null;

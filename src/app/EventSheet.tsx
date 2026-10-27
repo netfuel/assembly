@@ -416,7 +416,7 @@ export function EventSheet({
           if (key === "here")
             return !feat.checkin ? null : (
               <EvSection key={key} id="here" title="Here now" summary={checkedIn ? "You're checked in" : "Check in at the door"} open={open.here} onToggle={toggle} refs={sectionRefs}>
-                <CheckIn trigger={checkInSignal} event={e} me={me} onNeedSignIn={onNeedSignIn} onChange={onPresence} toast={toast} />
+                <CheckIn trigger={checkInSignal} onTriggered={() => setCheckInSignal(0)} event={e} me={me} onNeedSignIn={onNeedSignIn} onChange={onPresence} toast={toast} />
                 {friendsOn && (
           <FriendsHere
             eventId={e.id}

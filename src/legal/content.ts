@@ -29,7 +29,7 @@ export const PRIVACY: LegalDoc = {
           "Profile details you choose to add: pronouns, bio, scenes, and links.",
           "Events you post: everything in the announcement, including flyers, promo videos, the address, and the lineup.",
           "RSVPs: which events you marked going or interested.",
-          "Check-ins: which events you checked in to, when, how (location or door code), and when you checked out. Never where you were.",
+          "Check-ins: which events you checked in to, when, and when you checked out. Never where you were.",
           "Wall photos you post, their captions, and whether you posted without your name.",
           "Comments you post on event pages, when you posted or edited them, and the people you mute or block from comments.",
           "Friends: your username if you choose one, who you're friends with, requests, people you block or hide your nights from, and whether friends see a given night.",
@@ -59,7 +59,7 @@ export const PRIVACY: LegalDoc = {
       body: [
         "We don't track or store your device's location. The map shows events where organizers placed them.",
         "If you tap the locate button, your browser asks for permission, then the map shows your position as a dot and cards show how far away each event is. That position stays on your device: it's never sent to Assembly, never saved, and never logged. Your device only remembers that you turned location on, so it doesn't ask again. Tap the button again to turn it off and clear the dot.",
-        "Check-in by location works the same way: your phone compares its position with the event's and sends only whether you're close. Your coordinates never leave your device. You can always check in with the door code instead.",
+        "Check-in by location works the same way: your phone compares its position with the event's and sends only whether you're close. Your coordinates never leave your device.",
         "Wall photos are re-saved on your phone before upload, which removes location and camera details from the file.",
         "Address search in the posting form sends what you type to Photon, an OpenStreetMap search service run by Komoot, to find matching addresses.",
       ],

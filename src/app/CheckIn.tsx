@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Label } from "../components/ui";
-import { QrCode } from "../components/ShareSheet";
+import { Button } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import type { EventSummary, MeProfile, Presence } from "../../shared/types";
 import { reducedMotion } from "../lib/motion";
@@ -24,19 +23,9 @@ function position(): Promise<GeolocationPosition> {
   });
 }
 
-/** A door code from a scanned QR (/e/<id>?checkin=CODE). Read once, then dropped from the address bar. */
-function codeFromUrl(): string | null {
-  const p = new URLSearchParams(location.search);
-  const code = p.get("checkin");
-  if (!code) return null;
-  p.delete("checkin");
-  history.replaceState(history.state, "", location.pathname + (p.size ? `?${p}` : ""));
-  return code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
-}
-
 /**
- * "I'm here" for an event that's on: by location (checked on the phone, only yes or no is sent) or by the
- * host's door code. Shows how many people are here. Hosts get the door code and its QR to show at the entrance.
+ * "I'm here" for an event that's on, by location: the phone checks it's near the venue and sends only yes or no.
+ * Hosts are always let in. Shows how many people are here.
  */
 export function CheckIn({
   event: e,
@@ -45,9 +34,11 @@ export function CheckIn({
   onChange,
   toast,
   trigger = 0,
+  onTriggered,
 }: {
-  /** Bump to open the check-in choices from outside (the event page's action bar). */
+  /** Set above 0 to check in from outside (the event page's action bar); onTriggered resets it. */
   trigger?: number;
+  onTriggered?: () => void;
   event: EventSummary;
   me: MeProfile | null;
   onNeedSignIn: () => void;
@@ -55,12 +46,8 @@ export function CheckIn({
   toast: (msg: string) => void;
 }) {
   const [p, setP] = useState<Presence | null>(null);
-  const [mode, setMode] = useState<null | "choose" | "code">(null);
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState<null | "gps" | "code" | "out">(null);
+  const [busy, setBusy] = useState<null | "gps" | "out">(null);
   const [note, setNote] = useState<string | null>(null);
-  const [door, setDoor] = useState<string | null>(null);
-  const urlCode = useRef<string | null>(codeFromUrl());
   const stampEl = useRef<HTMLSpanElement>(null);
 
   const update = useCallback(
@@ -71,9 +58,13 @@ export function CheckIn({
     [onChange],
   );
 
+  // The event page's action bar asks to check in: once presence has loaded, go straight to the location check.
   useEffect(() => {
-    if (trigger > 0) setMode("choose");
-  }, [trigger]);
+    if (!trigger || !p) return;
+    onTriggered?.();
+    void byLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger, p]);
 
   useEffect(() => {
     api
@@ -82,14 +73,12 @@ export function CheckIn({
       .catch(() => setP(null));
   }, [e.id, me?.id, update]);
 
-  async function submit(body: Parameters<typeof api.checkIn>[1], kind: "gps" | "code") {
-    setBusy(kind);
+  async function submit(body: Parameters<typeof api.checkIn>[1]) {
+    setBusy("gps");
     setNote(null);
     try {
       const next = await api.checkIn(e.id, body);
       update(next);
-      setMode(null);
-      setCode("");
       toast("You're checked in. Have a good night.");
       stampEl.current?.animate?.([{ transform: "scale(1.6) rotate(-8deg)", opacity: 0 }, { transform: "scale(1) rotate(-3deg)", opacity: 1 }], {
         duration: reducedMotion() ? 0 : 320,
@@ -102,21 +91,10 @@ export function CheckIn({
     }
   }
 
-  // A scanned door QR: check in straight away when signed in.
-  useEffect(() => {
-    if (!p || !urlCode.current) return;
-    if (!me) {
-      onNeedSignIn();
-      return;
-    }
-    const c = urlCode.current;
-    urlCode.current = null;
-    if (p.open && !(p.viewer?.checkedIn && !p.viewer.checkedOut)) void submit({ method: "code", code: c }, "code");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p, me]);
-
   async function byLocation() {
     if (!me) return onNeedSignIn();
+    // Hosts don't need to prove they're there.
+    if (p?.viewerIsHost) return submit({ method: "host" });
     setBusy("gps");
     setNote(null);
     try {
@@ -125,16 +103,18 @@ export function CheckIn({
       const slack = Math.min(pos.coords.accuracy || 0, 250);
       if (d > NEAR_M + slack) {
         setBusy(null);
-        setNote("You don't look close to the venue yet. If you're inside, ask the door for the code.");
-        setMode("code");
+        setNote("You don't look close to the venue yet. Indoors, signal can drift: try again near the entrance.");
         return;
       }
-      await submit({ method: "gps", near: true }, "gps");
+      await submit({ method: "gps", near: true });
     } catch (err) {
       setBusy(null);
       const denied = (err as GeolocationPositionError)?.code === 1;
-      setNote(denied ? "Location is off for this site. Use the door code instead." : "Couldn't get your location. Use the door code instead.");
-      setMode("code");
+      setNote(
+        denied
+          ? "Location is off for this site. Turn it on in your browser's site settings to check in."
+          : "Couldn't get your location. Try again near the entrance, where signal is usually better.",
+      );
     }
   }
 
@@ -150,20 +130,10 @@ export function CheckIn({
     }
   }
 
-  async function showDoor(rotate = false) {
-    try {
-      setDoor((await api.doorCode(e.id, rotate)).code);
-      if (rotate) toast("New door code. The old one stops working.");
-    } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Couldn't load the door code.");
-    }
-  }
-
   if (!p) return null;
   const here = p.viewer?.checkedIn && !p.viewer.checkedOut;
   const showPanel = p.open || here || p.hereNow > 0;
   if (!showPanel && !p.viewerIsHost) return null;
-  const doorUrl = door ? `${location.origin}/e/${encodeURIComponent(e.id)}?checkin=${door}` : "";
 
   return (
     <section className="checkin" aria-label="Check in" data-reveal>
@@ -183,86 +153,18 @@ export function CheckIn({
             </Button>
           </>
         ) : p.open ? (
-          <Button size="sm" variant="solid" onClick={() => (me ? setMode(mode ? null : "choose") : onNeedSignIn())} aria-expanded={!!mode}>
-            Check in
+          <Button size="sm" variant="solid" onClick={byLocation} disabled={busy === "gps"}>
+            {busy === "gps" ? "Checking…" : "Check in"}
           </Button>
         ) : (
           <span className="note">Check-in opens 30 minutes before the start.</span>
         )}
       </div>
 
-      {mode && !here && (
-        <div className="checkin-panel">
-          {mode === "choose" && (
-            <>
-              <p className="note">
-                Your phone checks that you're at the venue and sends only yes or no. Your location isn't stored or shared.
-              </p>
-              <div className="checkin-options">
-                <Button size="lg" variant="primary" onClick={byLocation} disabled={!!busy}>
-                  {busy === "gps" ? "Checking…" : "Use my location"}
-                </Button>
-                <Button size="lg" onClick={() => setMode("code")} disabled={!!busy}>
-                  Enter the door code
-                </Button>
-              </div>
-            </>
-          )}
-          {mode === "code" && (
-            <form
-              className="checkin-code"
-              onSubmit={(ev) => {
-                ev.preventDefault();
-                if (code.trim()) void submit({ method: "code", code }, "code");
-              }}
-            >
-              <label className="field">
-                <span className="field-label">Door code</span>
-                <input
-                  value={code}
-                  onChange={(ev) => setCode(ev.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
-                  placeholder="ABC123"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="num code-input"
-                  autoFocus
-                />
-              </label>
-              <Button type="submit" size="lg" variant="primary" disabled={busy === "code" || code.length < 4}>
-                {busy === "code" ? "Checking…" : "Check in"}
-              </Button>
-            </form>
-          )}
-          {note && <p className="field-error">{note}</p>}
-        </div>
-      )}
-
-      {p.viewerIsHost && (
-        <div className="checkin-host">
-          {door ? (
-            <div className="door-code">
-              <QrCode url={doorUrl} label={`Check-in QR for ${e.title}`} />
-              <div className="stack">
-                <Label glyph="▣">Door code</Label>
-                <span className="door-code-value num">{door}</span>
-                <p className="note">Show this at the entrance. Scanning the QR checks people in. Their location never comes into it.</p>
-                <div className="inline-actions">
-                  <Button size="sm" onClick={() => showDoor(true)}>
-                    New code
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setDoor(null)}>
-                    Hide
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <Button size="sm" onClick={() => showDoor(false)}>
-              Show door code
-            </Button>
-          )}
-        </div>
+      {p.open && !here && (
+        <p className="note checkin-privacy">
+          {note ? <span className="field-error">{note}</span> : "Your phone checks that you're at the venue and sends only yes or no. Your location isn't stored or shared."}
+        </p>
       )}
     </section>
   );

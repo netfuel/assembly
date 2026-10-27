@@ -252,6 +252,7 @@ export interface Presence {
   opensAt: string;
   closesAt: string;
   viewerIsHost: boolean;
+  /** "code" is from the old door codes, kept for past check-ins. */
   viewer: { checkedIn: boolean; method: "gps" | "code" | "host"; checkedOut: boolean } | null;
 }
 
