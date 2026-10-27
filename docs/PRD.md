@@ -77,7 +77,7 @@ Assembly feels like a 90s rave flyer come to life on a night map: photocopy text
 | Where the theme shows up | Example |
 | --- | --- |
 | App name and logo | Assembly |
-| Post button | "Make an announcement" |
+| Post button | "Add an event" |
 | Weekly digest notification | "This week's announcements" |
 | Empty states | "Nothing on the schedule tonight. Check the weekend." |
 | Organizer verified badge | A small varsity-letter mark |
@@ -113,7 +113,7 @@ P0 ships at launch, P1 within 60 days after, P2 is later. Everything below is a 
 | Event page | Directions: open in Apple Maps or Google Maps; parking and transit notes from the organizer | P0 |
 | Event page | Share: copy link, native share sheet, Instagram story card (flyer + date + QR) | P0 |
 | Event page | Who's going: count and friends' faces (only users who opt in) | P1 |
-| Posting | "Make an announcement" flow: flyer upload, title, venue or address, date, times, scenes, door info, ticket link | P0 |
+| Posting | "Add an event" flow: flyer upload, title, venue or address, date, times, scenes, door info, ticket link | P0 |
 | Posting | Flyer upload: JPG, PNG, WebP, HEIC; up to 10 MB; auto-generate map thumbnail and story card | P0 |
 | Posting | Promo video upload: MP4 or MOV, max 90 seconds enforced server-side, transcoded for streaming | P0 |
 | Posting | Lineup builder: add artists, set times, and links; reuse artist profiles across events | P0 |
@@ -146,9 +146,9 @@ Four flows define launch. Each should complete one-handed in under the time list
 4. Watch the promo video, scan the lineup, tap an artist to hear them.
 5. RSVP (sign in with Google or Apple if first time) and add it to the calendar.
 
-**2. Make an announcement (organizer, 2 minutes)**
+**2. Add an event (organizer, 2 minutes)**
 
-1. Tap "Make an announcement".
+1. Tap "Add an event".
 2. Upload the flyer; title and date are suggested from the flyer text where possible (P1).
 3. Pick a listed venue or enter an address; add parking, entrance, or transit notes.
 4. Add the lineup with set times and artist links.

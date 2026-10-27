@@ -155,7 +155,7 @@ export function ProfileSheet({
           <p className="note">
             You haven't posted anything.{" "}
             <button className="link" onClick={onAnnounce}>
-              Make an announcement →
+              Add an event →
             </button>
           </p>
         )}

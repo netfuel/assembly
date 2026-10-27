@@ -216,7 +216,7 @@ export function EventSheet({
   const [sharing, setSharing] = useState(false);
   const [viewing, setViewing] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
-  const onPresence = useCallback((p: Presence) => setCheckedIn(!!p.viewer?.checkedIn), []);
+  const onPresence = useCallback((p: Presence) => setCheckedIn(!!(p.viewer?.checkedIn && !p.viewer.checkedOut)), []);
   const shareTarget = {
     title: e.title,
     text: `${e.title}: ${dayLabel(e.startsAt, now, tz)}, ${timeRange(e.startsAt, e.endsAt, tz)}${e.venueName ? ` at ${e.venueName}` : ""}`,
@@ -632,6 +632,11 @@ export function EventSheet({
           ) : canCheckIn && hasWall ? (
             <Button size="lg" variant="primary" className="ev-bar-primary" onClick={() => reveal("wall")}>
               See the wall
+            </Button>
+          ) : canCheckIn ? (
+            // Checked in and no wall (photo-free night or walls off): confirm it, and open Here now (where Check out is).
+            <Button size="lg" variant="confirmed" className="ev-bar-primary" onClick={() => reveal("here")} aria-label="You're checked in. Show who's here">
+              You're here ✓
             </Button>
           ) : (
             <Button

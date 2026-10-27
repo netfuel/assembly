@@ -633,8 +633,8 @@ export function App() {
               setSheet("announce");
             }}
           >
-            + <span className="hide-narrow">Make an announcement</span>
-            <span className="show-narrow">Post</span>
+            + <span className="hide-narrow">Add an event</span>
+            <span className="show-narrow">Add event</span>
           </Button>
           {me ? (
             <button className="avatar" onClick={() => setSheet("profile")} aria-label={inbox?.unread ? `You: ${inbox.unread} new` : "You: saved, notifications and profile"}>
@@ -878,7 +878,7 @@ export function App() {
           setSheet(null);
           setEditing(null);
         }}
-        label={editing ? "Edit announcement" : "Make an announcement"}
+        label={editing ? "Edit event" : "Add an event"}
         modal
         center
         className="sheet-compose"

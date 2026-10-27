@@ -384,7 +384,7 @@ export function AnnounceForm({
   return (
     <form ref={root} className="compose" onSubmit={submit} noValidate>
       <div className="stack" data-reveal>
-        <Label glyph="▶">{editing ? "Edit announcement" : "Make an announcement"}</Label>
+        <Label glyph="▶">{editing ? "Edit event" : "Add an event"}</Label>
         <h1 className="sheet-title">{editing ? s.title || "Untitled" : "Put it on the map."}</h1>
         <p className="note serif-text">
           {editing
