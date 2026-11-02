@@ -154,6 +154,7 @@ test.describe("Wall", () => {
   });
 
   test("the server strips location and camera data too, not only the app", async ({ api }) => {
+    test.fail(true, "Known bug #3 in the regression report: remove this line when it's fixed.");
     const a = await api("fanA");
     const photo = { name: "raw.jpg", mimeType: "image/jpeg", buffer: (await import("node:fs")).readFileSync("e2e/photo.jpg") };
     const r = await a.post(`/api/events/${EV.live}/wall`, { multipart: { photo, caption: "raw upload" } });

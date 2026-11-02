@@ -11,6 +11,10 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  # Nightly, and on request: the full sweep at every width.
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -40,6 +44,12 @@ jobs:
         run: printf 'DEV_LOGIN=1\nMODERATORS=test-moderator@dev.localhost\n' > .dev.vars
       - name: Regression suite (API, browser, cross-cutting)
         run: npm run test:e2e -- --project=phone
+        env:
+          E2E_FULL: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && '1' || '' }}
+      - name: Modules switched off
+        run: npm run test:e2e:flags
+      - name: Built app (service worker, offline, headers)
+        run: npm run test:e2e:built
       - uses: actions/upload-artifact@v4
         if: always()
         with:

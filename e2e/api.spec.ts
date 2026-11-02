@@ -1,5 +1,6 @@
 // API contract sweep: every route answers JSON with the right status for each role, private data isn't cached,
 // and bad input is a 4xx, never a 500. No browser.
+import { execFileSync } from "node:child_process";
 import { test, expect, ids } from "./helpers";
 import { EV } from "./roles";
 
@@ -74,6 +75,7 @@ test.describe("API contract", () => {
   });
 
   test("unknown API paths answer JSON 404, not the app's HTML", async ({ api }) => {
+    test.fail(true, "Known bug #10 in the regression report: remove this line when it's fixed.");
     const anon = await api(null);
     for (const path of ["/api/nope", "/api/events/does-not-exist", "/api/pages/artists/nobody", "/api/a/b/c"]) {
       const r = await anon.get(path);
@@ -144,7 +146,6 @@ test.describe("API contract", () => {
       ["PATCH", "/api/me", { links: { instagram: "javascript:alert(1)" } }],
       ["DELETE", "/api/me", { confirm: "nope" }],
       ["PUT", "/api/me/blocks/nobody-at-all", { kind: "mute" }],
-      ["GET", "/api/search?q=" + "x".repeat(500), undefined],
     ];
     const bad: string[] = [];
     for (const [method, path, body] of cases) {
@@ -161,6 +162,24 @@ test.describe("API contract", () => {
       if (r.status() < 400 || r.status() >= 500 || !message) bad.push(`${method} ${path} ${JSON.stringify(body).slice(0, 50)}: ${r.status()} ${text.slice(0, 80)}`);
     }
     expect(bad, bad.join("\n")).toEqual([]);
+  });
+
+  test("a long search answers 200", async ({ api }) => {
+    test.fail(true, "Known bug #2 in the regression report: remove this line when it's fixed.");
+    const anon = await api(null);
+    expect((await anon.get("/api/search?q=" + "x".repeat(60))).status(), "60-character query").toBe(200);
+  });
+
+  test("a word that matches 100+ events answers 200", async ({ api }) => {
+    test.fail(true, "Known bug #1 in the regression report: remove this line when it's fixed.");
+    const rows = Array.from({ length: 110 }, (_, i) => `('e2e-many-${i}','memphis','Zebra party ${i}',strftime('%Y-%m-%dT%H:%M:%SZ','now','+1 day'),strftime('%Y-%m-%dT%H:%M:%SZ','now','+2 day'),'x',35.1,-90.0,'live',0)`).join(",");
+    const sql = (q: string) => execFileSync("npx", ["wrangler", "d1", "execute", "assembly", "--local", "--persist-to", ".wrangler/e2e", "--command", q], { stdio: "pipe" });
+    sql(`INSERT INTO events (id, city_id, title, starts_at, ends_at, address, lat, lng, status, is_sample) VALUES ${rows}`);
+    try {
+      expect((await (await api(null)).get("/api/search?q=zebra")).status()).toBe(200);
+    } finally {
+      sql("DELETE FROM events WHERE id LIKE 'e2e-many-%'");
+    }
   });
 
   test("malformed JSON bodies are a 4xx, never a 500", async ({ api }) => {
