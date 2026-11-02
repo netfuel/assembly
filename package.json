@@ -22,7 +22,11 @@
     "headers": "node --experimental-strip-types --no-warnings scripts/write-headers.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
     "prebuild": "node scripts/sync-theme-hash.mjs",
-    "check:tags": "node scripts/check-tags.mjs"
+    "check:tags": "node scripts/check-tags.mjs",
+    "test:e2e": "node scripts/e2e-reset.mjs && playwright test",
+    "test:e2e:flags": "node scripts/e2e-reset.mjs && E2E_FEATURES_OFF=wall,friends,checkin,reactions,comments playwright test e2e/flags.spec.ts --project=phone",
+    "test:e2e:built": "node scripts/e2e-reset.mjs && E2E_BUILT=1 playwright test e2e/pwa.spec.ts --project=phone",
+    "test:smoke": "node scripts/check-tags.mjs https://assembly.rsvp"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -38,8 +42,10 @@
     "satori": "^0.32.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@cloudflare/vite-plugin": "^1.65.0",
     "@cloudflare/workers-types": "^5.20261023.1",
+    "@playwright/test": "^1.63.0",
     "@types/geojson": "^7946.0.16",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",

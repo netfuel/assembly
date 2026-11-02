@@ -23,3 +23,6 @@ email-routing.txt
 
 # Artwork downloaded by import-wearememphis.command (re-fetched from the manifest when needed)
 db/import/artwork/
+e2e-results/
+e2e/.auth/
+.wrangler/e2e/

@@ -4,9 +4,10 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
-  // Workers Builds runs only `npx wrangler deploy`, so wrangler builds the app first.
+  // Workers Builds runs only `npx wrangler deploy`, so wrangler builds the app first. Unit tests run first, so a
+  // failing test stops a deploy even before the GitHub Actions gate (.github/workflows/ci.yml) takes over deploys.
   // (The Vite plugin ignores "build" and "assets.directory" for its own builds; that warning is expected.)
-  "build": { "command": "npm run build" },
+  "build": { "command": "npm test && npm run build" },
   // The React app is served as static assets; /api/* and /fonts/* run the Worker.
   "assets": {
     "binding": "ASSETS",
