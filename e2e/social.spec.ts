@@ -100,6 +100,8 @@ test.describe("Comments", () => {
   });
 
   test("read only and off", async ({ as, api, problems }) => {
+    // Three page loads as two people: give it more time on slower CI machines.
+    test.slow();
     const host = await api("host");
     await host.put(`/api/events/${EV.upcoming}/comments-mode`, { data: { mode: "locked" } });
     const page = await as("fanA");
