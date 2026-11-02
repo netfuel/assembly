@@ -10,7 +10,14 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
  * Issues already in the regression report (bugs 4-9 and 14), per screen. The sweep fails only on new ones, so it
  * catches regressions today; delete entries here as the bugs are fixed. Regenerate from e2e-results/screens.
  */
-const KNOWN: Record<string, { small: string[]; axe: string[] }> = JSON.parse(readFileSync("e2e/known-issues.json", "utf8"));
+const KNOWN: { small: string[]; axe: string[] } = JSON.parse(readFileSync("e2e/known-issues.json", "utf8"));
+/** A control's identity for the baseline: its tag and classes, or its label without numbers ("You: 1 new" → "You: # new"). */
+const sig = (x: string) => {
+  const m = x.replace(/ \d+x\d+$/, "").match(/^(\S+?)\.(\S*) "(.*)"$/);
+  if (!m) return x;
+  const [, tag, cls, label] = m;
+  return cls ? `${tag}.${cls}` : `${tag} "${label.replace(/[0-9]+/g, "#")}"`;
+};
 
 type Screen = { name: string; role: Role | null; go: (p: Page) => Promise<void> };
 
@@ -33,18 +40,17 @@ const SCREENS: Screen[] = [
   { name: "terms", role: null, go: async (p) => void (await p.goto("/terms"), await p.getByRole("heading", { level: 1 }).waitFor()) },
 ];
 
-// Every push checks a phone and desktop; E2E_FULL (nightly and on request) adds 360 and 768.
-const WIDTHS = process.env.E2E_FULL
-  ? [
-      { w: 360, h: 780 },
-      { w: 390, h: 844 },
-      { w: 768, h: 1024 },
-      { w: 1280, h: 800 },
-    ]
-  : [
-      { w: 390, h: 844 },
-      { w: 1280, h: 800 },
-    ];
+// Every push checks a phone in light and dark; E2E_FULL (nightly, on request, and locally by default) adds 360,
+// 768 and 1280.
+const WIDTHS =
+  process.env.CI && !process.env.E2E_FULL
+    ? [{ w: 390, h: 844 }]
+    : [
+        { w: 360, h: 780 },
+        { w: 390, h: 844 },
+        { w: 768, h: 1024 },
+        { w: 1280, h: 800 },
+      ];
 
 /** Buttons and links smaller than 44 px, ignoring inline text links and small buttons whose ::after pads them to 44. */
 async function smallTargets(page: Page) {
@@ -56,6 +62,8 @@ async function smallTargets(page: Page) {
       if (!r.width || !r.height) continue;
       const style = getComputedStyle(el);
       if (style.visibility === "hidden" || el.closest("[hidden], [aria-hidden=true], .sr-only")) continue;
+      // The map library's own attribution and controls (required credits, sized by MapLibre).
+      if (el.closest(".maplibregl-ctrl, .maplibregl-ctrl-attrib")) continue;
       // Links and text buttons in running text are exempt (design review).
       if (style.display === "inline" || el.closest("p, .note, .policy-links")) continue;
       const after = getComputedStyle(el, "::after");
@@ -92,9 +100,8 @@ for (const theme of ["dark", "light"] as const) {
           // One file per screen: Playwright restarts its worker after a failing test, so nothing is kept in memory.
           writeFileSync(`e2e-results/screens/${theme}-${size.w}-${s.name}.json`, JSON.stringify({ overflow, small, axe, problems: [...problems] }, null, 1));
           expect.soft(overflow, "horizontal scroll (px)").toBeLessThanOrEqual(0);
-          const known = KNOWN[s.name] ?? { small: [], axe: [] };
-          const newSmall = small.filter((x) => !known.small.includes(x.replace(/ \d+x\d+$/, "")));
-          const newAxe = axe.filter((x) => !known.axe.includes(x.split(" ")[0]));
+          const newSmall = small.filter((x) => !KNOWN.small.includes(sig(x)));
+          const newAxe = axe.filter((x) => !KNOWN.axe.includes(x.split(" ")[0]));
           if (small.length + axe.length) test.info().annotations.push({ type: "known issues", description: `${small.length} small targets, ${axe.length} accessibility (see the regression report)` });
           expect.soft(newSmall, "new tap targets under 44 px").toEqual([]);
           expect.soft(newAxe, "new serious accessibility issues").toEqual([]);

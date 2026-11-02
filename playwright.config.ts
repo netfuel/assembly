@@ -10,7 +10,13 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: [["list"], ["json", { outputFile: "e2e-results/results.json" }], ["html", { outputFolder: "e2e-results/html", open: "never" }]],
+  reporter: [
+    ["list"],
+    // On GitHub, each failure shows on the run page as it happens.
+    ...(process.env.CI ? [["github"] as ["github"]] : []),
+    ["json", { outputFile: "e2e-results/results.json" }],
+    ["html", { outputFolder: "e2e-results/html", open: "never" }],
+  ],
   outputDir: "e2e-results/artifacts",
   globalSetup: "./e2e/global-setup.ts",
   use: {

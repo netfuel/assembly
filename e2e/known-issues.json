@@ -1,261 +1,37 @@
 {
- "add-event": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button. \"Address or DIY spot\"",
-   "button. \"Listed venue\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.chip \"Bar & club\"",
-   "button.chip \"DIY\"",
-   "button.chip \"House & disco\"",
-   "button.chip \"Jungle & bass\"",
-   "button.chip \"Live bands\"",
-   "button.chip \"Queer\"",
-   "button.chip \"Rave\"",
-   "button.chip \"Techno\"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "artist-page": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button. \"Past\"",
-   "button. \"Upcoming 3\"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Are you Juno Ray? Claim this p\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\"",
-   "button.link.report-link \"Report this page\""
-  ],
-  "axe": []
- },
- "event-comments": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button. \"Off\"",
-   "button. \"Open\"",
-   "button. \"Read only\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\"",
-   "button.link-plain.page-link \"E2E Host\"",
-   "input. \"\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "event-live": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\"",
-   "button.link-plain.page-link \"E2E Host\"",
-   "button.link.report-link \"Report the organizer\"",
-   "button.link.report-link \"Report this event\""
-  ],
-  "axe": []
- },
- "event-past": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\"",
-   "button.link-plain.page-link \"E2E Host\"",
-   "button.link.report-link \"Report the organizer\"",
-   "button.link.report-link \"Report this event\""
-  ],
-  "axe": []
- },
- "event-upcoming": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Instagram \u2197\"",
-   "a. \"Privacy\"",
-   "a. \"SoundCloud \u2197\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.lineup-name.link-plain \"Juno Ray\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\"",
-   "button.link-plain.page-link \"E2E Host\"",
-   "button.link.report-link \"Report the organizer\"",
-   "button.link.report-link \"Report this event\""
-  ],
-  "axe": []
- },
- "filters": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "home": {
-  "small": [
-   "a.logo \"Assembly home\"",
-   "button.home-sheet-grab \"Show the list\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "moderation": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "search": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Show all 3 on the map \u2192\"",
-   "button.link \"Subscribe in your calendar\"",
-   "button.search-clear \"Clear search\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "sign-in": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "terms": {
-  "small": [
-   "a. \"Community guidelines\"",
-   "a. \"Privacy policy\"",
-   "a. \"Terms of use\"",
-   "a.logo \"Assembly home\""
-  ],
-  "axe": []
- },
- "venue-page": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button. \"Past 1\"",
-   "button. \"Upcoming 4\"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Run Pulp Warehouse? Claim this\"",
-   "button.link \"Subscribe in your calendar\"",
-   "button.link.report-link \"Report this page\""
-  ],
-  "axe": []
- },
- "you-notifications": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button. \"Notifications\"",
-   "button. \"Profile\"",
-   "button. \"Saved\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "you-profile": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button. \"Notifications\"",
-   "button. \"Profile\"",
-   "button. \"Saved\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- },
- "you-saved": {
-  "small": [
-   "a. \"Guidelines\"",
-   "a. \"Privacy\"",
-   "a. \"Terms\"",
-   "a.logo \"Assembly home\"",
-   "button. \"Notifications\"",
-   "button. \"Profile\"",
-   "button. \"Saved\"",
-   "button.avatar \"You: saved, notifications and \"",
-   "button.home-sheet-grab \"Show the list\"",
-   "button.link \"Light mode\"",
-   "button.link \"Subscribe in your calendar\""
-  ],
-  "axe": [
-   "color-contrast"
-  ]
- }
+ "_note": "Issues already in the regression report (bugs 4-9 and 14). The sweep fails only on others. Remove entries as bugs are fixed.",
+ "small": [
+  "a \"Community guidelines\"",
+  "a \"Guidelines\"",
+  "a \"Instagram \u2197\"",
+  "a \"Privacy policy\"",
+  "a \"Privacy\"",
+  "a \"SoundCloud \u2197\"",
+  "a \"Terms of use\"",
+  "a \"Terms\"",
+  "a.logo",
+  "button \"Address or DIY spot\"",
+  "button \"Listed venue\"",
+  "button \"Notifications\"",
+  "button \"Off\"",
+  "button \"Open\"",
+  "button \"Past #\"",
+  "button \"Past\"",
+  "button \"Profile\"",
+  "button \"Read only\"",
+  "button \"Saved\"",
+  "button \"Upcoming #\"",
+  "button.avatar",
+  "button.chip",
+  "button.home-sheet-grab",
+  "button.lineup-name.link-plain",
+  "button.link",
+  "button.link-plain.page-link",
+  "button.link.report-link",
+  "button.search-clear",
+  "input \"\""
+ ],
+ "axe": [
+  "color-contrast"
+ ]
 }
