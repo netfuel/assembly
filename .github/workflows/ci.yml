@@ -82,4 +82,4 @@ jobs:
         run: sleep 20 && npm run test:smoke
       - name: Not deploying
         if: steps.creds.outputs.ok != 'true'
-        run: echo "::notice::Tests passed. Deploy skipped: add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets to deploy from CI."
+        run: 'echo "::notice::Tests passed. Deploy skipped, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets to deploy from CI."' 
