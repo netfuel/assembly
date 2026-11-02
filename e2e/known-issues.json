@@ -1,5 +1,5 @@
 {
- "_note": "Issues already in the regression report (bugs 4-9 and 14). The sweep fails only on others. Remove entries as bugs are fixed.",
+ "_note": "Issues already in the regression report (bugs 4-9, 14 and 16). The sweep fails only on others. Remove entries as bugs are fixed.",
  "small": [
   "a \"Community guidelines\"",
   "a \"Guidelines\"",
@@ -32,6 +32,7 @@
   "input \"\""
  ],
  "axe": [
-  "color-contrast"
+  "color-contrast",
+  "nested-interactive"
  ]
 }
