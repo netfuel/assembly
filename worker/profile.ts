@@ -1,3 +1,4 @@
+import { stripMetadata } from "./stripMeta";
 import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import type { MeProfile } from "../shared/types";
@@ -100,7 +101,7 @@ profile.post("/avatar", async (c) => {
   if (!type) return c.json({ error: "Use a JPG, PNG, or WebP image." }, 415);
 
   const key = `avatars/${userId}/${crypto.randomUUID()}.${type}`;
-  await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
+  await c.env.MEDIA.put(key, stripMetadata(bytes, type), { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
   const before = await c.env.DB.prepare("SELECT avatar_url FROM users WHERE id = ?").bind(userId).first<{ avatar_url: string | null }>();
   await c.env.DB.prepare("UPDATE users SET avatar_url = ? WHERE id = ?").bind(`/api/media/${key}`, userId).run();
   const old = ownAvatarKey(before?.avatar_url ?? null, userId);

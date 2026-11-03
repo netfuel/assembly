@@ -1,3 +1,4 @@
+import { stripMetadata } from "./stripMeta";
 // Artist, venue and organizer pages: /api/artists/:slug, /api/venues/:slug, /api/organizers/:slug.
 // Pages come from posting (a lineup creates artists; venues come from the venue list). An artist or venue can
 // claim its page; a moderator approves. After that only the owner or a moderator edits. Organizer pages are the
@@ -263,7 +264,7 @@ pages.post("/:kind/:slug/photo", async (c) => {
   if (!type) return c.json({ error: "Use a JPG, PNG, or WebP image." }, 415);
   const table = kind === "artist" ? "artists" : "venues";
   const key = `pages/${kind}/${t.id}/${crypto.randomUUID()}.${type}`;
-  await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
+  await c.env.MEDIA.put(key, stripMetadata(bytes, type), { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
   const before = await c.env.DB.prepare(`SELECT photo_key FROM ${table} WHERE id = ?`).bind(t.id).first<{ photo_key: string | null }>();
   await c.env.DB.prepare(`UPDATE ${table} SET photo_key = ?, updated_at = ? WHERE id = ?`).bind(key, new Date().toISOString(), t.id).run();
   if (before?.photo_key?.startsWith(`pages/${kind}/${t.id}/`)) await c.env.MEDIA.delete(before.photo_key);

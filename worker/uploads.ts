@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import { rateLimit } from "./posting";
 import { sniffImage } from "./validate";
+import { stripMetadata } from "./stripMeta";
 
 export const FLYER_MAX_BYTES = 10 * 1024 * 1024;
 export const VIDEO_MAX_SECONDS = 90;
@@ -40,7 +41,7 @@ uploads.post("/flyer", async (c) => {
   if (!type) return c.json({ error: "Use a JPG, PNG, or WebP image." }, 415);
 
   const key = `flyers/${userId}/${crypto.randomUUID()}.${type}`;
-  await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
+  await c.env.MEDIA.put(key, stripMetadata(bytes, type), { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
   return c.json({ key, url: `/api/media/${key}` }, 201);
 });
 
@@ -55,7 +56,7 @@ uploads.post("/flyer-thumb", async (c) => {
   if (bytes.byteLength > THUMB_MAX_BYTES) return c.json({ error: "Thumbnail too large." }, 413);
   const type = sniffImage(bytes);
   if (!type) return c.json({ error: "Use a JPG, PNG, or WebP image." }, 415);
-  await c.env.MEDIA.put(`${key}.thumb`, bytes, { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
+  await c.env.MEDIA.put(`${key}.thumb`, stripMetadata(bytes, type), { httpMetadata: { contentType: CONTENT_TYPES[type], cacheControl: "public, max-age=31536000, immutable" } });
   return c.json({ ok: true }, 201);
 });
 

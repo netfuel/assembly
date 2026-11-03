@@ -1,3 +1,4 @@
+import { stripMetadata } from "./stripMeta";
 // The event wall: photos from people who checked in (and the host), from doors until 7 days after the event.
 // People who RSVP'd, checked in, or host see every post; everyone else sees only the host's public highlights.
 // Photos are re-encoded on the phone before upload (that strips location and camera data) and served
@@ -195,11 +196,11 @@ eventWall.post(
     const id = crypto.randomUUID();
     const key = `wall/${userId}/${e.id}/${id}.${type}`;
     const meta = (t: keyof typeof CONTENT_TYPES) => ({ httpMetadata: { contentType: CONTENT_TYPES[t] } });
-    await c.env.MEDIA.put(key, bytes, meta(type));
+    await c.env.MEDIA.put(key, stripMetadata(bytes, type), meta(type));
     let thumbKey: string | null = null;
     if (thumbBytes && thumbType) {
       thumbKey = `${key}.thumb`;
-      await c.env.MEDIA.put(thumbKey, thumbBytes, meta(thumbType));
+      await c.env.MEDIA.put(thumbKey, stripMetadata(thumbBytes, thumbType), meta(thumbType));
     }
     await c.env.DB.prepare(
       `INSERT INTO wall_posts (id, event_id, user_id, media_key, thumb_key, width, height, caption, anonymous) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
