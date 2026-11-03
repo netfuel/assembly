@@ -7,10 +7,15 @@ import type { GateState, ServerConfig } from "../../shared/types";
  */
 export type Mount = "legal" | "gate" | "app";
 
-export function mountFor(config: Pick<ServerConfig, "gate"> | null, pathname: string): Mount {
+export function mountFor(config: Pick<ServerConfig, "gate"> | null, pathname: string, search = ""): Mount {
   if (/^\/(terms|privacy|guidelines)\/?$/.test(pathname)) return "legal";
-  if (config?.gate === "on") return "gate";
+  if (config?.gate === "on" || isPreview(search)) return "gate";
   return "app";
+}
+
+/** `?gate=preview` shows the gate to anyone, gate on or off, so it can be reviewed on a phone without gating the site. */
+export function isPreview(search: string): boolean {
+  return new URLSearchParams(search).get("gate") === "preview";
 }
 
 export const isGated = (gate: GateState | undefined) => gate === "on";

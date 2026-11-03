@@ -22,7 +22,7 @@ const Gate = lazy(() => import("./gate/Gate").then((m) => ({ default: m.Gate }))
 const root = createRoot(document.getElementById("root")!);
 
 function start(config: ServerConfig | null) {
-  const mount = mountFor(config, location.pathname);
+  const mount = mountFor(config, location.pathname, location.search);
   const legalMatch = location.pathname.match(/^\/(terms|privacy|guidelines)\/?$/);
   const legal = legalMatch ? (legalMatch[1] as "terms" | "privacy" | "guidelines") : null;
 

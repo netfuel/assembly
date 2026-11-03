@@ -9,6 +9,11 @@ describe("what the page mounts", () => {
     expect(mountFor({ gate: "off-for-you" }, "/")).toBe("app");
     expect(mountFor({}, "/")).toBe("app");
   });
+  it("shows the gate for a preview visit even when it's off", () => {
+    expect(mountFor({ gate: "off" }, "/", "?gate=preview")).toBe("gate");
+    expect(mountFor({ gate: "off" }, "/", "?gate=on")).toBe("app");
+    expect(mountFor({ gate: "off" }, "/privacy", "?gate=preview")).toBe("legal");
+  });
   it("never walls off policy pages or an offline visitor", () => {
     expect(mountFor({ gate: "on" }, "/privacy")).toBe("legal");
     expect(mountFor({ gate: "on" }, "/terms/")).toBe("legal");

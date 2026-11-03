@@ -4,7 +4,7 @@ import { reducedMotion, useGSAP } from "../lib/motion";
 import { useOnline } from "../lib/offline";
 import { A_PATH, VIEW_BOX } from "../../shared/brandGeometry";
 import type { AuthProviders } from "../../shared/types";
-import { gateReturnTo, looksLikeEmail, rememberInterest, rememberedInterest } from "./gate";
+import { gateReturnTo, isPreview, looksLikeEmail, rememberInterest, rememberedInterest } from "./gate";
 import type { SceneHandle } from "./scene";
 import gsap from "gsap";
 import "./gate.css";
@@ -60,6 +60,7 @@ export function Gate() {
 
   // Launch day: when the gate switches off, hand over to the app without anyone having to reload.
   useEffect(() => {
+    if (isPreview(location.search)) return; // a review visit stays on the gate
     const t = window.setInterval(() => {
       api.config().then((c) => {
         if (c.gate && c.gate !== "on") location.reload();
