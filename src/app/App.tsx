@@ -32,6 +32,7 @@ import { SignInSheet } from "./SignInSheet";
 import { ModerationSheet } from "./ModerationSheet";
 import { type AuthProviders, type FriendAt, type FriendsState, type Inbox, type RsvpStatus, type City, type EventDetail, type EventSummary, type MeProfile, type ServerConfig } from "../../shared/types";
 import "./app.css";
+import "../styles/tap.css";
 
 
 const FALLBACK_CITY: City = { id: "memphis", name: "Memphis", timezone: "America/Chicago", center: [-90.01, 35.14], zoom: 12.2 };

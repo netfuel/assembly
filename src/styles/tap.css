@@ -1,0 +1,23 @@
+/* Tap targets (docs/design-review.md): controls drawn smaller than 44 px keep their look and get an invisible
+   hit area at least 44 × 44, centred on them. Loaded last; :not(#\#) lifts these over `all: unset` and later rules. */
+:is(
+  .avatar, .logo, .chip, .segmented button, .link, .link-plain, .report-link, .page-link, .search-clear, .home-sheet-grab,
+  .artist-links a, .legal-nav nav a
+):not(#\#) {
+  position: relative;
+}
+:is(
+  .avatar, .logo, .chip, .segmented button, .link, .link-plain, .report-link, .page-link, .search-clear, .home-sheet-grab,
+  .artist-links a, .legal-nav nav a
+):not(#\#)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, var(--tap, 44px));
+  height: max(100%, var(--tap, 44px));
+  transform: translate(-50%, -50%);
+}
+/* A checkbox's tap target is its whole label row. */
+.wall-anon, .wall-toggle { min-height: var(--tap, 44px); cursor: pointer; }
+.wall-anon input, .wall-toggle input { width: 20px; height: 20px; margin: 0; accent-color: var(--color-accent); }

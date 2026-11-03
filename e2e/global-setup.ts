@@ -40,8 +40,6 @@ export default async function globalSetup() {
       ev("e2e-cancelled", "E2E Cancelled Night", "+3 days", "+3 days", "cancelled"),
       `UPDATE events SET ends_at = strftime('%Y-%m-%dT%H:%M:%SZ', starts_at, '+5 hours') WHERE id IN ('e2e-upcoming', 'e2e-cancelled');`,
       ...["e2e-live", "e2e-upcoming", "e2e-past", "e2e-cancelled"].map((e) => `INSERT INTO event_hosts (event_id, user_id, role) VALUES ('${e}', '${ids.host}', 'owner');`),
-      // The seed has no venue slugs (bug 4 in the report); give them the same slugs production backfilled.
-      `UPDATE venues SET slug = replace(id, 'sample-', '') WHERE slug IS NULL;`,
       `INSERT INTO lineup_slots (event_id, artist_id, position) VALUES ('e2e-live', 'sample-juno-ray', 0), ('e2e-upcoming', 'sample-juno-ray', 0);`,
     ].join("\n"),
   );

@@ -20,7 +20,7 @@
   /* Text */
   --color-fg: #121315;
   --color-muted: #5b5e65;
-  --color-faint: #686b72; /* still 4.5:1 on surface: tertiary text, never below AA */
+  --color-faint: #63666d; /* 4.78:1 on ground, 5.2:1 on surface: tertiary text, never below AA */
 
   /* Hero accent: primary actions, links, and focus. Never live, never an error, never at rest on content. */
   --color-accent: #ff3df2;

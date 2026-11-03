@@ -1,38 +1,5 @@
 {
- "_note": "Issues already in the regression report (bugs 4-9, 14 and 16). The sweep fails only on others. Remove entries as bugs are fixed.",
- "small": [
-  "a \"Community guidelines\"",
-  "a \"Guidelines\"",
-  "a \"Instagram \u2197\"",
-  "a \"Privacy policy\"",
-  "a \"Privacy\"",
-  "a \"SoundCloud \u2197\"",
-  "a \"Terms of use\"",
-  "a \"Terms\"",
-  "a.logo",
-  "button \"Address or DIY spot\"",
-  "button \"Listed venue\"",
-  "button \"Notifications\"",
-  "button \"Off\"",
-  "button \"Open\"",
-  "button \"Past #\"",
-  "button \"Past\"",
-  "button \"Profile\"",
-  "button \"Read only\"",
-  "button \"Saved\"",
-  "button \"Upcoming #\"",
-  "button.avatar",
-  "button.chip",
-  "button.home-sheet-grab",
-  "button.lineup-name.link-plain",
-  "button.link",
-  "button.link-plain.page-link",
-  "button.link.report-link",
-  "button.search-clear",
-  "input \"\""
- ],
- "axe": [
-  "color-contrast",
-  "nested-interactive"
- ]
+ "_note": "Issues already in the regression report. The sweep fails only on others. Remove entries as bugs are fixed.",
+ "small": [],
+ "axe": []
 }

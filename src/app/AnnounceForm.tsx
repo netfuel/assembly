@@ -1030,7 +1030,7 @@ function VideoField({
       )}
       {phase.kind === "uploading" && (
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(phase.progress * 100)}>
-          <span style={{ width: `${phase.progress * 100}%` }} />
+          <span style={{ transform: `translateX(${phase.progress * 100 - 100}%)` }} />
           <em className="num">Uploading {Math.round(phase.progress * 100)}%</em>
         </div>
       )}

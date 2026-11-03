@@ -65,6 +65,12 @@ export function stamp(el: Element | null) {
     );
 }
 
+/** The check-in mark lands like a rubber stamp: drops in large and tilted, settles slightly askew. */
+export function stampIn(el: Element | null) {
+  if (!el || reduce) return;
+  return gsap.fromTo(el, { scale: 1.6, rotate: -8, opacity: 0 }, { scale: 1, rotate: -3, opacity: 1, duration: 0.32, ease: EASE.out, clearProps: "opacity" });
+}
+
 /** The stamp's overshoot without the ring, for small marks inside a clipped strip (a reaction's icon). */
 export function pop(el: Element | null) {
   if (!el || reduce) return;

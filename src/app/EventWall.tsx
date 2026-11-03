@@ -282,7 +282,7 @@ function WallComposer({ file, eventId, onClose, onPosted }: { file: File; eventI
         {error && <p className="field-error">{error}</p>}
         {progress !== null && (
           <div className="wall-progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-            <span style={{ width: `${Math.round(progress * 100)}%` }} />
+            <span style={{ transform: `translateX(${Math.round(progress * 100) - 100}%)` }} />
           </div>
         )}
         <div className="wall-composer-actions">

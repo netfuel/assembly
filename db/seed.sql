@@ -5,21 +5,22 @@
 DELETE FROM lineup_slots WHERE event_id IN (SELECT id FROM events WHERE is_sample = 1);
 DELETE FROM rsvps WHERE event_id IN (SELECT id FROM events WHERE is_sample = 1);
 DELETE FROM events WHERE is_sample = 1;
-DELETE FROM artists WHERE id LIKE 'sample-%';
-DELETE FROM venues WHERE id LIKE 'sample-%';
+-- Sample venues and artists are upserted, not deleted: events people posted locally may point at them.
 
 INSERT OR IGNORE INTO cities (id, name, slug, timezone, center_lat, center_lng, default_zoom)
 VALUES ('memphis', 'Memphis', 'memphis', 'America/Chicago', 35.1400, -90.0100, 12.2);
 
-INSERT INTO venues (id, city_id, name, type, address, neighborhood, lat, lng) VALUES
-('sample-static-annex', 'memphis', 'Static Annex', 'warehouse', 'Sample address, rear loading dock', 'South Main', 35.1318, -90.0566),
-('sample-moth-house', 'memphis', 'Moth House', 'diy', 'Sample address, basement entrance on the side', 'Cooper-Young', 35.1188, -89.9912),
-('sample-velvet-ditch', 'memphis', 'Velvet Ditch', 'bar', 'Sample address, upstairs', 'Midtown', 35.1372, -90.0035),
-('sample-room-9', 'memphis', 'Room 9', 'club', 'Sample address, below the record shop', 'Overton Square', 35.1497, -89.9929),
-('sample-pulp', 'memphis', 'Pulp Warehouse', 'warehouse', 'Sample address, gate on the north side', 'Crosstown', 35.1523, -90.0128),
-('sample-low-ceiling', 'memphis', 'Low Ceiling', 'club', 'Sample address, stairs behind the diner', 'Downtown', 35.1452, -90.0505),
-('sample-greenhouse', 'memphis', 'Greenhouse Lot', 'outdoor', 'Sample address, enter through the garden gate', 'Binghampton', 35.1441, -89.9489),
-('sample-lantern', 'memphis', 'The Lantern', 'bar', 'Sample address, back patio', 'Broad Ave', 35.1479, -89.9651);
+INSERT INTO venues (id, city_id, name, slug, type, address, neighborhood, lat, lng) VALUES
+('sample-static-annex', 'memphis', 'Static Annex', 'static-annex', 'warehouse', 'Sample address, rear loading dock', 'South Main', 35.1318, -90.0566),
+('sample-moth-house', 'memphis', 'Moth House', 'moth-house', 'diy', 'Sample address, basement entrance on the side', 'Cooper-Young', 35.1188, -89.9912),
+('sample-velvet-ditch', 'memphis', 'Velvet Ditch', 'velvet-ditch', 'bar', 'Sample address, upstairs', 'Midtown', 35.1372, -90.0035),
+('sample-room-9', 'memphis', 'Room 9', 'room-9', 'club', 'Sample address, below the record shop', 'Overton Square', 35.1497, -89.9929),
+('sample-pulp', 'memphis', 'Pulp Warehouse', 'pulp', 'warehouse', 'Sample address, gate on the north side', 'Crosstown', 35.1523, -90.0128),
+('sample-low-ceiling', 'memphis', 'Low Ceiling', 'low-ceiling', 'club', 'Sample address, stairs behind the diner', 'Downtown', 35.1452, -90.0505),
+('sample-greenhouse', 'memphis', 'Greenhouse Lot', 'greenhouse', 'outdoor', 'Sample address, enter through the garden gate', 'Binghampton', 35.1441, -89.9489),
+('sample-lantern', 'memphis', 'The Lantern', 'lantern', 'bar', 'Sample address, back patio', 'Broad Ave', 35.1479, -89.9651)
+ON CONFLICT(id) DO UPDATE SET city_id = excluded.city_id, name = excluded.name, slug = excluded.slug, type = excluded.type,
+  address = excluded.address, neighborhood = excluded.neighborhood, lat = excluded.lat, lng = excluded.lng;
 
 INSERT INTO artists (id, name, slug, links) VALUES
 ('sample-juno-ray', 'Juno Ray', 'juno-ray', '{"soundcloud":"https://soundcloud.com/","instagram":"https://instagram.com/"}'),
@@ -35,7 +36,8 @@ INSERT INTO artists (id, name, slug, links) VALUES
 ('sample-big-aunt', 'Big Aunt', 'big-aunt', '{"instagram":"https://instagram.com/"}'),
 ('sample-lou-vega', 'Lou Vega', 'lou-vega', '{"spotify":"https://open.spotify.com/"}'),
 ('sample-neon-debt', 'Neon Debt', 'neon-debt', '{"soundcloud":"https://soundcloud.com/"}'),
-('sample-halle-burn', 'Halle Burn', 'halle-burn', '{"ra":"https://ra.co/"}');
+('sample-halle-burn', 'Halle Burn', 'halle-burn', '{"ra":"https://ra.co/"}')
+ON CONFLICT(id) DO UPDATE SET name = excluded.name, slug = excluded.slug, links = excluded.links;
 
 -- strftime offsets: 'start of day' is midnight UTC; +27 hours is about 9 to 10 pm in Memphis the same evening.
 INSERT INTO events (id, city_id, venue_id, title, pitch, starts_at, ends_at, address, neighborhood, lat, lng, getting_there, door_price, ticket_url, policy_tags, scenes, status, is_sample)

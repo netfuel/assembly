@@ -145,10 +145,6 @@ app.onError((err, c) => {
   console.error("api error", c.req.method, c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
   return c.json({ error: "Something went wrong on our end. Try again in a minute." }, 500);
 });
-app.onError((err, c) => {
-  console.error(err);
-  return c.json({ error: "Something went wrong on our side. Try again in a moment." }, 500);
-});
 
 // Fonts live outside /api; everything else the Worker handles is under /api.
 const root = new Hono<{ Bindings: Env }>();
@@ -168,6 +164,8 @@ root.onError((err, c) => {
   console.error("worker error", c.req.method, c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
   return c.json({ error: "Something went wrong on our end. Try again in a minute." }, 500);
 });
+// Unknown /api paths answer in JSON like every other API response; Hono uses the outermost app's handler.
+root.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "Not found." }, 404) : c.text("404 Not Found", 404)));
 root.route("/fonts", fonts);
 root.route("/e", og);
 root.route("/", ogPages);

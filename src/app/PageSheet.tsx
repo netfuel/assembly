@@ -6,7 +6,7 @@ import { api, ApiError } from "../lib/api";
 import { prepareAvatar } from "../lib/media";
 import { revealChildren } from "../lib/motion";
 import { clock, timeRange } from "../lib/time";
-import { MapSnippet } from "../map/MapSnippet";
+import { MapCredits, MapSnippet } from "../map/MapSnippet";
 import type { MapTheme } from "../map/mapStyle";
 import { FeedCard } from "./FeedView";
 import { LINK_LABELS, ReportBox } from "./EventSheet";
@@ -257,6 +257,7 @@ function VenueBlock({ p, theme, onShowPlace }: { p: PageProfile; theme: MapTheme
       <button className="map-snippet-wrap" onClick={() => onShowPlace(v.lng, v.lat)} aria-label={`Show ${p.name} on the map`}>
         <MapSnippet lng={v.lng} lat={v.lat} theme={theme} label={`Map of ${p.name}`} />
       </button>
+      <MapCredits />
       <p className="page-address">{v.address}</p>
       <div className="where-links">
         <LinkButton size="sm" href={`https://maps.apple.com/?daddr=${q}`} target="_blank" rel="noopener noreferrer">

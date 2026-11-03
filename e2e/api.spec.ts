@@ -75,7 +75,6 @@ test.describe("API contract", () => {
   });
 
   test("unknown API paths answer JSON 404, not the app's HTML", async ({ api }) => {
-    test.fail(true, "Known bug #10 in the regression report: remove this line when it's fixed.");
     const anon = await api(null);
     for (const path of ["/api/nope", "/api/events/does-not-exist", "/api/pages/artists/nobody", "/api/a/b/c"]) {
       const r = await anon.get(path);

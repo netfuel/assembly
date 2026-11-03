@@ -66,10 +66,13 @@ async function smallTargets(page: Page) {
       if (el.closest(".maplibregl-ctrl, .maplibregl-ctrl-attrib")) continue;
       // Links and text buttons in running text are exempt (design review).
       if (style.display === "inline" || el.closest("p, .note, .policy-links")) continue;
+      // A checkbox inside a label is tapped through the whole label.
+      const box = el.matches("input[type=checkbox]") && el.closest("label") ? el.closest("label")!.getBoundingClientRect() : r;
+      // Small controls can pad their hit area with an absolute ::after, either by negative insets or by a fixed size.
       const after = getComputedStyle(el, "::after");
-      const padded = after.content !== "none" && after.position === "absolute" ? Math.max(0, -parseFloat(after.top) || 0) * 2 : 0;
-      const h = r.height + padded;
-      const w = r.width + (after.content !== "none" && after.position === "absolute" ? Math.max(0, -parseFloat(after.left) || 0) * 2 : 0);
+      const hit = after.content !== "none" && after.position === "absolute";
+      const h = Math.max(box.height + (hit ? Math.max(0, -parseFloat(after.top) || 0) * 2 : 0), hit ? parseFloat(after.height) || 0 : 0);
+      const w = Math.max(box.width + (hit ? Math.max(0, -parseFloat(after.left) || 0) * 2 : 0), hit ? parseFloat(after.width) || 0 : 0);
       if (Math.min(w, h) < 43.5) out.push(`${el.tagName.toLowerCase()}.${(el.className || "").toString().split(" ").filter(Boolean).slice(0, 2).join(".")} "${(el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 30)}" ${Math.round(w)}x${Math.round(h)}`);
     }
     return [...new Set(out)];
