@@ -5,10 +5,11 @@ import { makeGrid } from "./grid";
 import { Pins } from "./pins";
 import { Lines } from "./lines";
 import { Post } from "./post";
+import { Tiles } from "./tiles";
 
 /**
  * The gate's background: the Memphis map at night, seen from above, with the preloader's lines still in
- * flight. Three layers, four draw calls (grid, pins, lines, post), one renderer. Mounted by Gate.tsx when
+ * flight. Three layers, seven draw calls (grid, blocks, tiles, pins, lines, A, post), one renderer. Mounted by Gate.tsx when
  * WebGL is there; the SVG A in the DOM is the fallback. See "Assembly launch gate plan", section 3.
  *
  * Budget: DPR capped at 2, 30 fps when the device looks modest, paused when the tab is hidden, stopped
@@ -65,6 +66,8 @@ export function mountScene(container: HTMLElement, opts: { reducedMotion: boolea
   scene.add(makeGrid());
   const pins = new Pins(pixelRatio);
   scene.add(pins.points);
+  const tiles = new Tiles();
+  scene.add(tiles.mesh);
   const lines = new Lines(1, 1, pixelRatio);
   scene.add(lines.group);
   const post = reduced ? null : new Post(renderer, scene, camera);
@@ -161,6 +164,7 @@ export function mountScene(container: HTMLElement, opts: { reducedMotion: boolea
       lines.setSpeed(1 - focus * 0.4 + speedBoost);
       lines.write();
       pins.update(t, near, focus);
+      tiles.update(t);
       post!.render(t, focus);
       if (now - lastInput > IDLE_STOP_MS) {
         stopped = true; // Three idle minutes: stop until something happens.
@@ -169,6 +173,7 @@ export function mountScene(container: HTMLElement, opts: { reducedMotion: boolea
     } else {
       lines.write();
       pins.update(t, null, 0);
+      tiles.update(t);
       renderer.render(scene, camera);
       return; // one frame
     }
@@ -243,6 +248,7 @@ export function mountScene(container: HTMLElement, opts: { reducedMotion: boolea
       document.removeEventListener("visibilitychange", onVis);
       lines.dispose();
       pins.dispose();
+      tiles.dispose();
       post?.dispose();
       ringGeo.dispose();
       for (const r of rings) (r.material as THREE.Material).dispose();

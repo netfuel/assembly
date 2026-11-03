@@ -3,7 +3,7 @@ import * as THREE from "three";
 /**
  * Layer 1: an abstract Memphis street grid on the ground plane. Avenues every 4 units, streets every 1,
  * one diagonal (Poplar) and a river edge along the west as a dark void. All of it is one InstancedMesh of
- * flat strips, so it costs one draw call. Colours are the app map's road palette on its land colour.
+ * flat strips, so it costs one draw call (the block fills are a second). Colours are the app map's road palette on its land colour.
  */
 export const GRID = { extent: 42, avenue: 4, street: 1, riverX: -17 } as const;
 
@@ -63,6 +63,26 @@ export function makeGrid(): THREE.Group {
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   group.add(mesh);
+
+  // Blocks: the land between streets reads as a city when most blocks are filled a shade lighter than the
+  // ground, the way the app's map draws building footprints. One more InstancedMesh.
+  const blocks: { x: number; z: number; w: number; d: number }[] = [];
+  for (let x = GRID.riverX; x < E; x += GRID.street) {
+    for (let z = -E; z < E; z += GRID.street) {
+      if (rand() < 0.3) continue;
+      const inset = 0.12 + rand() * 0.1;
+      blocks.push({ x: x + GRID.street / 2, z: z + GRID.street / 2, w: GRID.street - inset * 2, d: GRID.street - inset * 2 });
+    }
+  }
+  const blockGeo = new THREE.PlaneGeometry(1, 1);
+  blockGeo.rotateX(-Math.PI / 2);
+  const blockMesh = new THREE.InstancedMesh(blockGeo, new THREE.MeshBasicMaterial({ color: "#131316", fog: true }), blocks.length);
+  blocks.forEach((b, i) => {
+    m.compose(new THREE.Vector3(b.x, -0.005, b.z), new THREE.Quaternion(), new THREE.Vector3(b.w, 1, b.d));
+    blockMesh.setMatrixAt(i, m);
+  });
+  blockMesh.instanceMatrix.needsUpdate = true;
+  group.add(blockMesh);
 
   // Water: a flat darker slab west of the bank, under everything.
   const water = new THREE.Mesh(new THREE.PlaneGeometry(E, E * 2.4), new THREE.MeshBasicMaterial({ color: "#08090c", fog: true }));

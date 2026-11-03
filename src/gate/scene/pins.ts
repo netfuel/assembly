@@ -9,6 +9,7 @@ import { GRID } from "./grid";
 const ACCENT = new THREE.Color("#ff3df2");
 const UV = new THREE.Color("#7b5cf0");
 const LIVE = new THREE.Color("#3f8a00");
+const SODIUM = new THREE.Color("#c25e00");
 export const PIN_COUNT = 40;
 
 const VERT = /* glsl */ `
@@ -23,7 +24,7 @@ const VERT = /* glsl */ `
     vPulse = fract(uTime * 0.35 + phase);
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     vNear = uNear;
-    float size = (18.0 + 10.0 * uNear) * uPixelRatio;
+    float size = (30.0 + 12.0 * uNear) * uPixelRatio;
     gl_PointSize = size * (16.0 / -mv.z);
     gl_Position = projectionMatrix * mv;
   }`;
@@ -33,10 +34,12 @@ const FRAG = /* glsl */ `
   void main() {
     vec2 p = gl_PointCoord - 0.5;
     float d = length(p) * 2.0;
-    float dot = smoothstep(0.42, 0.16, d);
-    float glow = smoothstep(1.0, 0.3, d) * 0.22;
-    float ring = smoothstep(0.07, 0.0, abs(d - vPulse * 0.95)) * (1.0 - vPulse) * 0.7;
-    float a = (dot + glow + ring) * vLit;
+    // The app's pin: a hollow ring with a dot in the middle, and a pulse ring that grows out of it.
+    float dot = smoothstep(0.16, 0.06, d);
+    float ring = smoothstep(0.07, 0.0, abs(d - 0.36)) * 0.9;
+    float glow = smoothstep(0.9, 0.3, d) * 0.12;
+    float pulse = smoothstep(0.06, 0.0, abs(d - (0.4 + vPulse * 0.55))) * (1.0 - vPulse) * 0.6;
+    float a = (dot + ring + glow + pulse) * vLit;
     if (a < 0.01) discard;
     gl_FragColor = vec4(vTint * (1.0 + vNear * 0.6), a);
   }`;
@@ -65,7 +68,7 @@ export class Pins {
         z = Math.round((rand() * 2 - 1) * 7) * GRID.street;
       } while ((Math.abs(x) < 4.5 && Math.abs(z) < 4) || x < GRID.riverX + 2);
       this.positions.set([x, 0.06, z], i * 3);
-      const c = i % 7 === 0 ? LIVE : i % 3 === 0 ? UV : ACCENT;
+      const c = i % 7 === 0 ? LIVE : i % 3 === 0 ? UV : i % 4 === 1 ? SODIUM : ACCENT;
       tint.set([c.r, c.g, c.b], i * 3);
       phase[i] = rand();
     }

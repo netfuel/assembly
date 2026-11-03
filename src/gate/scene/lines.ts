@@ -15,6 +15,10 @@ import { sceneLines, toWorld, type SceneLine } from "./space";
  * That is the only time the A is legible; the rest of the time the lines point at where it was.
  */
 const Y = 0.08; // just above the grid
+const A_REST = 0.1; // the A is always faintly there, as in the video; the beat brings it up
+const A_BEAT = 0.6;
+const ECHO = 14 / 45; // the splash's echo offset (14, 12 view-box units), in world units
+const ECHO_Z = 12 / 45;
 const SEG = LINE_TIMING.dash / LINE_TIMING.gap; // the dash is 22% of its path, as in the splash CSS
 const CYCLE = 2.6; // seconds from entry to exit at idle
 const EASE = "power2.inOut"; // close to the splash's cubic-bezier(0.55, 0, 0.2, 1)
@@ -22,10 +26,11 @@ const EASE = "power2.inOut"; // close to the splash's cubic-bezier(0.55, 0, 0.2,
 export class Lines {
   readonly group = new THREE.Group();
   readonly a: Line2;
+  readonly echo: Line2;
   private readonly lines: { def: SceneLine; mesh: Line2; geo: LineGeometry; t: { v: number } }[] = [];
-  private readonly accent: LineMaterial;
-  private readonly uv: LineMaterial;
+  private readonly lineMat: LineMaterial;
   private readonly aMat: LineMaterial;
+  private readonly echoMat: LineMaterial;
   private idle: gsap.core.Timeline | null = null;
   private beatTl: gsap.core.Timeline | null = null;
   private speed = 1;
@@ -33,29 +38,35 @@ export class Lines {
 
   constructor(width: number, height: number, pixelRatio: number) {
     this.size.set(width * pixelRatio, height * pixelRatio);
-    const mk = (color: string, opacity: number, lw: number) =>
-      new LineMaterial({ color, linewidth: lw, transparent: true, opacity, resolution: this.size, fog: true, depthWrite: false, worldUnits: false });
-    this.accent = mk(BRAND_COLORS.accent, 0.95, 1.5);
-    this.uv = mk(BRAND_COLORS.uv, 0.95, 1.5);
-    this.aMat = mk(BRAND_COLORS.fg, 0, 1.25);
+    const mk = (color: string, opacity: number, lw: number, vertexColors = false) =>
+      new LineMaterial({ color, linewidth: lw, transparent: true, opacity, resolution: this.size, fog: true, depthWrite: false, worldUnits: false, vertexColors });
+    // The video's lines run UV at the tail to magenta at the head; the eighth line is UV through.
+    this.lineMat = mk("#ffffff", 0.95, 1.5, true);
+    this.aMat = mk(BRAND_COLORS.fg, A_REST, 1.25);
+    this.echoMat = mk(BRAND_COLORS.accent, A_REST * 0.9, 1.25);
 
+    const uv = new THREE.Color(BRAND_COLORS.uv);
+    const accent = new THREE.Color(BRAND_COLORS.accent);
     for (const def of sceneLines()) {
       const geo = new LineGeometry();
       geo.setPositions([def.from[0], Y, def.from[1], def.from[0], Y, def.from[1]]);
-      const mesh = new Line2(geo, def.uv ? this.uv : this.accent);
+      const head = def.uv ? uv : accent;
+      geo.setColors([uv.r, uv.g, uv.b, head.r, head.g, head.b]);
+      const mesh = new Line2(geo, this.lineMat);
       mesh.frustumCulled = false;
       this.group.add(mesh);
       this.lines.push({ def, mesh, geo, t: { v: -SEG } });
     }
 
-    this.a = makeOutline(this.aMat);
-    this.group.add(this.a);
+    this.a = makeOutline(this.aMat, 0, 0);
+    this.echo = makeOutline(this.echoMat, ECHO, ECHO_Z);
+    this.group.add(this.echo, this.a);
   }
 
   setSize(width: number, height: number, pixelRatio: number) {
     this.size.set(width * pixelRatio, height * pixelRatio);
     // LineMaterial copies the vector it's given, so each one is told again.
-    for (const m of [this.accent, this.uv, this.aMat]) m.resolution.copy(this.size);
+    for (const m of [this.lineMat, this.aMat, this.echoMat]) m.resolution.copy(this.size);
   }
 
   /** Typing speeds the lines up a little; the field dimming slows them. */
@@ -70,7 +81,8 @@ export class Lines {
     if (reduced) {
       // Parked in formation: each segment ends on its vertex and the A shows faintly.
       for (const l of this.lines) l.t.v = 1;
-      this.aMat.opacity = 0.35;
+      this.aMat.opacity = 0.45;
+      this.echoMat.opacity = 0.4;
       this.write();
       return;
     }
@@ -103,17 +115,21 @@ export class Lines {
       tl.fromTo(l.t, { v: start }, { v: 1, duration: 0.75 }, l.def.delay);
     }
     const arrive = 0.42 + 0.75; // the last line lands
-    tl.to(this.aMat, { opacity: 0.35, duration: 0.3 }, arrive - 0.25);
-    tl.to({}, { duration: 0.4 }, arrive); // the hold
-    tl.to(this.aMat, { opacity: 0, duration: 0.5 }, arrive + 0.4);
-    for (const l of this.lines) tl.to(l.t, { v: 1 + SEG + 0.6, duration: CYCLE * 0.8 }, arrive + 0.4);
+    const hold = 1.1; // the video lets the A sit; so does the beat
+    // The outline draws up first, then the echo prints a beat later, like the splash.
+    tl.to(this.aMat, { opacity: A_BEAT, duration: 0.3 }, arrive - 0.25);
+    tl.to(this.echoMat, { opacity: A_BEAT * 0.85, duration: 0.12, ease: "steps(1)" }, arrive + 0.1);
+    tl.to({}, { duration: hold }, arrive); // the hold
+    tl.to(this.aMat, { opacity: A_REST, duration: 0.6 }, arrive + hold);
+    tl.to(this.echoMat, { opacity: A_REST * 0.9, duration: 0.6 }, arrive + hold);
+    for (const l of this.lines) tl.to(l.t, { v: 1 + SEG + 0.6, duration: CYCLE * 0.8 }, arrive + hold);
     tl.call(() => {
       this.idle?.restart();
       this.idle?.timeScale(this.speed);
       this.scheduleBeat();
     });
     this.beatTl = tl;
-    return new Promise((res) => tl.call(res, [], arrive + 0.4));
+    return new Promise((res) => tl.call(res, [], arrive + hold));
   }
 
   /** Writes the segments' current positions. Call once per frame. */
@@ -141,14 +157,15 @@ export class Lines {
     this.stop();
     for (const l of this.lines) l.geo.dispose();
     this.a.geometry.dispose();
-    this.accent.dispose();
-    this.uv.dispose();
+    this.echo.geometry.dispose();
+    this.lineMat.dispose();
     this.aMat.dispose();
+    this.echoMat.dispose();
   }
 }
 
-/** The A's outline as one polyline, sampled from the brand path. */
-function makeOutline(mat: LineMaterial): Line2 {
+/** The A's outline as one polyline, sampled from the brand path, offset for the echo. */
+function makeOutline(mat: LineMaterial, dx: number, dz: number): Line2 {
   const svg = new SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.w} ${VIEW_BOX.h}"><path d="${A_PATH}"/></svg>`);
   const pos: number[] = [];
   for (const path of svg.paths) {
@@ -157,8 +174,8 @@ function makeOutline(mat: LineMaterial): Line2 {
       // Each contour is closed; join contours with a zero-length jump so they stay one geometry.
       const run = pts.map((p) => toWorld({ x: p.x, y: p.y }));
       if (pos.length) pos.push(...pos.slice(-3)); // repeat the last point: an invisible bridge
-      for (const [x, z] of run) pos.push(x, Y + 0.01, z);
-      pos.push(run[0][0], Y + 0.01, run[0][1]);
+      for (const [x, z] of run) pos.push(x + dx, Y + 0.01, z + dz);
+      pos.push(run[0][0] + dx, Y + 0.01, run[0][1] + dz);
     }
   }
   const geo = new LineGeometry();
