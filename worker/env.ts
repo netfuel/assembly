@@ -19,6 +19,8 @@ export interface Env {
   DEV_LOGIN?: string;
   /** Beta modules to switch off, comma-separated: wall, friends, checkin. Unset means all on. */
   FEATURES_OFF?: string;
+  /** "on" shows the launch gate: the API needs a session and the app shows the sign-up screen. Unset or "off" opens the site. */
+  GATE?: string;
   /** Comma-separated sign-in emails of people who can review reports and verify organizers. */
   MODERATORS?: string;
   /** Cloudflare Email Service binding (wrangler.jsonc send_email). */

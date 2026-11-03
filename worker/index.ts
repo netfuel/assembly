@@ -22,6 +22,8 @@ import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
 import { featureGate, features } from "./features";
+import { gateFor, launchGate } from "./gate";
+import { interest } from "./interest";
 import { pageModeration, pages } from "./pages";
 import { live } from "./live";
 import { inbox } from "./inbox";
@@ -50,6 +52,8 @@ app.use("*", async (c, next) => {
 
 // Beta modules switched off with FEATURES_OFF answer 404.
 app.use("*", featureGate);
+// Before launch (GATE=on) the API answers 401 to anyone without a session, except what the gate screen needs.
+app.use("*", launchGate);
 
 app.get("/health", (c) => c.json({ ok: true }));
 
@@ -83,13 +87,15 @@ app.post("/log", async (c) => {
 
 // What this server supports, so the app can show or hide features.
 app.get("/config", (c) => {
-  c.header("Cache-Control", "public, max-age=300");
+  // Private: the gate field depends on who is asking.
+  c.header("Cache-Control", "private, max-age=300");
   return c.json({
     video: streamConfigured(c.env),
     streamCustomerCode: c.env.STREAM_CUSTOMER_CODE ?? null,
     push: pushConfigured(c.env),
     vapidPublicKey: pushConfigured(c.env) ? c.env.VAPID_PUBLIC_KEY : null,
     features: features(c.env),
+    gate: gateFor(c.env, c.get("userId")),
   });
 });
 
@@ -106,6 +112,7 @@ app.get("/media/:key{.+}", async (c) => {
   return new Response(obj.body, { headers });
 });
 
+app.route("/interest", interest);
 app.route("/auth/email", emailAuth);
 app.route("/auth", auth);
 app.route("/me/inbox", inbox);

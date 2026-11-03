@@ -4,6 +4,7 @@ import { Apple, Google, decodeIdToken, generateCodeVerifier, generateState } fro
 import type { AppContext, Env } from "./env";
 import { endSession, siteOrigin, startSession } from "./session";
 import type { AuthProviders } from "../shared/types";
+import { markConverted } from "./interest";
 
 const STATE_TTL = 60 * 10;
 
@@ -47,6 +48,21 @@ function withResult(path: string, result: "ok" | "failed"): string {
  * same address (or the reverse) lands in the same account. Unverified emails never link.
  */
 export async function upsertUser(
+  db: D1Database,
+  provider: "google" | "apple" | "email",
+  subject: string,
+  email: string | null,
+  name: string | null,
+  avatarUrl: string | null,
+  emailVerified = false,
+): Promise<{ userId: string; isNew: boolean }> {
+  const result = await upsertIdentity(db, provider, subject, email, name, avatarUrl, emailVerified);
+  // On the launch interest list with this verified address? Note that they came in. Never blocks sign-in.
+  if (emailVerified) await markConverted(db, email, result.userId).catch((err) => console.error("interest convert", err));
+  return result;
+}
+
+async function upsertIdentity(
   db: D1Database,
   provider: "google" | "apple" | "email",
   subject: string,

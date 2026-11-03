@@ -125,6 +125,15 @@ A second batch comes from [We Are Memphis](https://wearememphis.com/live/) (the 
 - `scripts/import-wearememphis.py`: turns the scrape into `db/import/wearememphis.sql` plus `db/import/wearememphis-artwork.tsv` (event id, image URL, R2 key). It skips anything already listed from WYXR (same night, same venue, matching title) but still gives those events the We Are Memphis artwork when they have none. Only event-specific images are used; a venue's stock photo reused across its listings is left out. Venues are placed from the table in the script.
 - `import-wearememphis.command`: double-click to download the artwork, fit it inside 2000 px with a 160 px square thumbnail (`sips`), upload both to R2 under `flyers/import/wam/`, and load the SQL into the live database. Safe to repeat: finished images are skipped (`db/import/artwork/*.done`), events update in place, RSVPs are kept, and future listings missing from a newer scrape are removed unless someone RSVP'd or an organizer took the event over.
 
+## Launch gate
+
+Until launch, `GATE=on` turns assembly.rsvp into a sign-up screen: Google sign-in gets you in, or you leave an email to hear when it opens. It is a Worker secret, not a `wrangler.jsonc` var, so deploys leave it alone; `go-live.command` step 9 sets it, and launch day is `npx wrangler secret put GATE` with `off` (or deleting it). No deploy.
+
+- `worker/gate.ts`: with the gate on, every `/api` route answers 401 without a session except `config`, `health`, `log`, `POST interest`, `auth/*`, `media/*` and `og/*` (so link previews still work). Pages outside `/api` (link previews, feeds, policies) stay public. The allow-list is tested in `worker/gate.test.ts`.
+- `/api/config` reports `gate`: `on`, `off`, or `off-for-you` (signed in while it's on). The response is private-cached for that reason.
+- `db/migrations/0013_interest.sql` and `worker/interest.ts`: the interest list. `POST /api/interest` takes `{ email, source? }`, dedupes by a hash of the address and answers 200 either way (no probing), 5 per IP per 10 minutes. When someone on the list later signs in with that verified address, `signed_in_at` is filled. Moderators download the list at `/api/interest/export` (CSV) while signed in.
+- The sign-up screen itself (Pass 2) and its Three.js background (Pass 3) are in the plan doc "Assembly launch gate plan".
+
 ## Deploy to Cloudflare
 
 The production site is **https://assembly.rsvp**. The app and API ship as one Worker named `assembly`, and Cloudflare Workers Builds deploys it from GitHub on every push to `main`.

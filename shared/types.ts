@@ -136,8 +136,12 @@ export interface Features {
   comments: boolean;
 }
 
+/** The launch gate as this visitor sees it: on (show the gate), off, or off-for-you (signed in while it's on). */
+export type GateState = "on" | "off" | "off-for-you";
+
 export interface ServerConfig {
   video: boolean;
+  gate?: GateState;
   features?: Features;
   streamCustomerCode: string | null;
   /** Web push is configured (VAPID keys set). */

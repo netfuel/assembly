@@ -161,7 +161,16 @@ try {
     if (code) await putSecret("STREAM_CUSTOMER_CODE", code);
   } else todo.push("Promo video (optional): enable Stream, then run this again.");
 
-  step(9, "Checking the live site");
+  step(9, "Launch gate");
+  // GATE lives as a secret, not a wrangler.jsonc var: deploys overwrite vars, and the gate has to survive
+  // every push until launch day. "on" shows the sign-up screen; anything else (or unset) opens the site.
+  console.log(`   ${has("GATE") ? "GATE is set (the site is gated unless its value is off)." : "GATE is not set: the site is open to everyone."}`);
+  const gateChoice = await ask("Gate the site? on = sign-up screen until launch, off = open, Enter = leave as is:");
+  if (/^on$/i.test(gateChoice)) await putSecret("GATE", "on");
+  else if (/^off$/i.test(gateChoice)) await putSecret("GATE", "off");
+  else ok("Leaving the gate as it is");
+
+  step(10, "Checking the live site");
   for (const url of ["https://assembly.rsvp/api/health", "https://www.assembly.rsvp/api/health", "https://assembly.netfuel.workers.dev/api/health"]) {
     try {
       const res = await fetch(url, { redirect: "manual" });
