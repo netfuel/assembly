@@ -122,7 +122,7 @@ export function Gate() {
           Memphis
         </p>
         <p className="gate-lead" data-rise>
-          Underground music on one live map. Opening in Memphis soon.
+          Underground music on one live map. Opening 2027. Memphis first.
         </p>
 
         {done ? (
