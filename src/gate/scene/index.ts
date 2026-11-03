@@ -9,20 +9,20 @@ import { Tiles } from "./tiles";
 
 /**
  * The gate's background: the Memphis map at night, seen from above, with the preloader's lines still in
- * flight. Three layers, seven draw calls (grid, blocks, tiles, pins, lines, A, post), one renderer. Mounted by Gate.tsx when
+ * flight. Three layers, six draw calls (grid, blocks, tiles, pins, lines, post), one renderer. Mounted by Gate.tsx when
  * WebGL is there; the SVG A in the DOM is the fallback. See "Assembly launch gate plan", section 3.
  *
  * Budget: DPR capped at 2, 30 fps when the device looks modest, paused when the tab is hidden, stopped
  * after three idle minutes and resumed on touch. Reduced motion: one static frame, lines parked in
- * formation with the A faint, no drift, no post pass.
+ * formation, no drift, no post pass.
  */
 export interface SceneHandle {
   /** The field has focus: drift slows, the grid dims. */
   setFocus(on: boolean): void;
   /** A key was typed: lines speed up briefly. */
   typed(): void;
-  /** The formation beat, now: on submit and on the Google tap. */
-  beat(): Promise<void>;
+  /** The formation beat, now: on submit and on the Google tap. `onArrive` fires as the lines land. */
+  beat(onArrive?: () => void): Promise<void>;
   /** A pin pulse from a point on screen (the form), like the splash's ring. */
   ring(clientX: number, clientY: number): void;
   destroy(): void;
@@ -232,9 +232,14 @@ export function mountScene(container: HTMLElement, opts: { reducedMotion: boolea
       speedBoost = Math.min(0.6, speedBoost + 0.15);
       wake();
     },
-    beat() {
+    beat(onArrive) {
       wake();
-      return reduced ? Promise.resolve() : lines.beat();
+      if (reduced) {
+        onArrive?.();
+        return Promise.resolve();
+      }
+      lines.onArrive = onArrive ?? null;
+      return lines.beat();
     },
     ring,
     destroy() {

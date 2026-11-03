@@ -19,20 +19,22 @@
   overflow: hidden;
 }
 
-/* Ambient layer: the scene mounts here (pass 3). Until then the A sits faint behind the panel. */
+/* Ambient layer: the scene mounts here (pass 3); without WebGL the ground stays flat. */
 .gate-scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.gate-a { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 0.6s ease; }
-.gate-scene.has-scene .gate-a { opacity: 0; }
 .gate-canvas { position: absolute; inset: 0; display: block; }
-.gate-a path { fill: none; stroke: var(--gate-fg); stroke-width: 1.25; opacity: 0.2; }
-@media (max-width: 760px) { .gate-a path { stroke-width: 1.8; } }
+
+/* The mark sits above the panel, over the map: the A from the header logo, with its parts so it can move. */
+.gate-stack { position: relative; z-index: 1; width: 100%; max-width: 360px; display: grid; justify-items: center; gap: var(--space-5); }
+.gate-mark { display: block; overflow: visible; filter: drop-shadow(0 2px 12px rgb(0 0 0 / 0.6)); }
+.gate-mark .logo-echo { fill: var(--gate-accent); }
+.gate-mark .logo-a { fill: var(--gate-fg); }
+.gate-mark .logo-dot { fill: var(--gate-uv); }
+.gate-mark .logo-ring { fill: none; stroke: var(--gate-uv); stroke-width: 10; opacity: 0; }
 
 /* The panel: one column, readable over anything the scene does. */
 .gate-panel {
   position: relative;
-  z-index: 1;
   width: 100%;
-  max-width: 360px;
   display: grid;
   gap: var(--space-4);
   padding: var(--space-6) var(--space-5);
