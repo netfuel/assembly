@@ -31,3 +31,5 @@ EMAIL_FROM=
 # Launch gate: "on" shows the sign-up screen and the API needs a session. Leave unset locally.
 # Set it live with go-live.command (step 9) or `npx wrangler secret put GATE`; a deploy doesn't change it.
 # GATE=
+# While GATE=on, only MODERATORS and GATE_ALLOW addresses get a session from a sign-in.
+# GATE_ALLOW=tester@example.com

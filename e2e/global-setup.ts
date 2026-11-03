@@ -18,7 +18,8 @@ export default async function globalSetup() {
     const r = await ctx.get(`/api/auth/dev?name=${encodeURIComponent(ROLES[role])}`, { maxRedirects: 0 });
     if (r.status() >= 400) throw new Error(`dev sign-in failed for ${role}: ${r.status()}. Is DEV_LOGIN=1 in .dev.vars?`);
     const me = await (await ctx.get("/api/me")).json();
-    ids[role] = me.user.id;
+    if (me.user) ids[role] = me.user.id; // under the gate, an unlisted role (throwaway) gets no session
+    else if (!process.env.E2E_GATE) throw new Error(`dev sign-in gave no session for ${role}`);
     await ctx.storageState({ path: `e2e/.auth/${role}.json` });
     await ctx.dispose();
   }

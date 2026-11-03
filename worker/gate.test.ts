@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gateFor, gateOn, gatePublic } from "./gate";
+import { gateAllowList, gateAllowsEmail, gateFor, gateOn, gatePublic } from "./gate";
 
 describe("launch gate switch", () => {
   it("is off unless GATE is exactly on", () => {
@@ -9,11 +9,21 @@ describe("launch gate switch", () => {
     expect(gateOn({ GATE: "on" })).toBe(true);
     expect(gateOn({ GATE: " ON " })).toBe(true);
   });
-  it("tells a signed-in visitor the gate is off for them", () => {
-    expect(gateFor({ GATE: "on" }, null)).toBe("on");
-    expect(gateFor({ GATE: "on" }, "user-1")).toBe("off-for-you");
-    expect(gateFor({}, null)).toBe("off");
-    expect(gateFor({}, "user-1")).toBe("off");
+  it("tells a listed sign-in the gate is off for them", () => {
+    expect(gateFor({ GATE: "on" }, false)).toBe("on");
+    expect(gateFor({ GATE: "on" }, true)).toBe("off-for-you");
+    expect(gateFor({}, false)).toBe("off");
+    expect(gateFor({}, true)).toBe("off");
+  });
+  it("lets only listed emails through while on", () => {
+    const env = { GATE: "on", MODERATORS: "Matt@Example.com, 'x@y.org'", GATE_ALLOW: "tester@example.com\nnot-an-email" };
+    expect(gateAllowList(env)).toEqual(["matt@example.com", "x@y.org", "tester@example.com"]);
+    expect(gateAllowsEmail(env, "matt@example.com")).toBe(true);
+    expect(gateAllowsEmail(env, "TESTER@example.com")).toBe(true);
+    expect(gateAllowsEmail(env, "someone@gmail.com")).toBe(false);
+    expect(gateAllowsEmail(env, null)).toBe(false);
+    expect(gateAllowsEmail({ GATE: "on" }, "matt@example.com")).toBe(false);
+    expect(gateAllowsEmail({}, "someone@gmail.com")).toBe(true);
   });
 });
 

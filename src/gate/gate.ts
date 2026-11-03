@@ -45,6 +45,13 @@ export function looksLikeEmail(raw: string): boolean {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
+/** What the sign-in round-trip reported, from ?signin=; "waitlist" means the address isn't on the pre-launch list. */
+export type SignInResult = "ok" | "failed" | "waitlist" | null;
+export function signInResult(search: string): SignInResult {
+  const v = new URLSearchParams(search).get("signin");
+  return v === "ok" || v === "failed" || v === "waitlist" ? v : null;
+}
+
 /** Where the Google round-trip should land: the current path, or the event a shared link pointed at. */
 export function gateReturnTo(search: string): string {
   const from = new URLSearchParams(search).get("from");

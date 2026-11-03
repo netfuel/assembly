@@ -1,10 +1,11 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { Apple, Google, decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import type { AppContext, Env } from "./env";
 import { endSession, siteOrigin, startSession } from "./session";
 import type { AuthProviders } from "../shared/types";
-import { markConverted } from "./interest";
+import { addInterest, markConverted } from "./interest";
+import { gatePasses } from "./gate";
 
 const STATE_TTL = 60 * 10;
 
@@ -37,9 +38,18 @@ function safeReturnTo(value: string | undefined | null): string {
   return value;
 }
 
-/** Adds ?signin=ok or ?signin=failed to a return path that may already have a query. */
-function withResult(path: string, result: "ok" | "failed"): string {
+/** Adds ?signin=ok, failed or waitlist to a return path that may already have a query. */
+function withResult(path: string, result: "ok" | "failed" | "waitlist"): string {
   return `${path}${path.includes("?") ? "&" : "?"}signin=${result}`;
+}
+
+/**
+ * While the gate is on, a sign-in from an address that isn't listed gets no session: the address goes
+ * on the interest list instead (so the launch email reaches them) and they return to the gate.
+ */
+async function waitlist(c: Context<AppContext>, email: string | null | undefined, source: "google" | "apple"): Promise<string> {
+  await addInterest(c.env.DB, email ?? null, source, c.req.header("User-Agent")).catch((err) => console.error("waitlist failed", err));
+  return "/";
 }
 
 /**
@@ -157,6 +167,7 @@ auth.get("/google/callback", async (c) => {
     const tokens = await client.validateAuthorizationCode(code, verifier);
     const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string; email_verified?: boolean; name?: string; picture?: string };
     const { userId } = await upsertUser(c.env.DB, "google", claims.sub, claims.email ?? null, claims.name ?? null, claims.picture ?? null, claims.email_verified === true);
+    if (!(await gatePasses(c.env, userId))) return c.redirect(withResult(await waitlist(c, claims.email, "google"), "waitlist"));
     await startSession(c, userId);
     return c.redirect(withResult(returnTo, "ok"));
   } catch (err) {
@@ -206,6 +217,7 @@ auth.post("/apple/callback", async (c) => {
     // Apple sends email_verified as a boolean or the string "true".
     const verified = claims.email_verified === true || claims.email_verified === "true";
     const { userId } = await upsertUser(c.env.DB, "apple", claims.sub, claims.email ?? null, name, null, verified);
+    if (!(await gatePasses(c.env, userId))) return c.redirect(withResult(await waitlist(c, claims.email, "apple"), "waitlist"), 303);
     await startSession(c, userId);
     return c.redirect(withResult(returnTo, "ok"), 303);
   } catch (err) {
@@ -225,6 +237,7 @@ auth.get("/dev", async (c) => {
   // Test accounts get a fake address, so MODERATORS in .dev.vars can name one (e.g. test-moderator@dev.localhost).
   const slug = slugifyName(name);
   const { userId } = await upsertUser(c.env.DB, "google", `dev-${slug}`, `${slug}@dev.localhost`, name, null);
+  if (!(await gatePasses(c.env, userId))) return c.redirect(withResult(await waitlist(c, `${slug}@dev.localhost`, "google"), "waitlist"));
   await startSession(c, userId);
   return c.redirect(withResult(safeReturnTo(c.req.query("return_to")), "ok"));
 });

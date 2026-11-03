@@ -127,7 +127,7 @@ A second batch comes from [We Are Memphis](https://wearememphis.com/live/) (the 
 
 ## Launch gate
 
-Until launch, `GATE=on` turns assembly.rsvp into a sign-up screen: Google sign-in gets you in, or you leave an email to hear when it opens. It is a Worker secret, not a `wrangler.jsonc` var, so deploys leave it alone; `go-live.command` step 9 sets it, and launch day is `npx wrangler secret put GATE` with `off` (or deleting it). No deploy.
+Until launch, `GATE=on` turns assembly.rsvp into a sign-up screen: you leave an email to hear when it opens, or sign in with Google. While the gate is on, a sign-in only opens a session for an address listed in `MODERATORS` or `GATE_ALLOW` (testers and friends of the launch, same comma-separated format: `npx wrangler secret put GATE_ALLOW`). Anyone else who signs in is added to the interest list and returned to the gate with "sign-in is for the crew until it opens"; sessions from before the gate are held back the same way. It is a Worker secret, not a `wrangler.jsonc` var, so deploys leave it alone; `go-live.command` step 9 sets it, and launch day is `npx wrangler secret put GATE` with `off` (or deleting it). No deploy.
 
 - `worker/gate.ts`: with the gate on, every `/api` route answers 401 without a session except `config`, `health`, `log`, `POST interest`, `auth/*`, `media/*` and `og/*` (so link previews still work). Pages outside `/api` (link previews, feeds, policies) stay public. The allow-list is tested in `worker/gate.test.ts`.
 - `/api/config` reports `gate`: `on`, `off`, or `off-for-you` (signed in while it's on). The response is never cached, so a sign-in changes the answer at once.

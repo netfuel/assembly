@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gateReturnTo, looksLikeEmail, mountFor } from "./gate";
+import { gateReturnTo, looksLikeEmail, mountFor, signInResult } from "./gate";
 
 describe("what the page mounts", () => {
   it("shows the gate only when the server says so", () => {
@@ -33,5 +33,15 @@ describe("gate form", () => {
     expect(gateReturnTo("?from=/e/night-shift")).toBe("/e/night-shift");
     expect(gateReturnTo("?from=https://evil.example")).toBe("/");
     expect(gateReturnTo("")).toBe("/");
+  });
+});
+
+describe("sign-in result flag", () => {
+  it("reads only the three outcomes", () => {
+    expect(signInResult("?signin=ok")).toBe("ok");
+    expect(signInResult("?gate=preview&signin=waitlist")).toBe("waitlist");
+    expect(signInResult("?signin=failed")).toBe("failed");
+    expect(signInResult("?signin=other")).toBe(null);
+    expect(signInResult("")).toBe(null);
   });
 });

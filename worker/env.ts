@@ -21,6 +21,8 @@ export interface Env {
   FEATURES_OFF?: string;
   /** "on" shows the launch gate: the API needs a session and the app shows the sign-up screen. Unset or "off" opens the site. */
   GATE?: string;
+  /** Emails that may pass the gate besides MODERATORS: testers, friends of the launch. */
+  GATE_ALLOW?: string;
   /** Comma-separated sign-in emails of people who can review reports and verify organizers. */
   MODERATORS?: string;
   /** Cloudflare Email Service binding (wrangler.jsonc send_email). */

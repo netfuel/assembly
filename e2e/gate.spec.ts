@@ -66,3 +66,21 @@ test("signed in, the app appears as usual", async ({ as, problems }) => {
   await expect(page.locator(".card").first()).toBeVisible();
   noProblems(problems);
 });
+
+test("a sign-in that isn't on the list is turned away, and lands on the interest list", async ({ api, as, problems }) => {
+  // The dev sign-in behaves like Google here: E2E Throwaway isn't in MODERATORS or GATE_ALLOW, Test Moderator is.
+  const anon = await api(null);
+  const turned = await anon.get("/api/auth/dev?name=E2E%20Throwaway", { maxRedirects: 0 });
+  expect(turned.status()).toBe(302);
+  expect(turned.headers()["location"]).toBe("/?signin=waitlist");
+  expect(turned.headers()["set-cookie"] ?? "").not.toContain("asm_session=");
+  const page = await as(null);
+  await page.goto("/?signin=waitlist");
+  await expect(page.locator(".gate-done")).toContainText("for the crew");
+  await expect(page.locator("#gate-email")).toHaveCount(0);
+  const mod = await api("mod");
+  expect((await mod.get("/api/events")).status()).toBe(200);
+  const list = await (await mod.get("/api/interest/export")).text();
+  expect(list).toContain("e2e-throwaway@dev.localhost");
+  noProblems(problems);
+});

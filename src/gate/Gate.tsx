@@ -15,6 +15,7 @@ import {
   looksLikeEmail,
   rememberInterest,
   rememberedInterest,
+  signInResult,
 } from "./gate";
 import type { SceneHandle } from "./scene";
 import gsap from "gsap";
@@ -31,8 +32,10 @@ export function Gate() {
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(() => rememberedInterest() !== null);
-  const [error, setError] = useState<string | null>(null);
+  // Back from a sign-in: "waitlist" means the account isn't on the pre-launch list; it's on the interest list now.
+  const [result] = useState(() => signInResult(location.search));
+  const [done, setDone] = useState(() => rememberedInterest() !== null || result === "waitlist");
+  const [error, setError] = useState<string | null>(() => (result === "failed" ? "Sign-in didn't go through. Try again." : null));
   const [devName, setDevName] = useState("Test Organizer");
   const online = useOnline();
   const root = useRef<HTMLDivElement>(null);
@@ -201,7 +204,9 @@ export function Gate() {
 
           {done ? (
             <p className="gate-done" role="status" aria-live="polite" data-rise>
-              You're on the list. We'll write once, when it opens.
+              {result === "waitlist"
+                ? "You're on the list. Sign-in is for the crew until it opens; we'll write when it does."
+                : "You're on the list. We'll write once, when it opens."}
             </p>
           ) : (
             <form className="gate-form" onSubmit={submit} noValidate data-rise>

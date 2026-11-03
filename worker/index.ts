@@ -22,7 +22,7 @@ import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
 import { featureGate, features } from "./features";
-import { gateFor, launchGate } from "./gate";
+import { gateFor, gatePasses, launchGate } from "./gate";
 import { interest } from "./interest";
 import { pageModeration, pages } from "./pages";
 import { live } from "./live";
@@ -86,7 +86,7 @@ app.post("/log", async (c) => {
 });
 
 // What this server supports, so the app can show or hide features.
-app.get("/config", (c) => {
+app.get("/config", async (c) => {
   // Never cached: the gate field depends on who is asking, and a sign-in has to change the answer at once.
   c.header("Cache-Control", "no-store");
   return c.json({
@@ -95,7 +95,7 @@ app.get("/config", (c) => {
     push: pushConfigured(c.env),
     vapidPublicKey: pushConfigured(c.env) ? c.env.VAPID_PUBLIC_KEY : null,
     features: features(c.env),
-    gate: gateFor(c.env, c.get("userId")),
+    gate: gateFor(c.env, await gatePasses(c.env, c.get("userId"))),
   });
 });
 

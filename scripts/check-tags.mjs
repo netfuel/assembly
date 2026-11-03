@@ -17,6 +17,12 @@ const json = async (path) => {
   return r.json();
 };
 
+/** While the launch gate is on, the API answers 401 without a session and there is nothing to check here. */
+async function gated() {
+  const r = await fetch(base + "/api/config", { headers: { Accept: "application/json" } }).catch(() => null);
+  return r?.ok ? (await r.json()).gate === "on" : false;
+}
+
 /** Pick one real example of each page type from the API. */
 async function examples() {
   const { events } = await json("/api/events");
@@ -75,6 +81,10 @@ async function check({ path, image, size }) {
 }
 
 try {
+  if (await gated()) {
+    console.log("skip: the launch gate is on, so the API is closed to this check");
+    process.exit(0);
+  }
   for (const ex of await examples()) {
     const before = failed;
     failed = false;

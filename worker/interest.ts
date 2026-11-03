@@ -39,15 +39,20 @@ interest.post("/", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const email = normalizeEmail(body.email);
   if (!email) return c.json({ error: "That address didn't go through. Try again." }, 400);
-  const hash = await emailHash(email);
   const referrer = typeof body.referrer === "string" ? body.referrer.slice(0, 300) : (c.req.header("Referer") ?? null)?.slice(0, 300) ?? null;
-  await c.env.DB.prepare(
-    "INSERT INTO interest (id, email, email_hash, source, referrer, device) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(email_hash) DO NOTHING",
-  )
-    .bind(crypto.randomUUID(), email, hash, cleanSource(body.source) ?? "gate", referrer, deviceFamily(c.req.header("User-Agent")))
-    .run();
+  await addInterest(c.env.DB, email, cleanSource(body.source) ?? "gate", c.req.header("User-Agent"), referrer);
   return c.json({ ok: true });
 });
+
+/** Adds an address to the list once; a repeat is a no-op. Also used when a gated sign-in is turned away. */
+export async function addInterest(db: D1Database, rawEmail: string | null, source: string, userAgent?: string | null, referrer: string | null = null) {
+  const email = rawEmail ? normalizeEmail(rawEmail) : null;
+  if (!email) return;
+  await db
+    .prepare("INSERT INTO interest (id, email, email_hash, source, referrer, device) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(email_hash) DO NOTHING")
+    .bind(crypto.randomUUID(), email, await emailHash(email), source, referrer, deviceFamily(userAgent ?? undefined))
+    .run();
+}
 
 /** CSV of the list, newest first. Moderators only. */
 interest.get("/export", async (c) => {
