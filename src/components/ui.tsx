@@ -110,15 +110,25 @@ export function Segmented<T extends string>({
   onChange: (id: T) => void;
   label: string;
 }) {
-  // A gradient pill slides under the selected option (CSS reads --seg-x and --seg-w).
+  // A gradient pill slides under the selected option (CSS reads --seg-x and --seg-w). Measured against the
+  // control itself, and again whenever it changes size: a font arriving, a sheet settling, a rotation.
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const el = root.current;
-    const btn = el?.querySelector<HTMLButtonElement>('button[aria-checked="true"]');
-    if (!el || !btn) return;
-    el.style.setProperty("--seg-x", `${btn.offsetLeft}px`);
-    el.style.setProperty("--seg-w", `${btn.offsetWidth}px`);
-    el.dataset.pill = "true";
+    if (!el) return;
+    const place = () => {
+      const btn = el.querySelector<HTMLButtonElement>('button[aria-checked="true"]');
+      if (!btn) return;
+      el.style.setProperty("--seg-x", `${btn.offsetLeft}px`);
+      el.style.setProperty("--seg-w", `${btn.offsetWidth}px`);
+      el.dataset.pill = "true";
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    for (const b of el.querySelectorAll("button")) ro.observe(b);
+    document.fonts?.ready.then(place).catch(() => undefined);
+    return () => ro.disconnect();
   }, [value, options.length]);
   return (
     <div className="segmented" role="radiogroup" aria-label={label} ref={root}>
