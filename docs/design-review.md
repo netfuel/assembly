@@ -99,7 +99,8 @@ Derived from the code (`@keyframes` and `src/lib/motion.ts`). Anything new has t
 | Your-location pulse and drop | `me-pulse`, `me-drop` | state | location on |
 | Skeleton shimmer | `skel-shimmer` | state | loading |
 | Generated flyer art | `GeneratedArt` | ambient, max 2 at once | in view |
-| Launch gate: formation beat (the A asserts itself), field shake, sweep on the button | `gate.css` | feedback (gate only, before launch) | submit, Google tap, error |
+| Launch gate scene: map grid drift, pin pulses, the eight lines in flight, a formation beat every 12 to 20 s | `src/gate/scene` | ambient (gate only, before launch; 30 fps on modest devices, stops after 3 idle minutes) | gate shown |
+| Launch gate: formation beat on demand, pin ring from the form, field shake, sweep on the button | `src/gate/scene`, `gate.css` | feedback (gate only, before launch) | submit, Google tap, error |
 
 ## Three layers
 

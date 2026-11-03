@@ -5,6 +5,7 @@ import { useOnline } from "../lib/offline";
 import { A_PATH, VIEW_BOX } from "../../shared/brandGeometry";
 import type { AuthProviders } from "../../shared/types";
 import { gateReturnTo, looksLikeEmail, rememberInterest, rememberedInterest } from "./gate";
+import type { SceneHandle } from "./scene";
 import gsap from "gsap";
 import "./gate.css";
 
@@ -25,6 +26,33 @@ export function Gate() {
   const online = useOnline();
   const root = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
+  const sceneBox = useRef<HTMLDivElement>(null);
+  const scene = useRef<SceneHandle | null>(null);
+  const [sceneOn, setSceneOn] = useState(false);
+
+  // The Three.js scene (its own chunk) mounts once the splash has cleared, when WebGL is there. Without it,
+  // the SVG A underneath stays as the background.
+  useEffect(() => {
+    let dead = false;
+    const start = async () => {
+      const m = await import("./scene");
+      if (dead || !sceneBox.current || !m.supportsWebGL()) return;
+      try {
+        scene.current = m.mountScene(sceneBox.current, { reducedMotion: reducedMotion() });
+        setSceneOn(true);
+      } catch {
+        // A WebGL context that fails to start (too many contexts, a driver quirk): keep the flat version.
+      }
+    };
+    if (splashStillUp()) window.addEventListener("assembly:splash-done", start, { once: true });
+    else start();
+    return () => {
+      dead = true;
+      window.removeEventListener("assembly:splash-done", start);
+      scene.current?.destroy();
+      scene.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     api.providers().then(setProviders).catch(() => setProviders({ google: false, apple: false }));
@@ -47,7 +75,7 @@ export function Gate() {
       if (reducedMotion()) return void gsap.set(items, { opacity: 1 });
       gsap.set(items, { opacity: 0, y: 10 });
       const go = () => gsap.to(items, { opacity: 1, y: 0, duration: 0.6, stagger: 0.07, ease: "power3.out", delay: 0.1 });
-      if (document.getElementById("splash")) window.addEventListener("assembly:splash-done", go, { once: true });
+      if (splashStillUp()) window.addEventListener("assembly:splash-done", go, { once: true });
       else go();
     },
     { scope: root },
@@ -65,7 +93,10 @@ export function Gate() {
       await api.interest(email.trim(), "gate");
       rememberInterest(email.trim().toLowerCase());
       setDone(true);
-      window.dispatchEvent(new CustomEvent("assembly:gate-joined"));
+      // The A asserts itself as the confirmation, and a pin pulse leaves the form.
+      const r = field.current?.getBoundingClientRect();
+      if (r) scene.current?.ring(r.left + r.width / 2, r.top + r.height / 2);
+      scene.current?.beat();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "That address didn't go through. Try again.");
       shake(field.current);
@@ -76,7 +107,7 @@ export function Gate() {
 
   return (
     <div className="gate" ref={root}>
-      <div id="gate-scene" className="gate-scene" aria-hidden="true">
+      <div id="gate-scene" className={`gate-scene ${sceneOn ? "has-scene" : ""}`} aria-hidden="true" ref={sceneBox}>
         <svg className="gate-a" viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.w} ${VIEW_BOX.h}`} preserveAspectRatio="xMidYMid meet" focusable="false">
           <path d={A_PATH} fillRule="evenodd" />
         </svg>
@@ -115,7 +146,10 @@ export function Gate() {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (error) setError(null);
+                  scene.current?.typed();
                 }}
+                onFocus={() => scene.current?.setFocus(true)}
+                onBlur={() => scene.current?.setFocus(false)}
                 aria-invalid={!!error}
                 aria-describedby={error ? "gate-error" : undefined}
               />
@@ -140,7 +174,18 @@ export function Gate() {
           </div>
         )}
         {online && providers?.google && (
-          <a className="gate-google" href={signInUrl("google", returnTo)} data-rise onClick={() => window.dispatchEvent(new CustomEvent("assembly:gate-signin"))}>
+          <a
+            className="gate-google"
+            href={signInUrl("google", returnTo)}
+            data-rise
+            onClick={(e) => {
+              // Play the formation beat, then go. Modifier clicks (new tab) are left alone.
+              if (!scene.current || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || reducedMotion()) return;
+              e.preventDefault();
+              const href = e.currentTarget.href;
+              Promise.race([scene.current.beat(), new Promise((r) => setTimeout(r, 1200))]).then(() => (location.href = href));
+            }}
+          >
             <GoogleMark />
             Continue with Google
           </a>
@@ -164,6 +209,12 @@ export function Gate() {
       </main>
     </div>
   );
+}
+
+/** The splash is on screen and hasn't started its hand-off yet (its "is-gate" class means the event already fired). */
+function splashStillUp() {
+  const el = document.getElementById("splash");
+  return !!el && !el.classList.contains("is-gate");
 }
 
 function GoogleMark() {
