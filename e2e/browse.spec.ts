@@ -17,9 +17,11 @@ test.describe("Feed and filters", () => {
   test("live events lead the rail with a Live now badge", async ({ as, problems }) => {
     const page = await as(null);
     await page.goto("/");
-    const first = page.locator(".card:not(.card-skeleton)").first();
-    await expect(first).toContainText("E2E Live Night");
-    await expect(first).toContainText(/live/i);
+    // Other sample nights can be live too, depending on the time of day; every live card must come before the rest.
+    await expect(page.locator(".card", { hasText: "E2E Live Night" })).toContainText(/live now/i);
+    const live = await page.locator(".card:not(.card-skeleton)").evaluateAll((els) => els.map((e) => /live now/i.test(e.textContent ?? "")));
+    expect(live[0], "the first card is live").toBe(true);
+    expect(live.indexOf(false) === -1 || live.slice(live.indexOf(false)).every((x) => !x), "no live card after a non-live one").toBe(true);
     noProblems(problems);
   });
 
