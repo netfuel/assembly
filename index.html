@@ -99,6 +99,8 @@
       #splash.is-reveal .sp-caption { animation: none; opacity: 0; }
       #splash.is-reveal .sp-cover { animation: none; opacity: 0; }
       #splash.is-done svg { opacity: 0; transition: opacity 0.15s; }
+      /* Handing off to the launch gate (src/lib/splash.ts revealToGate): no zoom, the whole thing fades over the gate's A. */
+      #splash.is-gate { opacity: 0; transition: opacity 0.6s ease; pointer-events: none; }
       #splash.is-done .sp-ring { animation: sp-ring 0.7s cubic-bezier(0.2, 0.6, 0.3, 1) forwards; }
       @keyframes sp-shoot { 0% { stroke-dashoffset: 22; opacity: 1; } 85% { stroke-dashoffset: -78; opacity: 1; } 100% { stroke-dashoffset: -78; opacity: 0; } }
       @keyframes sp-draw { to { stroke-dashoffset: 0; } }

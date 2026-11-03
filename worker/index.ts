@@ -87,8 +87,8 @@ app.post("/log", async (c) => {
 
 // What this server supports, so the app can show or hide features.
 app.get("/config", (c) => {
-  // Private: the gate field depends on who is asking.
-  c.header("Cache-Control", "private, max-age=300");
+  // Never cached: the gate field depends on who is asking, and a sign-in has to change the answer at once.
+  c.header("Cache-Control", "no-store");
   return c.json({
     video: streamConfigured(c.env),
     streamCustomerCode: c.env.STREAM_CUSTOMER_CODE ?? null,

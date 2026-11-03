@@ -121,6 +121,8 @@ export const api = {
     request<{ ok: true; eventsDeleted: number }>("/api/me", { method: "DELETE", body: JSON.stringify({ confirm }) }),
   providers: () => request<AuthProviders>("/api/auth/providers"),
   config: () => request<ServerConfig>("/api/config"),
+  /** Launch gate: leave an address to hear when the site opens. Always ok, even for a repeat address. */
+  interest: (email: string, source: string) => request<{ ok: true }>("/api/interest", { method: "POST", body: JSON.stringify({ email, source }) }),
   emailStart: (email: string) => request<{ ok: true; devCode?: string }>("/api/auth/email/start", { method: "POST", body: JSON.stringify({ email }) }),
   emailVerify: (email: string, code: string) =>
     request<{ ok: true; newUser: boolean }>("/api/auth/email/verify", { method: "POST", body: JSON.stringify({ email, code }) }),

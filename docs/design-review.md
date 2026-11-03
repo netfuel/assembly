@@ -99,6 +99,7 @@ Derived from the code (`@keyframes` and `src/lib/motion.ts`). Anything new has t
 | Your-location pulse and drop | `me-pulse`, `me-drop` | state | location on |
 | Skeleton shimmer | `skel-shimmer` | state | loading |
 | Generated flyer art | `GeneratedArt` | ambient, max 2 at once | in view |
+| Launch gate: formation beat (the A asserts itself), field shake, sweep on the button | `gate.css` | feedback (gate only, before launch) | submit, Google tap, error |
 
 ## Three layers
 

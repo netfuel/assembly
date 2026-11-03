@@ -46,6 +46,23 @@ export function hideSplash() {
   maybeReveal();
 }
 
+/**
+ * The gate is mounting under the splash: let beats 1 to 3 finish (the lines form the A), then fade the whole
+ * splash instead of zooming through the A, so the A on the gate takes over in place.
+ */
+export function revealToGate() {
+  const splash = el();
+  if (!splash || revealed) return;
+  revealed = true;
+  const reduce = reducedMotion();
+  const go = () => {
+    splash.classList.add("is-gate");
+    window.setTimeout(() => splash.remove(), reduce ? 50 : 700);
+    window.dispatchEvent(new Event("assembly:splash-done"));
+  };
+  window.setTimeout(go, Math.max(0, MIN_MS - performance.now()));
+}
+
 /** Remove the splash at once, for pages that don't use it. */
 export function skipSplash() {
   revealed = true;

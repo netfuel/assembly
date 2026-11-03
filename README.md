@@ -130,9 +130,10 @@ A second batch comes from [We Are Memphis](https://wearememphis.com/live/) (the 
 Until launch, `GATE=on` turns assembly.rsvp into a sign-up screen: Google sign-in gets you in, or you leave an email to hear when it opens. It is a Worker secret, not a `wrangler.jsonc` var, so deploys leave it alone; `go-live.command` step 9 sets it, and launch day is `npx wrangler secret put GATE` with `off` (or deleting it). No deploy.
 
 - `worker/gate.ts`: with the gate on, every `/api` route answers 401 without a session except `config`, `health`, `log`, `POST interest`, `auth/*`, `media/*` and `og/*` (so link previews still work). Pages outside `/api` (link previews, feeds, policies) stay public. The allow-list is tested in `worker/gate.test.ts`.
-- `/api/config` reports `gate`: `on`, `off`, or `off-for-you` (signed in while it's on). The response is private-cached for that reason.
+- `/api/config` reports `gate`: `on`, `off`, or `off-for-you` (signed in while it's on). The response is never cached, so a sign-in changes the answer at once.
 - `db/migrations/0013_interest.sql` and `worker/interest.ts`: the interest list. `POST /api/interest` takes `{ email, source? }`, dedupes by a hash of the address and answers 200 either way (no probing), 5 per IP per 10 minutes. When someone on the list later signs in with that verified address, `signed_in_at` is filled. Moderators download the list at `/api/interest/export` (CSV) while signed in.
-- The sign-up screen itself (Pass 2) and its Three.js background (Pass 3) are in the plan doc "Assembly launch gate plan".
+- `src/gate/`: the sign-up screen. `main.tsx` fetches `/api/config` before mounting anything; `gate: "on"` mounts the gate (its own chunk, loaded only then) with no service worker and no install prompt, anything else mounts the app. The splash hands off to it without the zoom (`revealToGate`). The address left on the gate is remembered in `localStorage` so a return visit shows the done state; the gate polls config every minute and reloads when the gate turns off. `shared/brandGeometry.ts` holds the A and the preloader lines for the gate and its Three.js scene (Pass 3, see the plan doc "Assembly launch gate plan").
+- `npm run test:e2e:gate` runs the gated regression spec (`e2e/gate.spec.ts`); the normal suite runs with the gate off.
 
 ## Deploy to Cloudflare
 

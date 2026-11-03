@@ -1,0 +1,149 @@
+/* The launch gate. Forced dark: the scene is built for the night map and the launch moment matches the video. */
+.gate {
+  --gate-ground: #0a0a0b;
+  --gate-fg: #ededee;
+  --gate-muted: #8e8e96;
+  --gate-faint: #7d7d86;
+  --gate-line: #34343a;
+  --gate-accent: #ff3df2;
+  --gate-uv: #a98bff;
+  --gate-danger: #ff6b6b;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(var(--space-6), env(safe-area-inset-top)) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom));
+  background: var(--gate-ground);
+  color: var(--gate-fg);
+  color-scheme: dark;
+  overflow: hidden;
+}
+
+/* Ambient layer: the scene mounts here (pass 3). Until then the A sits faint behind the panel. */
+.gate-scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.gate-a { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gate-a path { fill: none; stroke: var(--gate-fg); stroke-width: 1.25; opacity: 0.2; }
+@media (max-width: 760px) { .gate-a path { stroke-width: 1.8; } }
+
+/* The panel: one column, readable over anything the scene does. */
+.gate-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 360px;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-5);
+  border: 1px solid rgb(255 255 255 / 0.06);
+  border-radius: var(--radius-md, 12px);
+  background: rgb(10 10 11 / 0.72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  text-align: center;
+}
+
+.gate-wordmark {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-variation-settings: var(--vary-display);
+  font-weight: 400;
+  font-size: var(--text-xl);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.gate-caption {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  font: 500 10px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gate-muted);
+}
+.gate-caption::before { content: "· "; color: var(--gate-accent); }
+.gate-lead { margin: 0; font-size: var(--text-sm); line-height: 1.5; color: var(--gate-fg); }
+
+.gate-form { display: grid; gap: var(--space-2); }
+.gate-field {
+  position: relative;
+  display: flex;
+  min-height: 48px;
+  border: 1px solid var(--gate-line);
+  border-radius: 999px;
+  background: #0f0f11;
+  overflow: hidden;
+}
+.gate-field:focus-within { border-color: var(--gate-accent); box-shadow: 0 0 0 1px var(--gate-accent); }
+.gate-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--gate-fg);
+  font: inherit;
+  font-size: max(16px, var(--text-sm)); /* 16px keeps iOS from zooming on focus */
+  outline: none;
+}
+.gate-field input::placeholder { color: var(--gate-faint); }
+.gate-submit {
+  flex: none;
+  margin: 4px;
+  padding: 0 var(--space-4);
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gate-fg);
+  color: var(--gate-ground);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+}
+.gate-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+.gate-submit:not(:disabled):hover { filter: brightness(1.08); }
+/* Submitting: the app's search sweep along the field's bottom edge. */
+.gate-field.is-busy::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--gate-accent), transparent);
+  animation: gate-sweep 900ms ease-in-out infinite;
+}
+@keyframes gate-sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.gate-error { margin: 0; font-size: var(--text-xs); line-height: 1.5; color: var(--gate-danger); }
+.gate-done { margin: 0; min-height: 48px; display: grid; place-items: center; font-size: var(--text-sm); line-height: 1.5; color: var(--gate-fg); }
+
+.gate-or { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-2xs); color: var(--gate-faint); text-transform: uppercase; letter-spacing: var(--tracking-label); }
+.gate-rule { flex: 1; height: 1px; background: var(--gate-line); }
+
+.gate-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  border: 1px solid var(--gate-fg);
+  border-radius: 999px;
+  background: var(--gate-fg);
+  color: var(--gate-ground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+.gate-google:hover { filter: brightness(1.08); }
+.gate-google svg { flex: none; }
+
+.gate-dev { display: flex; gap: var(--space-2); }
+.gate-dev input, .gate-dev button { min-height: 40px; padding: 0 var(--space-3); border: 1px dashed var(--gate-line); border-radius: 999px; background: transparent; color: var(--gate-muted); font: inherit; font-size: var(--text-xs); }
+.gate-dev input { flex: 1; min-width: 0; }
+.gate-dev button { cursor: pointer; }
+
+.gate-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-2); font: 500 11px/1.6 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 0.04em; color: var(--gate-faint); }
+.gate-footer a { color: inherit; text-decoration: none; padding: 6px 2px; } /* 44 px with the line box */
+.gate-footer a:hover { color: var(--gate-fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-field.is-busy::after { animation: none; width: 100%; opacity: 0.5; }
+}

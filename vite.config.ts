@@ -17,7 +17,15 @@ export default defineConfig({
     // The regression suite (npm run test:e2e) gets its own local database, and can switch modules off.
     cloudflare(
       process.env.E2E
-        ? { persistState: { path: ".wrangler/e2e" }, config: process.env.E2E_FEATURES_OFF ? { vars: { FEATURES_OFF: process.env.E2E_FEATURES_OFF } } : {} }
+        ? {
+            persistState: { path: ".wrangler/e2e" },
+            config: {
+              vars: {
+                ...(process.env.E2E_FEATURES_OFF ? { FEATURES_OFF: process.env.E2E_FEATURES_OFF } : {}),
+                ...(process.env.E2E_GATE ? { GATE: process.env.E2E_GATE } : {}),
+              },
+            },
+          }
         : {},
     ),
     VitePWA({
