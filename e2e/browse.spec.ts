@@ -113,7 +113,6 @@ test.describe("Search", () => {
   });
 
   test("a long query doesn't break search", async ({ as, problems }) => {
-    test.fail(true, "Known bug #2 in the regression report: remove this line when it's fixed.");
     const page = await as(null);
     await page.goto("/");
     await page.locator(".hs-search").click();

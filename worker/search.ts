@@ -20,6 +20,22 @@ export function ftsQuery(q: string): string | null {
   return words.length ? words.map((w) => `"${w}"*`).join(" ") : null;
 }
 
+/** A `%…%` LIKE pattern that fits D1's 50-byte cap on LIKE patterns: long queries are cut to their first ~46 bytes,
+ * never mid-character or mid-escape. */
+export function likePattern(q: string): string {
+  const enc = new TextEncoder();
+  let out = "";
+  let bytes = 2; // the two %
+  for (const ch of q) {
+    const piece = /[%_\\]/.test(ch) ? `\\${ch}` : ch;
+    const n = enc.encode(piece).length;
+    if (bytes + n > 50) break;
+    out += piece;
+    bytes += n;
+  }
+  return `%${out}%`;
+}
+
 interface Hit {
   kind: "event" | "artist" | "venue";
   ref_id: string;
@@ -46,7 +62,7 @@ async function ftsHits(env: Env, q: string, city: string): Promise<Hit[] | null>
 }
 
 async function likeHits(env: Env, q: string, city: string): Promise<Hit[]> {
-  const like = `%${q.replace(/[%_\\]/g, (m) => `\\${m}`).slice(0, 60)}%`;
+  const like = likePattern(q);
   const [ev, ar, ve] = await env.DB.batch<{ id: string }>([
     env.DB.prepare(
       `SELECT DISTINCT e.id FROM events e LEFT JOIN venues v ON v.id = e.venue_id
@@ -65,7 +81,7 @@ const inList = (n: number) => Array.from({ length: n }, () => "?").join(",");
 
 /** Organizers by name or username, only people with upcoming public events in the city. */
 async function organizerHits(env: Env, q: string, city: string): Promise<SearchPlace[]> {
-  const like = `%${q.replace(/[%_\\]/g, (m) => `\\${m}`).slice(0, 60)}%`;
+  const like = likePattern(q);
   try {
     const { results } = await env.DB.prepare(
       `SELECT u.id, u.display_name AS name, COALESCE(u.username, u.id) AS slug, COUNT(e.id) AS upcoming,
@@ -115,12 +131,12 @@ export async function search(env: Env, q: string, city: string): Promise<SearchR
   const { results: rows } = await env.DB.prepare(
     `${EVENT_SELECT}
      WHERE e.city_id = ? AND e.status IN ('live', 'cancelled') AND e.ends_at > ?
-       AND (e.id IN (${inList(eventIds.length || 1)})
+       AND (e.id IN (SELECT value FROM json_each(?))
          ${artistIds.length ? `OR e.id IN (SELECT event_id FROM lineup_slots WHERE artist_id IN (${inList(artistIds.length)}))` : ""}
          ${venueIds.length ? `OR e.venue_id IN (${inList(venueIds.length)})` : ""})
      ORDER BY e.starts_at LIMIT 300`,
   )
-    .bind(city, now, ...(eventIds.length ? eventIds : [""]), ...artistIds, ...venueIds)
+    .bind(city, now, JSON.stringify(eventIds), ...artistIds, ...venueIds)
     .all<EventRow>();
   const all = rows.map(toSummary);
   const direct = new Set(eventIds);

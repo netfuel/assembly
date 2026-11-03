@@ -165,13 +165,11 @@ test.describe("API contract", () => {
   });
 
   test("a long search answers 200", async ({ api }) => {
-    test.fail(true, "Known bug #2 in the regression report: remove this line when it's fixed.");
     const anon = await api(null);
     expect((await anon.get("/api/search?q=" + "x".repeat(60))).status(), "60-character query").toBe(200);
   });
 
   test("a word that matches 100+ events answers 200", async ({ api }) => {
-    test.fail(true, "Known bug #1 in the regression report: remove this line when it's fixed.");
     const rows = Array.from({ length: 110 }, (_, i) => `('e2e-many-${i}','memphis','Zebra party ${i}',strftime('%Y-%m-%dT%H:%M:%SZ','now','+1 day'),strftime('%Y-%m-%dT%H:%M:%SZ','now','+2 day'),'x',35.1,-90.0,'live',0)`).join(",");
     const sql = (q: string) => execFileSync("npx", ["wrangler", "d1", "execute", "assembly", "--local", "--persist-to", ".wrangler/e2e", "--command", q], { stdio: "pipe" });
     sql(`INSERT INTO events (id, city_id, title, starts_at, ends_at, address, lat, lng, status, is_sample) VALUES ${rows}`);
