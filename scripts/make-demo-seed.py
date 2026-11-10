@@ -188,8 +188,10 @@ def main():
              "\nON CONFLICT(id) DO UPDATE SET name = excluded.name, slug = excluded.slug, links = excluded.links, bio = excluded.bio;")
     rows = []
     for pid, name, pron, bio, scenes, org, friend in PEOPLE:
-        rows.append(f"({q('demo-' + pid)}, {q(name)}, {q(pron)}, {q(bio)}, {j(scenes)}, 1, {1 if org else 0}, {q(pid.replace('-', ''))}, {1 if friend else 0})")
-    s.append("INSERT INTO users (id, display_name, pronouns, bio, scenes, show_attendance, is_verified_organizer, username, friends_on) VALUES\n" + ",\n".join(rows) + ";")
+        # A portrait is used when public/demo/avatars/<id>.jpg exists; otherwise the app shows initials.
+        photo = f"/demo/avatars/{pid}.jpg" if (ROOT / "public" / "demo" / "avatars" / f"{pid}.jpg").exists() else None
+        rows.append(f"({q('demo-' + pid)}, {q(name)}, {q(pron)}, {q(bio)}, {j(scenes)}, 1, {1 if org else 0}, {q(pid.replace('-', ''))}, {1 if friend else 0}, {q(photo)})")
+    s.append("INSERT INTO users (id, display_name, pronouns, bio, scenes, show_attendance, is_verified_organizer, username, friends_on, avatar_url) VALUES\n" + ",\n".join(rows) + ";")
 
     rows = []
     for k, cid in enumerate(CROWD):

@@ -44,24 +44,24 @@ INSERT INTO artists (id, name, slug, links, bio, city_id) VALUES
 ('demo-vex-mercy', 'Vex Mercy', 'vex-mercy', '{"soundcloud":"https://soundcloud.com/","ra":"https://ra.co/"}', 'Industrial and EBM.', 'memphis'),
 ('demo-cola-wars', 'Cola Wars', 'cola-wars', '{"bandcamp":"https://bandcamp.com/"}', 'Garage rock, three chords, no mercy.', 'memphis')
 ON CONFLICT(id) DO UPDATE SET name = excluded.name, slug = excluded.slug, links = excluded.links, bio = excluded.bio;
-INSERT INTO users (id, display_name, pronouns, bio, scenes, show_attendance, is_verified_organizer, username, friends_on) VALUES
-('demo-org-wet-paint', 'Wet Paint Collective', 'they/them', 'Queer house nights since 2019.', '["queer","house"]', 1, 1, 'orgwetpaint', 0),
-('demo-org-moth', 'Moth House', NULL, 'Basement shows, all ages, sliding scale.', '["diy","live"]', 1, 1, 'orgmoth', 0),
-('demo-org-static', 'Static Crew', NULL, 'Warehouse techno, one room, no phones.', '["rave","techno"]', 1, 1, 'orgstatic', 0),
-('demo-org-low', 'Low Ceiling Sound', NULL, 'Jungle, footwork, and bass.', '["bass","rave"]', 1, 1, 'orglow', 0),
-('demo-org-greenhouse', 'Greenhouse Sundays', NULL, 'Open-air disco, free with RSVP.', '["house","queer"]', 1, 1, 'orggreenhouse', 0),
-('demo-org-pulp', 'Pulp After Dark', NULL, 'Costume raves, two rooms.', '["rave","queer"]', 1, 1, 'orgpulp', 0),
-('demo-org-tin-roof', 'Tin Roof Volunteers', NULL, 'All-ages DIY hall.', '["diy","live"]', 1, 1, 'orgtinroof', 0),
-('demo-friend-ari', 'Ari M.', 'she/her', 'Out most Fridays.', '["queer","house"]', 1, 0, 'friendari', 1),
-('demo-friend-dev', 'Dev O.', 'he/him', 'Techno and coffee.', '["techno","rave"]', 1, 0, 'frienddev', 1),
-('demo-friend-sky', 'Sky R.', 'they/them', 'Basement shows forever.', '["diy","live"]', 1, 0, 'friendsky', 1),
-('demo-friend-nina', 'Nina T.', 'she/her', NULL, '["bass","bar"]', 1, 0, 'friendnina', 1),
-('demo-fan-jules', 'Jules P.', 'they/them', NULL, '["queer"]', 1, 0, 'fanjules', 0),
-('demo-fan-marco', 'Marco L.', 'he/him', NULL, '["house"]', 1, 0, 'fanmarco', 0),
-('demo-fan-bee', 'Bee W.', 'she/her', NULL, '["diy"]', 1, 0, 'fanbee', 0),
-('demo-fan-theo', 'Theo K.', 'he/him', NULL, '["techno"]', 1, 0, 'fantheo', 0),
-('demo-fan-rosa', 'Rosa G.', 'she/her', NULL, '["queer","rave"]', 1, 0, 'fanrosa', 0),
-('demo-fan-kai', 'Kai N.', 'they/them', NULL, '["bass"]', 1, 0, 'fankai', 0);
+INSERT INTO users (id, display_name, pronouns, bio, scenes, show_attendance, is_verified_organizer, username, friends_on, avatar_url) VALUES
+('demo-org-wet-paint', 'Wet Paint Collective', 'they/them', 'Queer house nights since 2019.', '["queer","house"]', 1, 1, 'orgwetpaint', 0, NULL),
+('demo-org-moth', 'Moth House', NULL, 'Basement shows, all ages, sliding scale.', '["diy","live"]', 1, 1, 'orgmoth', 0, NULL),
+('demo-org-static', 'Static Crew', NULL, 'Warehouse techno, one room, no phones.', '["rave","techno"]', 1, 1, 'orgstatic', 0, NULL),
+('demo-org-low', 'Low Ceiling Sound', NULL, 'Jungle, footwork, and bass.', '["bass","rave"]', 1, 1, 'orglow', 0, NULL),
+('demo-org-greenhouse', 'Greenhouse Sundays', NULL, 'Open-air disco, free with RSVP.', '["house","queer"]', 1, 1, 'orggreenhouse', 0, NULL),
+('demo-org-pulp', 'Pulp After Dark', NULL, 'Costume raves, two rooms.', '["rave","queer"]', 1, 1, 'orgpulp', 0, NULL),
+('demo-org-tin-roof', 'Tin Roof Volunteers', NULL, 'All-ages DIY hall.', '["diy","live"]', 1, 1, 'orgtinroof', 0, NULL),
+('demo-friend-ari', 'Ari M.', 'she/her', 'Out most Fridays.', '["queer","house"]', 1, 0, 'friendari', 1, '/demo/avatars/friend-ari.jpg'),
+('demo-friend-dev', 'Dev O.', 'he/him', 'Techno and coffee.', '["techno","rave"]', 1, 0, 'frienddev', 1, '/demo/avatars/friend-dev.jpg'),
+('demo-friend-sky', 'Sky R.', 'they/them', 'Basement shows forever.', '["diy","live"]', 1, 0, 'friendsky', 1, '/demo/avatars/friend-sky.jpg'),
+('demo-friend-nina', 'Nina T.', 'she/her', NULL, '["bass","bar"]', 1, 0, 'friendnina', 1, '/demo/avatars/friend-nina.jpg'),
+('demo-fan-jules', 'Jules P.', 'they/them', NULL, '["queer"]', 1, 0, 'fanjules', 0, NULL),
+('demo-fan-marco', 'Marco L.', 'he/him', NULL, '["house"]', 1, 0, 'fanmarco', 0, NULL),
+('demo-fan-bee', 'Bee W.', 'she/her', NULL, '["diy"]', 1, 0, 'fanbee', 0, NULL),
+('demo-fan-theo', 'Theo K.', 'he/him', NULL, '["techno"]', 1, 0, 'fantheo', 0, NULL),
+('demo-fan-rosa', 'Rosa G.', 'she/her', NULL, '["queer","rave"]', 1, 0, 'fanrosa', 0, NULL),
+('demo-fan-kai', 'Kai N.', 'they/them', NULL, '["bass"]', 1, 0, 'fankai', 0, '/demo/avatars/fan-kai.jpg');
 INSERT INTO users (id, display_name, scenes, show_attendance) VALUES
 ('demo-crowd-ash', 'Ash A.', '[]', 0),
 ('demo-crowd-bo', 'Bo B.', '[]', 0),
