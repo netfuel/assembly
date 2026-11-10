@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import seed from "../db/demo/seed.sql?raw";
+import { DEMO_SEED_SQL as seed } from "./demoSeed";
 import { demoOn, seedStatements } from "./demo";
 
 describe("demo mode", () => {

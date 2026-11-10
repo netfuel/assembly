@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from "hono";
 import type { AppContext, Env } from "./env";
 import { startSession } from "./session";
-import seedSql from "../db/demo/seed.sql?raw";
+import { DEMO_SEED_SQL as seedSql } from "./demoSeed";
 
 /**
  * Demo mode (demo.assembly.rsvp). DEMO=1 turns it on; production never sets it.

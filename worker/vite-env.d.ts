@@ -3,8 +3,3 @@ interface ImportMeta {
   readonly env?: { readonly DEV?: boolean };
 }
 
-// Text imports (worker/demo.ts reads the demo seed this way).
-declare module "*.sql?raw" {
-  const text: string;
-  export default text;
-}
