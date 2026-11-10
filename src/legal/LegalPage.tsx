@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Label } from "../components/ui";
 import { useTheme } from "../lib/theme";
-import { CONTACT, DOCS, EFFECTIVE } from "./content";
+import { CONTACT, DOCS, REVIEW_NOTE, STATUS, UPDATED } from "./content";
 import "./legal.css";
 
 /** Standalone page for /terms, /privacy, and /guidelines. Doesn't load the map. */
@@ -28,8 +28,13 @@ export function LegalPage({ slug }: { slug: keyof typeof DOCS }) {
         </nav>
       </header>
       <main className="legal-main">
-        <Label glyph="◇">Effective {EFFECTIVE}</Label>
+        <Label glyph="◇">
+          {STATUS} · Last updated {UPDATED}
+        </Label>
         <h1>{doc.title}</h1>
+        <p className="legal-draft" role="note">
+          {REVIEW_NOTE}
+        </p>
         <p className="legal-lede">{doc.lede}</p>
         {doc.sections.map((s) => (
           <section key={s.heading}>

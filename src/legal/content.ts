@@ -1,9 +1,13 @@
 // Terms, privacy policy, and community guidelines. Plain language, specific to how Assembly works.
 // Update EFFECTIVE when anything material changes, and say what changed at the top of the page.
 
-export const EFFECTIVE = "October 26, 2026";
-export const OPERATOR = "Matt Ladner";
-export const CONTACT = "hello@assembly.rsvp";
+export const UPDATED = "November 10, 2026";
+export const STATUS = "Draft, beta";
+export const REVIEW_NOTE = "Pending legal review. This draft has not been reviewed by a lawyer and may change before launch.";
+// Placeholders: replace with real details before launch. Don't guess.
+export const OPERATOR = "[Legal entity name: to be confirmed]";
+export const ADDRESS = "[Mailing address: to be confirmed]";
+export const CONTACT = "support@assembly.rsvp";
 
 export interface LegalDoc {
   slug: "terms" | "privacy" | "guidelines";
@@ -19,7 +23,7 @@ export const PRIVACY: LegalDoc = {
   sections: [
     {
       heading: "Who we are",
-      body: [`Assembly (assembly.rsvp) is run by ${OPERATOR} in Memphis, Tennessee. Questions or requests: ${CONTACT}.`],
+      body: [`Assembly (assembly.rsvp) is run by ${OPERATOR}. Mailing address: ${ADDRESS}. Questions or requests: ${CONTACT}.`],
     },
     {
       heading: "What we collect",
@@ -55,6 +59,10 @@ export const PRIVACY: LegalDoc = {
       ],
     },
     {
+      heading: "Messages",
+      body: ["Assembly has no private messaging. Comments and wall photos are not private: their visibility is described above."],
+    },
+    {
       heading: "Location",
       body: [
         "We don't track or store your device's location. The map shows events where organizers placed them.",
@@ -74,7 +82,7 @@ export const PRIVACY: LegalDoc = {
           "Your browser's push service (Google, Apple, Mozilla, or Microsoft): encrypted notification messages, if you turn notifications on. They can't read the contents.",
           "OpenFreeMap: the map tiles your browser loads, which means it sees your IP address like any website would.",
         ],
-        "We don't sell or rent personal data. We'll disclose information if the law requires it, and we'll tell you first when we're allowed to.",
+        "We don't sell or rent personal data, and we don't use advertising trackers or share your activity with ad networks. We'll disclose information if the law requires it, and we'll tell you first when we're allowed to.",
       ],
     },
     {
@@ -96,7 +104,7 @@ export const PRIVACY: LegalDoc = {
           "Edit your profile or remove your photo any time.",
           "Edit or remove your own comments, and see or undo who you muted or blocked, in your profile.",
           "Turn notifications off in your profile or your browser settings.",
-          "Delete your account in your profile. That removes your profile, sign-in methods, RSVPs, photos, and events you host alone, and signs you out everywhere.",
+          "Delete your account in your profile. That removes your profile, sign-in methods, RSVPs, photos, comments, friend connections, and events you host alone, and signs you out everywhere.",
           `Ask for a copy of your data, or for anything else, at ${CONTACT}.`,
         ],
       ],
@@ -120,8 +128,8 @@ export const PRIVACY: LegalDoc = {
 
 export const TERMS: LegalDoc = {
   slug: "terms",
-  title: "Terms of use",
-  lede: "The short version: be at least 18, post real events you have the right to post, respect people, and know that Assembly lists events but doesn't run them or sell tickets.",
+  title: "Terms of service",
+  lede: "The short version: be at least 18, post real events you have the right to post, respect people, and know that Assembly lists events and links to external tickets. It doesn't sell tickets, hold money, or run events.",
   sections: [
     {
       heading: "Agreement",
@@ -130,8 +138,8 @@ export const TERMS: LegalDoc = {
       ],
     },
     {
-      heading: "Who can use Assembly",
-      body: ["You must be 18 or older to make an account. You're responsible for what happens under your account, so keep your email and sign-in methods secure."],
+      heading: "Accounts and age",
+      body: ["You must be 18 or older to make an account. Many venues are 21+, and it is your job to meet each event's own age rules. You're responsible for what happens under your account, so keep your email and sign-in methods secure."],
     },
     {
       heading: "Posting events",
@@ -170,19 +178,20 @@ export const TERMS: LegalDoc = {
     {
       heading: "Tickets and payments",
       body: [
-        "Assembly doesn't sell tickets or handle money. Ticket links go to other services (like RA, DICE, Eventbrite, or Venmo) and their terms apply. Refunds, entry, and disputes are between you and the organizer.",
+        "Assembly lists events and links to external tickets. It does not sell tickets, hold money, or run events. Ticket links go to other services (like RA, DICE, Eventbrite, or Venmo) and their terms apply. Refunds, entry, and disputes are between you and the organizer.",
       ],
     },
     {
       heading: "Going to events",
       body: [
-        "Organizers, not Assembly, run events. We don't check venues, vet attendees, or guarantee that an event happens as listed. Use your judgment, look out for each other, and report anything unsafe.",
+        "Organizers, not Assembly, run events. Organizers are responsible for their events, venues, permits, and safety. We don't check venues, vet attendees, or guarantee that an event happens as listed. Use your judgment, look out for each other, and report anything unsafe.",
       ],
     },
     {
       heading: "Not allowed",
       body: [
         "Anything that breaks the Community guidelines, including hateful or harassing content, selling drugs or weapons, sexual services, fake events, scams, spam, impersonation, or posting someone's private address without permission. Don't try to break, overload, or scrape the service, or get around limits, bans, or reviews.",
+        "Harm reduction information, such as water, naloxone, testing, and ride plans, is allowed and welcome.",
       ],
     },
     {
@@ -196,7 +205,7 @@ export const TERMS: LegalDoc = {
       body: [`If something on Assembly infringes your copyright, email ${CONTACT} with the link, what it infringes, and your contact details, and we'll take it down while we sort it out.`],
     },
     {
-      heading: "No warranty",
+      heading: "Disclaimers",
       body: [
         "Assembly is provided as is. We work to keep it accurate and running, but we don't promise it will be error-free or always available, or that listings are correct.",
       ],
@@ -204,7 +213,7 @@ export const TERMS: LegalDoc = {
     {
       heading: "Limits on liability",
       body: [
-        "To the extent the law allows, Assembly and its operator aren't liable for indirect or consequential damages, or for anything that happens at an event, between attendees and organizers, or on other services we link to. Our total liability for any claim is limited to $100.",
+        "To the extent the law allows, Assembly and its operator aren't liable for indirect or consequential damages, or for anything that happens at an event, between attendees and organizers, or on other services we link to. The exact cap on our liability is pending legal review.",
       ],
     },
     {
@@ -221,7 +230,7 @@ export const TERMS: LegalDoc = {
     },
     {
       heading: "Contact",
-      body: [`${CONTACT}`],
+      body: [`${CONTACT}. Operator: ${OPERATOR}. Mailing address: ${ADDRESS}.`],
     },
   ],
 };
