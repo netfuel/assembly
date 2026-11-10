@@ -22,6 +22,7 @@
     "headers": "node --experimental-strip-types --no-warnings scripts/write-headers.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
     "prebuild": "node scripts/sync-theme-hash.mjs",
+    "bench:search": "node --experimental-strip-types --no-warnings scripts/bench-search.ts",
     "check:tags": "node scripts/check-tags.mjs",
     "test:e2e": "node scripts/e2e-reset.mjs && playwright test",
     "test:e2e:flags": "node scripts/e2e-reset.mjs && E2E_FEATURES_OFF=wall,friends,checkin,reactions,comments playwright test e2e/flags.spec.ts --project=phone",

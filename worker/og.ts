@@ -3,6 +3,7 @@
 import { Hono } from "hono";
 import type { Env } from "./env";
 import { ogVersion } from "./ogVersion";
+import { OG_H, OG_W, htmlResponse, noindexHtml, rewriteHead } from "./ogHead";
 
 interface Row {
   id: string;
@@ -24,8 +25,6 @@ interface Row {
   host_name: string | null;
   city_name?: string;
 }
-
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export function previewText(e: Row): { title: string; description: string } {
   const tz = e.timezone;
@@ -66,41 +65,24 @@ og.get("/:id", async (c) => {
   if (!page.ok || !(page.headers.get("Content-Type") ?? "").includes("text/html")) return page;
   // Unknown, hidden, or in-review events get the plain app page (the app shows its own message), kept out of search.
   if (!e) {
-    const res = new Response(page.body, page);
-    res.headers.set("X-Robots-Tag", "noindex");
-    res.headers.set("Cache-Control", "public, max-age=60");
-    return res;
+    return htmlResponse(noindexHtml(await page.text()), page, { noindex: true });
   }
 
   const { title, description } = previewText(e);
   const url = `${origin}/e/${encodeURIComponent(e.id)}`;
   // The designed preview (worker/ogImage.ts); the version in the URL makes apps fetch it again after an edit.
   const image = `${origin}/api/og/e/${encodeURIComponent(e.id)}.png?v=${await ogVersion(e)}`;
-  const tags = [
-    `<meta property="og:type" content="website">`,
-    `<meta property="og:site_name" content="Assembly">`,
-    `<meta property="og:title" content="${esc(title)}">`,
-    `<meta property="og:description" content="${esc(description)}">`,
-    `<meta property="og:url" content="${esc(url)}">`,
-    `<meta property="og:image" content="${esc(image)}">`,
-    `<meta property="og:image:width" content="1200">`,
-    `<meta property="og:image:height" content="630">`,
-    `<meta property="og:image:alt" content="${esc(`${e.title}: ${description}`)}">`,
-    `<meta name="twitter:card" content="summary_large_image">`,
-    `<link rel="canonical" href="${esc(url)}">`,
-    `<script type="application/ld+json">${structuredData(e, url, image, origin)}</script>`,
-  ].join("");
-
-  const rewritten = new HTMLRewriter()
-    .on("title", { element: (el) => void el.setInnerContent(`${title} · Assembly`) })
-    .on('meta[name="description"]', { element: (el) => void el.setAttribute("content", description) })
-    // The page's default preview tags give way to the event's.
-    .on('meta[property^="og:"], meta[name^="twitter:"], link[rel="canonical"]', { element: (el) => void el.remove() })
-    .on("head", { element: (el) => void el.append(tags, { html: true }) })
-    .transform(page);
-  const res = new Response(rewritten.body, rewritten);
-  res.headers.set("Cache-Control", "public, max-age=60");
-  return res;
+  const html = rewriteHead(await page.text(), {
+    title,
+    description,
+    url,
+    image,
+    imageWidth: OG_W,
+    imageHeight: OG_H,
+    imageAlt: `${e.title}: ${description}`,
+    extra: `<script type="application/ld+json">${structuredData(e, url, image, origin)}</script>`,
+  });
+  return htmlResponse(html, page);
 });
 
 /** schema.org/Event, so search engines can show date, place, and tickets. Escaped so it can't close the script tag. */
