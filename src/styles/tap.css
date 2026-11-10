@@ -2,13 +2,13 @@
    hit area at least 44 × 44, centred on them. Loaded last; :not(#\#) lifts these over `all: unset` and later rules. */
 :is(
   .avatar, .logo, .chip, .segmented button, .link, .link-plain, .report-link, .page-link, .search-clear, .home-sheet-grab,
-  .artist-links a, .legal-nav nav a
+  .artist-links a, .legal-nav nav a, .sheet-footer a, .gate-footer a
 ):not(#\#) {
   position: relative;
 }
 :is(
   .avatar, .logo, .chip, .segmented button, .link, .link-plain, .report-link, .page-link, .search-clear, .home-sheet-grab,
-  .artist-links a, .legal-nav nav a
+  .artist-links a, .legal-nav nav a, .sheet-footer a, .gate-footer a
 ):not(#\#)::after {
   content: "";
   position: absolute;
