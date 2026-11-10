@@ -16,9 +16,12 @@ on:
     - cron: "17 9 * * *"
   workflow_dispatch:
 
+# A newer push replaces an older run on the same branch, except on main: a main run that may deploy is never
+# cancelled (it would leave production on older code), and the nightly sweep runs in its own group so it can't
+# cancel a deploy either. Main runs queue instead; GitHub keeps the newest waiting one.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   test:
@@ -50,6 +53,8 @@ jobs:
         run: npm run test:e2e:flags
       - name: Launch gate on
         run: npm run test:e2e:gate -- --project=phone
+      - name: Demo site (guest sign-in, nightly reset, friends on the map)
+        run: npm run test:e2e:demo
       - name: Built app (service worker, offline, headers)
         run: npm run test:e2e:built
       - uses: actions/upload-artifact@v4

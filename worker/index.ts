@@ -180,6 +180,10 @@ root.route("/e", og);
 root.route("/", ogPages);
 root.route("/feeds", feeds);
 root.get("/sitemap.xml", sitemap);
+// The demo asks crawlers to stay out entirely; the real site serves public/robots.txt.
+root.get("/robots.txt", async (c) =>
+  demoOn(c.env) ? c.text("User-agent: *\nDisallow: /\n", 200, { "Cache-Control": "public, max-age=3600" }) : await c.env.ASSETS.fetch(c.req.raw),
+);
 root.route("/", app);
 
 export default {

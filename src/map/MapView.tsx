@@ -138,6 +138,8 @@ export function MapView({
     });
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
+    // The regression suite reads the map's layers (friend faces are drawn on the canvas, not as elements).
+    if (import.meta.env.DEV) (window as unknown as { __assemblyMap?: MapLibre }).__assemblyMap = map;
     meMarker.current = new MyLocationMarker(map);
     // Wide screens: the list panel covers the right edge, so the map's visual center sits left of it.
     const panelPad = () => map.setPadding(window.matchMedia("(min-width: 900px)").matches ? { top: 0, bottom: 0, left: 0, right: 416 } : { top: 0, bottom: 0, left: 0, right: 0 });

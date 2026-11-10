@@ -13,7 +13,7 @@
     "binding": "ASSETS",
     "directory": "./dist/client",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/fonts/*", "/e/*", "/a/*", "/v/*", "/o/*", "/c/*", "/feeds/*", "/sitemap.xml"]
+    "run_worker_first": ["/api/*", "/fonts/*", "/e/*", "/a/*", "/v/*", "/o/*", "/c/*", "/feeds/*", "/sitemap.xml", "/robots.txt"]
   },
   "observability": { "enabled": true },
   // Starting-soon push reminders (worker/notify.ts).

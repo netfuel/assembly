@@ -12,6 +12,8 @@ function sql(command: string) {
 
 export default async function globalSetup() {
   mkdirSync("e2e/.auth", { recursive: true });
+  // The demo suite only uses guests, who sign themselves in, and the demo's own content.
+  if (process.env.E2E_DEMO) return;
   const ids: Partial<Record<Role, string>> = {};
   for (const role of Object.keys(ROLES) as Role[]) {
     const ctx = await request.newContext({ baseURL: BASE });

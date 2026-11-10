@@ -22,6 +22,8 @@ export default defineConfig({
             config: {
               vars: {
                 ...(process.env.E2E_FEATURES_OFF ? { FEATURES_OFF: process.env.E2E_FEATURES_OFF } : {}),
+                // Demo mode (demo.assembly.rsvp): guest sign-in and the nightly reset.
+                ...(process.env.E2E_DEMO ? { DEMO: "1" } : {}),
                 // Gate mode: the fans, host and owner are listed; E2E Throwaway isn't, so the turn-away can be tested.
                 ...(process.env.E2E_GATE
                   ? { GATE: process.env.E2E_GATE, GATE_ALLOW: "e2e-fan-a@dev.localhost,e2e-fan-b@dev.localhost,e2e-fan-c@dev.localhost,e2e-host@dev.localhost,e2e-page-owner@dev.localhost" }
