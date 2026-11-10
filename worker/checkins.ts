@@ -6,6 +6,7 @@ import { isModerator } from "./moderation";
 import { rateLimit } from "./posting";
 import { alertFriendsOfCheckIn } from "./friends";
 import { features } from "./features";
+import { syncMarks } from "./achievements";
 import type { Presence } from "../shared/types";
 
 const OPEN_BEFORE_MS = 30 * 60e3;
@@ -128,7 +129,9 @@ checkins.post("/:id/checkin", async (c) => {
       .bind(e.id, userId, method)
       .run();
     if (features(c.env).friends) c.executionCtx.waitUntil(alertFriendsOfCheckIn(c.env, e.id, userId));
-    return c.json(await presence(c.env, e, userId));
+    // Marks come from the check-ins now stored, never from the request. A mark never blocks a check-in.
+    const earned = features(c.env).achievements ? await syncMarks(c.env, userId) : [];
+    return c.json({ ...(await presence(c.env, e, userId)), ...(earned.length ? { earned } : {}) });
   } catch (err) {
     if (notMigrated(err)) return c.json({ error: "Check-in isn't set up on this server yet." }, 503);
     throw err;
@@ -141,9 +144,14 @@ checkins.delete("/:id/checkin", async (c) => {
   try {
     const e = await loadEvent(c.env, c.req.param("id"));
     if (!e) return c.json({ error: "We couldn't find that event." }, 404);
-    await c.env.DB.prepare("UPDATE checkins SET checked_out_at = ? WHERE event_id = ? AND user_id = ?")
-      .bind(new Date().toISOString(), e.id, userId)
-      .run();
+    if (c.req.query("remove") === "1") {
+      // "I wasn't there": the check-in goes, and so does any mark it earned.
+      await removeCheckin(c.env, e.id, userId);
+    } else {
+      await c.env.DB.prepare("UPDATE checkins SET checked_out_at = ? WHERE event_id = ? AND user_id = ?")
+        .bind(new Date().toISOString(), e.id, userId)
+        .run();
+    }
     return c.json(await presence(c.env, e, userId));
   } catch (err) {
     if (notMigrated(err)) return c.json({ error: "Check-in isn't set up on this server yet." }, 503);
@@ -151,3 +159,9 @@ checkins.delete("/:id/checkin", async (c) => {
   }
 });
 
+
+/** Remove a check-in for good, and with it the marks it earned (marks that still hold are recomputed from what is left). */
+export async function removeCheckin(env: Env, eventId: string, userId: string) {
+  await env.DB.prepare("DELETE FROM checkins WHERE event_id = ? AND user_id = ?").bind(eventId, userId).run();
+  if (features(env).achievements) await syncMarks(env, userId);
+}

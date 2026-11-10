@@ -43,7 +43,7 @@ export function CheckIn({
   me: MeProfile | null;
   onNeedSignIn: () => void;
   onChange: (p: Presence) => void;
-  toast: (msg: string) => void;
+  toast: (msg: string, mark?: string) => void;
 }) {
   const [p, setP] = useState<Presence | null>(null);
   const [busy, setBusy] = useState<null | "gps" | "out">(null);
@@ -79,7 +79,10 @@ export function CheckIn({
     try {
       const next = await api.checkIn(e.id, body);
       update(next);
-      toast("You're checked in. Have a good night.");
+      // One toast: the check-in, and the first mark it earned (a count if there are more). No modal, no sound.
+      const [first, ...more] = next.earned ?? [];
+      if (first) toast(`Checked in · ${first.name}${more.length ? ` +${more.length}` : ""}`, first.glyph);
+      else toast("You're checked in. Have a good night.");
       stampIn(stampEl.current);
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : "Couldn't check you in. Try again.");

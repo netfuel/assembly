@@ -6,6 +6,7 @@ import { clock, dayLabel } from "../lib/time";
 import { SCENES, type BlockedPerson, type FriendsState, type Inbox, type InboxItem, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
 import { PushControl } from "../components/PushControl";
 import { VarsityMark } from "./EventSheet";
+import { Achievements } from "./Achievements";
 import "./announce.css";
 
 const LINKS: { key: string; label: string; placeholder: string }[] = [
@@ -217,6 +218,8 @@ export function ProfileSheet({
         )}
         <span className="note">{me.showAttendance ? "You show up on who's going lists." : "Your RSVPs are private."}</span>
       </div>
+
+      {config.features?.achievements !== false && <Achievements tz={tz} toast={toast} />}
 
       <MutedList toast={toast} />
 

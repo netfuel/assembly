@@ -121,7 +121,8 @@ export function App() {
   const [providersFailed, setProvidersFailed] = useState(false);
   const [sheet, setSheet] = useState<null | "signin" | "announce" | "profile" | "moderation" | "subscribe" | "friends" | "invite" | "install">(null);
   const [installMode, setInstallMode] = useState<"prompt" | "ios">("ios");
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastMsg, setToastState] = useState<{ text: string; mark?: string } | null>(null);
+  const setToastMsg = useCallback((m: string | null) => setToastState(m ? { text: m } : null), []);
   const [config, setConfig] = useState<ServerConfig>({ video: false, streamCustomerCode: null });
   const [editing, setEditing] = useState<EventDetail | null>(null);
   // An open event that isn't in the loaded list: your own hidden event, or a link to one weeks out.
@@ -222,7 +223,7 @@ export function App() {
   }, [meId, selectedId]);
   const railRef = useRef<HTMLDivElement>(null);
 
-  const toast = useCallback((msg: string) => setToastMsg(msg), []);
+  const toast = useCallback((msg: string, mark?: string) => setToastState({ text: msg, mark }), []);
   useEffect(() => {
     if (!toastMsg) return;
     const t = setTimeout(() => setToastMsg(null), 2800);
@@ -999,7 +1000,7 @@ export function App() {
         toast={toast}
       />
       <InstallPrompt />
-      <Toast message={toastMsg} />
+      <Toast message={toastMsg?.text ?? null} mark={toastMsg?.mark} />
     </div>
   );
 }

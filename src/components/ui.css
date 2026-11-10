@@ -221,6 +221,7 @@
 }
 .toast { animation: toast-in var(--dur-feedback) var(--ease-out); }
 .toast::before { content: "✓ "; color: var(--color-accent-text); }
+.toast-mark { display: inline-block; margin-left: var(--space-2); color: var(--color-accent-text); }
 /* Success: a gradient ring expands from the check and fades. */
 .toast-ring { position: absolute; left: calc(var(--space-3) + 4px); top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
   border: 1.5px solid var(--grad-green); pointer-events: none; opacity: 0; animation: toast-ring 600ms 80ms var(--ease-out); }
