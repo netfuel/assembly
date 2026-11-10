@@ -205,3 +205,7 @@ Ready for live users once the go-live steps are done.
 - Notifications: changes, cancellations, and a reminder an hour before doors, once VAPID keys are set.
 - Limits: 10 posts an hour, 30 flyer uploads an hour, 10 videos an hour per account.
 - Address search uses Photon (OpenStreetMap data). If it's down, the form falls back to placing the pin by hand.
+
+## Demo site (demo.assembly.rsvp)
+
+A separate Worker (`assembly-demo`, `env.demo` in wrangler.jsonc) runs the same build with `DEMO=1`: no sign-in (each visitor gets a guest account when the app loads), invented Memphis content from `db/demo/seed.sql`, and a reset to that content every night at 3 am Memphis with fresh dates. It has its own database, sessions and media bucket, and no email, push or OAuth. CI deploys it from main beside production (job `deploy-demo`). To change the content, edit `scripts/make-demo-seed.py` and run `python3 scripts/make-demo-seed.py`. To try it locally: `npx wrangler d1 migrations apply assembly-demo --local --env demo`, `npx wrangler d1 execute assembly-demo --local --env demo --file db/demo/seed.sql`, then `CLOUDFLARE_ENV=demo npm run dev`.

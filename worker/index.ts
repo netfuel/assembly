@@ -29,6 +29,7 @@ import { live } from "./live";
 import { inbox } from "./inbox";
 import { reactions } from "./reactions";
 import { blocks, commentActions, commentModeration, eventComments } from "./comments";
+import { demoGuest, demoOn, resetDemo } from "./demo";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -37,6 +38,9 @@ app.use("*", async (c, next) => {
   c.set("userId", await readSession(c));
   await next();
 });
+
+// Demo site only: a visitor without a session becomes a guest when the app loads.
+app.use("*", demoGuest);
 
 // Block cross-site writes. Apple's sign-in callback is the one cross-site POST we accept.
 app.use("*", async (c, next) => {
@@ -155,6 +159,8 @@ root.use("*", async (c, next) => {
   // import.meta.env doesn't exist, so read it defensively: anything but true means production.
   try {
     c.res = withSecurityHeaders(c.res, import.meta.env?.DEV === true);
+    // The demo stays out of search results so it never competes with the real site.
+    if (demoOn(c.env)) c.res.headers.set("X-Robots-Tag", "noindex, nofollow");
   } catch (err) {
     // Never take the site down over headers: log it and send the response as is.
     console.error("security headers failed", c.req.path, err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err));
@@ -177,6 +183,8 @@ export default {
   fetch: root.fetch,
   /** Cron (wrangler.jsonc triggers): starting-soon reminders every 15 minutes. */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    // The demo has one cron, nightly: put the invented content back with fresh dates.
+    if (demoOn(env)) return ctx.waitUntil(resetDemo(env).then((n) => console.log("demo reset", n)).catch((err) => console.error("demo reset", err)));
     ctx.waitUntil(startingSoon(env).catch((err) => console.error("starting soon", err)));
   },
 } satisfies ExportedHandler<Env>;

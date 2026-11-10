@@ -30,7 +30,8 @@ fonts.get("/timeless/:file", async (c) => {
   if (!FILES.has(file)) return c.notFound();
   if (!fromOwnSite(c.req.raw)) return c.text("Fonts are served only to assembly.rsvp pages.", 403);
 
-  const obj = await c.env.MEDIA.get(`fonts/timeless/${file}`);
+  // The demo reads the fonts from production's bucket (FONTS binding) instead of keeping a copy.
+  const obj = await (c.env.FONTS ?? c.env.MEDIA).get(`fonts/timeless/${file}`);
   if (!obj) {
     // Local dev: serve from public/fonts/timeless/. Static-asset hosting answers unknown paths with
     // the app's index.html (single-page fallback), so pass through only a real font.

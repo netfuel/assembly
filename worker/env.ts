@@ -2,6 +2,8 @@ export interface Env {
   DB: D1Database;
   SESSIONS: KVNamespace;
   MEDIA: R2Bucket;
+  /** Demo only: production's bucket, read for the licensed fonts so the demo needn't hold a copy. */
+  FONTS?: R2Bucket;
   ASSETS: Fetcher;
   DEFAULT_CITY: string;
   GOOGLE_CLIENT_ID?: string;
@@ -19,6 +21,8 @@ export interface Env {
   DEV_LOGIN?: string;
   /** Beta modules to switch off, comma-separated: wall, friends, checkin. Unset means all on. */
   FEATURES_OFF?: string;
+  /** "1" runs the demo site (worker/demo.ts): guest sign-in, nightly reset. Never set in production. */
+  DEMO?: string;
   /** "on" shows the launch gate: the API needs a session and the app shows the sign-up screen. Unset or "off" opens the site. */
   GATE?: string;
   /** Emails that may pass the gate besides MODERATORS: testers, friends of the launch. */

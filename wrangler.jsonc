@@ -38,7 +38,27 @@
   ],
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "assembly-media" }
-  ]
+  ],
+  // demo.assembly.rsvp: the same app with invented content, a guest account instead of sign-in, and a nightly
+  // reset (worker/demo.ts). Its own Worker, database, sessions and media bucket, so it never touches production.
+  // CI deploys it from main (.github/workflows/ci.yml, job deploy-demo); scripts/demo-resources.mjs creates the
+  // resources on first run and fills in the two ids below.
+  "env": {
+    "demo": {
+      "name": "assembly-demo",
+      "vars": { "DEFAULT_CITY": "memphis", "DEMO": "1" },
+      "triggers": { "crons": ["0 9 * * *"] },
+      "d1_databases": [
+        { "binding": "DB", "database_name": "assembly-demo", "database_id": "DEMO_D1_ID", "migrations_dir": "db/migrations" }
+      ],
+      "kv_namespaces": [{ "binding": "SESSIONS", "id": "DEMO_KV_ID" }],
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "assembly-demo-media" },
+        // Read only, for the fonts (worker/fonts.ts). Nothing in the demo writes to it.
+        { "binding": "FONTS", "bucket_name": "assembly-media" }
+      ]
+    }
+  }
   // Secrets (set with `wrangler secret put`, or .dev.vars locally):
   // GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
   // APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
