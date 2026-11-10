@@ -1,6 +1,6 @@
 """Turns a WYXR concert calendar export into SQL for Assembly's database.
 
-Run:  python3 scripts/import-wyxr.py db/import/wyxr-2026-10-25.json
+Run:  python3 scripts/import-wyxr.py db/import/wyxr-2026-11-10.json
 Then: double-click import-events.command (or npx wrangler d1 execute assembly --remote --file=db/import/wyxr.sql)
 
 The export comes from https://concert-calendar.wyxr.org/ (WYXR 91.7 FM's Memphis concert calendar).
@@ -65,6 +65,21 @@ V = {
     "Huey's (Southwind)": ("venue-hueys-southwind", "Huey's Southwind", "bar", "7825 Winchester Rd, Memphis, TN 38125", "Southwind", 35.04770, -89.80340),
     "Huey's (Millington)": ("venue-hueys-millington", "Huey's Millington", "bar", "8570 US-51, Millington, TN 38053", "Millington", 35.36026, -89.89146),
     "Huey's (Southaven)": ("venue-hueys-southaven", "Huey's Southaven", "bar", "7090 Malco Blvd, Southaven, MS 38671", "Southaven", 34.96516, -89.98708),
+    # Added with the 2026-11-10 export. Havenhaus has no published street address since its 2025 move
+    # downtown; it is placed off South Main behind Earnestine & Hazel's, across from Central Station.
+    "Havenhaus": ("venue-havenhaus", "Havenhaus", "diy", "Off S Main St behind Earnestine & Hazel's, Memphis, TN 38103", "South Main", 35.13300, -90.05965),
+    "Haven Haus": "Havenhaus",
+    "Earnestine & Hazel's": ("venue-earnestine-hazels", "Earnestine & Hazel's", "bar", "531 S Main St, Memphis, TN 38103", "South Main", 35.13296, -90.05931),
+    "Hotel Pontotoc": ("venue-hotel-pontotoc", "Hotel Pontotoc (The Dame)", "bar", "69 E Pontotoc Ave, Memphis, TN 38103", "Downtown", 35.13831, -90.05724),
+    "Wiseacre Brewing Co.": ("venue-wiseacre-downtown", "Wiseacre Downtown", "bar", "398 S B.B. King Blvd, Memphis, TN 38103", "Downtown", 35.13436, -90.05464),
+    "Ok Corral Memphis": ("venue-ok-corral", "OK Corral", "club", "6389 Winchester Rd, Memphis, TN 38115", "Hickory Hill", 35.04953, -89.84954),
+    "First Congo": ("venue-first-congo", "First Congregational Church", "other", "1000 S Cooper St, Memphis, TN 38104", "Cooper-Young", 35.11848, -89.99067),
+    "Dixon Gallery & Gardens": ("venue-dixon", "Dixon Gallery and Gardens", "other", "4339 Park Ave, Memphis, TN 38117", "East Memphis", 35.10658, -89.91697),
+    "Cooper-Young": ("venue-cooper-young", "Cooper-Young", "outdoor", "Cooper St & Young Ave, Memphis, TN 38104", "Cooper-Young", 35.11977, -89.99064),
+    "Museum of Science & History (MoSH)": ("venue-mosh", "Museum of Science & History (MoSH)", "other", "3050 Central Ave, Memphis, TN 38111", "Central Gardens", 35.12534, -89.95936),
+    "MoSH Planetarium": "Museum of Science & History (MoSH)",
+    "Overton Park Greenhouses": ("venue-overton-park-greenhouse", "Greenhouse at Overton Park", "other", "281 E Parkway N, Memphis, TN 38112", "Overton Park", 35.14322, -89.98228),
+    "Rhodes College": ("venue-rhodes-college", "Rhodes College", "other", "2000 N Parkway, Memphis, TN 38112", "Midtown", 35.15564, -89.98894),
     "Huey's (Olive Branch)": ("venue-hueys-olive-branch", "Huey's Olive Branch", "bar", "8179 McGregor Crossing, Suite 200, Olive Branch, MS 38654", "Olive Branch", 34.96420, -89.84522),
 }
 
@@ -72,9 +87,23 @@ V = {
 SKIP = re.compile(
     r"comedy|bingo|board games|book signing|oddity market|visual arts reception|rc drift|second city|"
     r"jay leno|emo phillips|billy wayne davis|talkin in memphis|premier table|^thanksgiving$|\[postponed\]|"
-    r"block party$",
+    r"block party$|closed for private event|trivia night|big river race|own your season|black power mixtape|"
+    r"^ms\. pat$|jordan jensen|blameless: the tour|creative arts ensemble: (feed our|paper arts)",
     re.I,
 )
+# Same show listed twice under titles the containment rule below misses (WYXR id prefix -> the listing kept).
+SAME_SHOW = {
+    "2e89f466": "642eb9f0",  # Jesse James Deconto with David Wimbish! / David Wimbish w/ Jesse James DeConto
+    "6fe3033c": "4c913cca",  # Oxbow w/ Eron Ackerman / Eron Ackerman and Oxbow
+    "7bc4490f": "0ff82d1c",  # Evergreen Sound Sessions: 6 / Vl 6
+    "45c87883": "54f61027",  # Paul Oakenfold + Crystal Method / + The Crystal Method
+    "c7d7ea4a": "5186f5d2",  # Jazz Jam Session hosted by Alex Upton / by the Alex Upton Quartet
+    "b2618c31": "c6bf4b83",  # Little Feat & The Hot Tomato Horns / Little Feat: The Last Farewell Tour
+}
+# WYXR placed the listing at the wrong venue.
+VENUE_FIX = {
+    "af2bb2b7": "Rhodes College",  # Shell on Wheels at Rhodes College, listed under the Shell itself
+}
 # Rooms named in Hi Tone titles move to the "getting there" line.
 ROOM = re.compile(r"\s*\[(small room[^\]]*|big room[^\]]*|both rooms)\]\s*", re.I)
 NO_COVER = re.compile(r"\s*(?:[–-]\s*NO COVER|\*\s*no cover\s*\*|\*\s*free\s*\*)\s*", re.I)
@@ -139,7 +168,10 @@ def main(path):
         if SKIP.search(title):
             skipped.append(title)
             continue
-        venue = V[r["venue"]]
+        if r["id"] in SAME_SHOW:
+            skipped.append(title)
+            continue
+        venue = V[VENUE_FIX.get(r["id"], r["venue"])]
         if isinstance(venue, str):
             venue = V[venue]
         vid, vname, vtype, address, hood, lat, lng = venue
@@ -180,7 +212,7 @@ def main(path):
             scenes += ["rave", "bass"]
         elif DANCE.search(text):
             scenes.append("house")
-        if re.search(r"\bdiy\b", text, re.I):
+        if re.search(r"\bdiy\b", text, re.I) or vtype == "diy":
             scenes.append("diy")
         if not {"rave", "house"} & set(scenes):
             scenes.append("live")
@@ -288,4 +320,4 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else ROOT / "db" / "import" / "wyxr-2026-10-25.json")
+    main(sys.argv[1] if len(sys.argv) > 1 else ROOT / "db" / "import" / "wyxr-2026-11-10.json")

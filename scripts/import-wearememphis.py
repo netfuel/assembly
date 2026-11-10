@@ -1,6 +1,6 @@
 """Turns the We Are Memphis live-music scrape (plus Overton Park Shell and Satellite Music Hall) into SQL for Assembly's database.
 
-Run:  python3 scripts/import-wearememphis.py db/import/wearememphis-2026-10-25.json
+Run:  python3 scripts/import-wearememphis.py db/import/wearememphis-2026-11-10.json
 Then: double-click import-wearememphis.command (downloads the artwork, uploads it to R2, loads the SQL)
 
 Skips anything already on the site from the WYXR import (same night, same venue, matching title) but
@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "db" / "import" / "wearememphis.sql"
 MANIFEST = ROOT / "db" / "import" / "wearememphis-artwork.tsv"
-WYXR = ROOT / "db" / "import" / "wyxr-2026-10-25.json"
+WYXR = ROOT / "db" / "import" / "wyxr-2026-11-10.json"
 TZ = ZoneInfo("America/Chicago")
 UTC = ZoneInfo("UTC")
 CITY = "memphis"
@@ -90,6 +90,8 @@ V = {
     "Beale Street Entertainment District": ("venue-beale-street", "Beale Street", "outdoor", "Beale St, Memphis, TN 38103", "Beale Street", 35.13970, -90.05200),
     "AutoZone Sharpe Planetarium, Memphis Museum of Science and History": ("venue-mosh", "Museum of Science & History (MoSH)", "other", "3050 Central Ave, Memphis, TN 38111", "Central Gardens", 35.12534, -89.95936),
     "Museum of Science & History (MoSH)": "AutoZone Sharpe Planetarium, Memphis Museum of Science and History",
+    "Silky O'Sullivan's": ("venue-silky-osullivans", "Silky O'Sullivan's", "bar", "183 Beale St, Memphis, TN 38103", "Beale Street", 35.13937, -90.05217),
+    "Rhodes College": ("venue-rhodes-college", "Rhodes College", "other", "2000 N Parkway, Memphis, TN 38112", "Midtown", 35.15564, -89.98894),
     "Greenhouse at Overton Park": ("venue-overton-park-greenhouse", "Greenhouse at Overton Park", "other", "281 E Parkway N, Memphis, TN 38112", "Overton Park", 35.14322, -89.98228),
     "Vietnamese Buddhist Association of Memphis, Chùa Chánh Tâm": ("venue-chua-chanh-tam", "Chùa Chánh Tâm", "other", "1368 Jefferson Ave, Memphis, TN 38104", "Midtown", 35.14230, -90.02170),
 }
@@ -362,4 +364,4 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else ROOT / "db" / "import" / "wearememphis-2026-10-25.json")
+    main(sys.argv[1] if len(sys.argv) > 1 else ROOT / "db" / "import" / "wearememphis-2026-11-10.json")
