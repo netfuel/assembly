@@ -475,6 +475,8 @@ export interface EventComment {
    * blocked): placeholders kept above their replies.
    */
   status: "live" | "hidden" | "removed" | "muted";
+  /** For removed comments: who removed it. Null for older removals, which read as a plain "Comment removed.". */
+  removedBy: "author" | "organizer" | "moderator" | null;
   /** The author changed it after posting. */
   edited: boolean;
   createdAt: string;

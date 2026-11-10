@@ -1,5 +1,6 @@
 // Comments on event pages. Anyone signed in can comment; flat, oldest first, one level of replies.
-// The author, the event's hosts and moderators can remove a comment; hosts can pin one and switch comments
+// The author, the event's organizers (hosts) and moderators can remove a comment (soft delete: the row stays, the
+// placeholder says who removed it); hosts can pin one and switch comments
 // on, to read only, or off. Three open reports hide a comment until a moderator restores or removes it.
 // Mute hides someone's comments for you; block hides them both ways and stops them replying to you or
 // commenting on events you host.
@@ -11,6 +12,7 @@ import { rateLimit } from "./posting";
 import { COMMENT_MAX, COMMENT_REPORT_REASONS, type CommentMode, type CommentThread, type EventComment, type ModCommentItem } from "../shared/types";
 
 const REASONS = new Set<string>(COMMENT_REPORT_REASONS.map((r) => r.id));
+type RemovedBy = "author" | "organizer" | "moderator";
 const MODES = new Set<CommentMode>(["on", "locked", "off"]);
 export const HIDE_AT_REPORTS = 3;
 
@@ -24,6 +26,7 @@ interface Row {
   pinned: number;
   created_at: string;
   edited_at: string | null;
+  removed_by: RemovedBy | null;
   display_name: string | null;
   avatar_url: string | null;
   verified: number | null;
@@ -73,6 +76,7 @@ function toComment(r: Row & { placeholder: "removed" | "muted" | null }, viewerI
       parentId: r.parent_id,
       body: "",
       status: r.placeholder,
+      removedBy: r.placeholder === "removed" ? r.removed_by : null,
       createdAt: r.created_at,
       edited: false,
       author: null,
@@ -87,6 +91,7 @@ function toComment(r: Row & { placeholder: "removed" | "muted" | null }, viewerI
     parentId: r.parent_id,
     body: r.body,
     status: r.status === "hidden" ? "hidden" : "live",
+    removedBy: null,
     createdAt: r.created_at,
     edited: !!r.edited_at,
     author: { id: r.user_id, displayName: r.display_name ?? "Someone", avatarUrl: r.avatar_url },
@@ -285,15 +290,16 @@ commentActions.delete(
     if (!cm || cm.status === "removed") return c.json({ error: "That comment isn't there anymore." }, 404);
     const s = await staffFor(c.env, cm.event_id, userId);
     if (cm.user_id !== userId && !s.host && !s.moderator) return c.json({ error: "Only the author, the host, or a moderator can remove this." }, 403);
-    await removeComment(c.env, cm.id);
+    // The author's own delete wins over staff roles; then the event's organizer; then a moderator.
+    await removeComment(c.env, cm.id, cm.user_id === userId ? "author" : s.host ? "organizer" : "moderator");
     return c.json(await thread(c.env, eventOf(cm), userId));
   }),
 );
 
 /** Keep the row (and clear the words) so reports keep their history and replies keep their place. */
-async function removeComment(env: Env, id: string) {
+async function removeComment(env: Env, id: string, by: RemovedBy) {
   await env.DB.batch([
-    env.DB.prepare("UPDATE comments SET status = 'removed', body = '', pinned = 0 WHERE id = ?").bind(id),
+    env.DB.prepare("UPDATE comments SET status = 'removed', removed_by = ?, body = '', pinned = 0 WHERE id = ?").bind(by, id),
     env.DB.prepare("UPDATE comment_reports SET status = 'actioned' WHERE comment_id = ? AND status = 'open'").bind(id),
   ]);
 }
@@ -403,8 +409,9 @@ commentModeration.post(
     if (!(await isModerator(c.env, c.get("userId")))) return c.json({ error: "Moderators only." }, 403);
     const cm = await loadComment(c.env, param(c));
     if (!cm) return c.json({ error: "That comment is gone." }, 404);
+    if (cm.status === "removed") return c.json({ error: "That comment is already removed." }, 409);
     const { action } = (await c.req.json().catch(() => ({}))) as { action?: string };
-    if (action === "remove") await removeComment(c.env, cm.id);
+    if (action === "remove") await removeComment(c.env, cm.id, "moderator");
     else if (action === "restore") {
       await c.env.DB.batch([
         c.env.DB.prepare("UPDATE comments SET status = 'live' WHERE id = ? AND status = 'hidden'").bind(cm.id),

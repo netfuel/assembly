@@ -77,7 +77,6 @@ The event page and the posting flow have a few more controls than before. Each c
 ## Not done yet
 
 - Profile has not been redesigned yet.
-- Comments on events (the review lists them under sections) don't exist yet.
 - "Watch" as a live primary action waits for live streaming.
 
 ## Animation inventory
