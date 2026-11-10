@@ -6,7 +6,7 @@ import { mapPalette, mapStyle, type MapTheme } from "./mapStyle";
 import { isLive } from "../lib/time";
 import { reducedMotion } from "../lib/motion";
 import type { EventSummary, FriendAt } from "../../shared/types";
-import { FriendMarkers } from "./friendMarkers";
+import { FRIEND_LAYER, addFriendLayer, syncFriendFaces } from "./friendFaces";
 import { hasThumb, syncThumbs, thumbImageId } from "./thumbPins";
 import { MyLocationMarker } from "./myLocation";
 import type { Position } from "../lib/location";
@@ -113,13 +113,13 @@ export function MapView({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibre | null>(null);
-  const friendMarkers = useRef<FriendMarkers | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const ready = useRef(false);
   const loadThumbsRef = useRef<(() => void) | null>(null);
-  const latest = useRef({ events, selectedId, onSelect, theme, highlight, onUnfollow });
-  latest.current = { events, selectedId, onSelect, theme, highlight, onUnfollow };
+  const syncFacesRef = useRef<(() => void) | null>(null);
+  const latest = useRef({ events, selectedId, onSelect, theme, highlight, onUnfollow, friends });
+  latest.current = { events, selectedId, onSelect, theme, highlight, onUnfollow, friends };
   const meMarker = useRef<MyLocationMarker | null>(null);
 
   // Create the map once.
@@ -314,9 +314,12 @@ export function MapView({
         paint: { "text-color": MAP_COLORS.fg, "text-halo-color": MAP_COLORS.halo, "text-halo-width": 2 },
       });
 
+      // Friends' faces share the pins' coordinates and sit above them, in the same layer stack.
+      addFriendLayer(map);
       ready.current = true;
       applySelection(map, latest.current.selectedId, latest.current.events);
       loadThumbs();
+      syncFaces();
     });
 
     // Thumbnails load in the background; refresh the pins as each one arrives.
@@ -326,9 +329,22 @@ export function MapView({
         cancelAnimationFrame(refresh);
         refresh = requestAnimationFrame(() => {
           (map.getSource(SOURCE) as unknown as GeoSource | undefined)?.setData(toGeoJSON(latest.current.events, new Date()));
+          syncFacesRef.current?.(); // faces step out to clear a flyer thumbnail once it's the pin
         });
       });
     loadThumbsRef.current = loadThumbs;
+    const syncFaces = () => {
+      const p = mapPalette(latest.current.theme);
+      const dark = latest.current.theme === "dark";
+      syncFriendFaces(
+        map,
+        latest.current.events,
+        latest.current.friends,
+        { live: p.live, fg: p.fg, surface: dark ? "#1a1b1e" : "#ffffff", line: dark ? "#3a3c42" : "#c9ccd2" },
+        hasThumb,
+      );
+    };
+    syncFacesRef.current = syncFaces;
 
     // Layer-scoped listeners live on the map, so they survive style changes. Register once.
     const pick = (e: MapLayerMouseEvent) => {
@@ -338,6 +354,7 @@ export function MapView({
     map.on("click", "event-halo", pick);
     map.on("click", "event-core", pick);
     map.on("click", "event-thumb", pick);
+    map.on("click", FRIEND_LAYER, pick);
     map.on("click", "cluster", async (e) => {
       const f = e.features?.[0];
       if (!f) return;
@@ -349,7 +366,7 @@ export function MapView({
         duration: reducedMotion() ? 0 : 500,
       });
     });
-    for (const layer of ["event-halo", "event-core", "event-thumb", "cluster"]) {
+    for (const layer of ["event-halo", "event-core", "event-thumb", FRIEND_LAYER, "cluster"]) {
       map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
     }
@@ -491,19 +508,10 @@ export function MapView({
     }
   }, [followMe, myPosition]);
 
+  // Faces follow the events and friends. Until the style has loaded, style.load draws them.
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    friendMarkers.current ??= new FriendMarkers(map);
-    friendMarkers.current.update(events, friends, (id) => onSelectRef.current(id));
+    if (ready.current) syncFacesRef.current?.();
   }, [events, friends]);
-  useEffect(
-    () => () => {
-      friendMarkers.current?.destroy();
-      friendMarkers.current = null;
-    },
-    [],
-  );
 
   return <div ref={container} className="map" role="region" aria-label="Map of events" />;
 }
