@@ -7,7 +7,7 @@ test.skip(!process.env.E2E_FEATURES_OFF, "needs E2E_FEATURES_OFF: npm run test:e
 
 test("config says every module is off", async ({ api }) => {
   const f = (await (await (await api(null)).get("/api/config")).json()).features;
-  expect(f).toEqual({ wall: false, friends: false, checkin: false, reactions: false, comments: false });
+  expect(f).toEqual({ wall: false, friends: false, checkin: false, reactions: false, comments: false, achievements: false });
 });
 
 test("module routes answer 404, other routes still work", async ({ api }) => {
@@ -19,6 +19,7 @@ test("module routes answer 404, other routes still work", async ({ api }) => {
     ["POST", `/api/events/${EV.live}/checkin`],
     ["GET", "/api/friends"],
     ["GET", "/api/mod/comments"],
+    ["GET", "/api/me/achievements"],
   ];
   for (const [method, path] of off) expect((await a.fetch(path, { method, data: {} })).status(), `${method} ${path}`).toBe(404);
   expect((await a.get(`/api/events/${EV.live}`)).status()).toBe(200);
