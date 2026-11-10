@@ -201,7 +201,7 @@ function CommentItem({
   if (c.status === "removed" || c.status === "muted")
     return (
       <article className="comment is-removed">
-        <p className="comment-body dim">{c.status === "removed" ? "Comment removed." : "Hidden: from someone you muted or blocked."}</p>
+        <p className="comment-body dim">{c.status === "removed" ? removedText(c.removedBy) : "Hidden: from someone you muted or blocked."}</p>
       </article>
     );
   const a = c.author!;
@@ -424,4 +424,9 @@ function Composer({
       </div>
     </form>
   );
+}
+
+/** The placeholder a removed comment leaves behind. */
+export function removedText(by: EventComment["removedBy"]): string {
+  return by === "organizer" ? "Removed by organizer." : by === "moderator" ? "Removed by moderator." : "Comment removed.";
 }
