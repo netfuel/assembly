@@ -3,8 +3,8 @@ import { features, moduleFor } from "../worker/features";
 
 describe("feature flags", () => {
   it("are all on unless listed", () => {
-    expect(features({})).toEqual({ wall: true, friends: true, checkin: true, reactions: true, comments: true });
-    expect(features({ FEATURES_OFF: " Wall, checkin " })).toEqual({ wall: false, friends: true, checkin: false, reactions: true, comments: true });
+    expect(features({})).toEqual({ wall: true, friends: true, checkin: true, reactions: true, comments: true, achievements: true });
+    expect(features({ FEATURES_OFF: " Wall, checkin " })).toEqual({ wall: false, friends: true, checkin: false, reactions: true, comments: true, achievements: false });
     expect(features({ FEATURES_OFF: "reactions" }).reactions).toBe(false);
   });
   it("map routes to modules", () => {

@@ -89,7 +89,7 @@ export function EventSheet({
   /** Something about the event changed (a new host): reload it. */
   onChanged: () => void;
   config: ServerConfig;
-  toast: (msg: string) => void;
+  toast: (msg: string, mark?: string) => void;
 }) {
   const [detail, setDetail] = useState<EventDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);

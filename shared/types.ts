@@ -1,3 +1,4 @@
+import type { EarnedNow } from "./achievements";
 // Types shared by the React app and the Worker API.
 
 export const SCENES = [
@@ -134,6 +135,8 @@ export interface Features {
   checkin: boolean;
   reactions: boolean;
   comments: boolean;
+  /** Check-in marks. Needs checkin: it is off whenever check-in is. */
+  achievements: boolean;
 }
 
 /** The launch gate as this visitor sees it: on (show the gate), off, or off-for-you (signed in while it's on). */
@@ -258,6 +261,8 @@ export interface Presence {
   viewerIsHost: boolean;
   /** "code" is from the old door codes, kept for past check-ins. */
   viewer: { checkedIn: boolean; method: "gps" | "code" | "host"; checkedOut: boolean } | null;
+  /** Only on the answer to a check-in: marks that check-in just earned. */
+  earned?: EarnedNow[];
 }
 
 export interface WallPost {

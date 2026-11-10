@@ -29,7 +29,7 @@ interface PersonRow {
 }
 const person = (r: PersonRow): FriendPerson => ({ id: r.id, displayName: r.display_name, avatarUrl: r.avatar_url, username: r.username });
 
-async function blockedEitherWay(env: Env, a: string, b: string) {
+export async function blockedEitherWay(env: Env, a: string, b: string) {
   return !!(await env.DB.prepare("SELECT 1 FROM blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)").bind(a, b, b, a).first());
 }
 
@@ -379,7 +379,7 @@ eventFriendVisibility.put(
   }),
 );
 
-async function areFriends(env: Env, a: string, b: string) {
+export async function areFriends(env: Env, a: string, b: string) {
   const [x, y] = pair(a, b);
   return !!(await env.DB.prepare("SELECT 1 FROM friendships WHERE user_a = ? AND user_b = ? AND status = 'accepted'").bind(x, y).first());
 }

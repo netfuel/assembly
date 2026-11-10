@@ -33,6 +33,7 @@ Branches: `design-review`, `design-review-2`. Measured at 390×844 and 360×780,
 - **Beta modules behind flags.** Wall, Friends and Check-in are all on by default. Set `FEATURES_OFF=wall,friends,checkin` (any subset) to switch modules off:
   - The API answers 404 for their routes, so old clients can't reach them either.
   - `/api/config` reports `features`, and the app hides their sections and actions.
+  - `achievements` (check-in marks) is a fourth, and depends on `checkin`: it is off whenever check-in is.
 - **Motion.**
   - No idle loops on content screens: the live dot and the check-in dot are still.
   - Gradients appear only on state (the selected segment) or feedback (the toast).
@@ -89,6 +90,7 @@ Derived from the code (`@keyframes` and `src/lib/motion.ts`). Anything new has t
 | Sheet slide, detents | `HomeSheet`, `slideTo` | on demand | drag, tap |
 | Sheet-in, toast-in, install-in | `ui.css` | on demand | open |
 | Child reveal, card reveal | `revealChildren`, `revealCards` | on demand | sheet or rail opens |
+| Achievement mark in the check-in toast (scale and rotate, once; static under reduced motion) | `Toast`, `markIn` | feedback | a check-in earns a mark |
 | Count-up (going) | `countTo` | feedback | RSVP changes |
 | RSVP stamp (box-shadow ring; the one exception to transform and opacity only) | `stamp` | feedback | RSVP tap |
 | Toast success ring | `toast-ring` | feedback | success |
@@ -115,7 +117,7 @@ Common actions take at most two taps from the home screen: find tonight's event 
 
 ## Control inventory (390×844)
 
-Map 11, Feed 15, Event 17, Filters 18 (34 fully open), Search 13, Profile 20, Posting 23. These are the budgets: a change that raises a number has to say what it replaces.
+Map 11, Feed 15, Event 17, Filters 18 (34 fully open), Search 13, Profile 20, Posting 23. Check-in achievements add none to any first viewport: the Achievements row is one collapsed Disclosure inside the Profile tab (Profile tab +1, the default Saved tab is unchanged at 20), and the check-in toast has no controls. Opened, the section adds 6 tiles (earned ones carry a 44 px Hide), 2 checkboxes at 44 px, and nothing small. These are the budgets: a change that raises a number has to say what it replaces.
 
 ## Feature entry rule
 

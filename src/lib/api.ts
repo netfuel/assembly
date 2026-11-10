@@ -1,3 +1,4 @@
+import type { MyAchievements } from "../../shared/achievements";
 import type {
   ArtistMatch,
   AuthProviders,
@@ -186,6 +187,12 @@ export const api = {
   presence: (id: string) => request<Presence>(`/api/events/${enc(id)}/presence`),
   checkIn: (id: string, body: { method: "gps"; near: true } | { method: "host" }) =>
     request<Presence>(`/api/events/${enc(id)}/checkin`, { method: "POST", body: JSON.stringify(body) }),
+  /** "I wasn't there": removes the check-in, and the marks it earned. */
+  removeCheckIn: (id: string) => request<Presence>(`/api/events/${enc(id)}/checkin?remove=1`, { method: "DELETE" }),
+  myAchievements: () => request<MyAchievements>("/api/me/achievements"),
+  hideAchievement: (id: string, hidden: boolean) => request<MyAchievements>(`/api/me/achievements/${enc(id)}/hidden`, { method: "PUT", body: JSON.stringify({ hidden }) }),
+  hideAllAchievements: (hidden: boolean) => request<MyAchievements>("/api/me/achievements/hidden", { method: "PUT", body: JSON.stringify({ hidden }) }),
+  shareAchievementDetail: (on: boolean) => request<MyAchievements>("/api/me/achievements/share-detail", { method: "PUT", body: JSON.stringify({ on }) }),
   checkOut: (id: string) => request<Presence>(`/api/events/${enc(id)}/checkin`, { method: "DELETE" }),
   wall: (id: string) => request<WallState>(`/api/events/${enc(id)}/wall`),
   setWallEnabled: (id: string, enabled: boolean) => request<WallState>(`/api/events/${enc(id)}/wall`, { method: "PATCH", body: JSON.stringify({ enabled }) }),

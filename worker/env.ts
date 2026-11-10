@@ -19,7 +19,7 @@ export interface Env {
   STREAM_CUSTOMER_CODE?: string;
   /** "1" enables /api/auth/dev on localhost for testing without OAuth. Never set in production. */
   DEV_LOGIN?: string;
-  /** Beta modules to switch off, comma-separated: wall, friends, checkin. Unset means all on. */
+  /** Beta modules to switch off, comma-separated: wall, friends, checkin, reactions, comments, achievements (needs checkin). Unset means all on. */
   FEATURES_OFF?: string;
   /** "1" runs the demo site (worker/demo.ts): guest sign-in, nightly reset. Never set in production. */
   DEMO?: string;

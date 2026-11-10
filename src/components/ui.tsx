@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type ButtonHTMLAttributes, type ComponentProps, type HTMLAttributes, type ReactNode } from "react";
+import { markIn } from "../lib/motion";
 import "./ui.css";
 
 type Variant = "default" | "primary" | "solid" | "ghost" | "confirmed";
@@ -294,13 +295,22 @@ export function Sheet({
   );
 }
 
-export function Toast({ message }: { message: string | null }) {
+export function Toast({ message, mark }: { message: string | null; mark?: string }) {
+  const markEl = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (message && mark) markIn(markEl.current);
+  }, [message, mark]);
   if (!message) return null;
   return (
     // Keyed by message so each new confirmation replays its entrance and ring.
     <div className="toast" role="status" key={message}>
       <span className="toast-ring" aria-hidden="true" />
       {message}
+      {mark && (
+        <span ref={markEl} className="toast-mark" aria-hidden="true">
+          {mark}
+        </span>
+      )}
     </div>
   );
 }

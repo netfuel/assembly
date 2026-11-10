@@ -71,6 +71,12 @@ export function stampIn(el: Element | null) {
   return gsap.fromTo(el, { scale: 1.6, rotate: -8, opacity: 0 }, { scale: 1, rotate: -3, opacity: 1, duration: 0.32, ease: EASE.out, clearProps: "opacity" });
 }
 
+/** An earned mark lands in the check-in toast: a small overshoot, once. Static under reduced motion. */
+export function markIn(el: Element | null) {
+  if (!el || reduce) return;
+  return gsap.fromTo(el, { scale: 0.4, rotate: -24, opacity: 0 }, { scale: 1, rotate: 0, opacity: 1, duration: DUR.count, ease: "back.out(2.2)", clearProps: "transform,opacity" });
+}
+
 /** The stamp's overshoot without the ring, for small marks inside a clipped strip (a reaction's icon). */
 export function pop(el: Element | null) {
   if (!el || reduce) return;
