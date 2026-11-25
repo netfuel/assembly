@@ -19,6 +19,7 @@ import { eventWall, wallModeration, wallPosts } from "./wall";
 import { eventFriendVisibility, friends } from "./friends";
 import { achievements, friendMarks } from "./achievements";
 import { withSecurityHeaders } from "./security";
+import { appCors, blockCrossSiteWrites } from "./appOrigin";
 import { posting, rateLimit } from "./posting";
 import { streamConfigured, uploads } from "./uploads";
 import type { City } from "../shared/types";
@@ -34,6 +35,9 @@ import { demoGuest, demoOn, resetDemo } from "./demo";
 
 const app = new Hono<AppContext>().basePath("/api");
 
+// The iOS app calls across origins (worker/appOrigin.ts). First, so its preflights never reach the gates below.
+app.use("*", appCors);
+
 // Who is signed in, for every request.
 app.use("*", async (c, next) => {
   c.set("userId", await readSession(c));
@@ -43,17 +47,8 @@ app.use("*", async (c, next) => {
 // Demo site only: a visitor without a session becomes a guest when the app loads.
 app.use("*", demoGuest);
 
-// Block cross-site writes. Apple's sign-in callback is the one cross-site POST we accept.
-app.use("*", async (c, next) => {
-  const method = c.req.method;
-  if (method !== "GET" && method !== "HEAD" && !c.req.path.startsWith("/api/auth/apple/callback")) {
-    const origin = c.req.header("Origin");
-    if (origin && origin !== new URL(c.req.url).origin) {
-      return c.json({ error: "Cross-site request blocked." }, 403);
-    }
-  }
-  await next();
-});
+// Block cross-site writes (the site and the iOS app pass). Apple's sign-in callback is the one cross-site POST we accept.
+app.use("*", blockCrossSiteWrites);
 
 // Beta modules switched off with FEATURES_OFF answer 404.
 app.use("*", featureGate);
@@ -175,6 +170,7 @@ root.onError((err, c) => {
 });
 // Unknown /api paths answer in JSON like every other API response; Hono uses the outermost app's handler.
 root.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ error: "Not found." }, 404) : c.text("404 Not Found", 404)));
+root.use("/fonts/*", appCors);
 root.route("/fonts", fonts);
 root.route("/e", og);
 root.route("/", ogPages);

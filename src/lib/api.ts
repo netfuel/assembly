@@ -35,6 +35,7 @@ import type {
   EventComment,
   Reactions,
 } from "../../shared/types";
+import { apiCredentials, apiUrl, withServerUrls } from "./native";
 
 const PAGE_PATH: Record<PageKind, string> = { artist: "artists", venue: "venues", organizer: "organizers" };
 const pagePath = (kind: PageKind, slug: string) => `/api/pages/${PAGE_PATH[kind]}/${encodeURIComponent(slug)}`;
@@ -53,8 +54,8 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, {
-      credentials: "same-origin",
+    res = await fetch(apiUrl(path), {
+      credentials: apiCredentials,
       ...init,
       headers: {
         Accept: "application/json",
@@ -67,7 +68,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   const body = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string> } & T;
   if (!res.ok) throw new ApiError(body.error ?? `Request failed (${res.status}).`, res.status, body.fields ?? {});
-  return body;
+  return withServerUrls(body);
 }
 
 const enc = encodeURIComponent;
