@@ -34,6 +34,26 @@ test("a visitor sees the gate, no map, no service worker", async ({ as, problems
   noProblems(problems);
 });
 
+test("Google and Apple sign-in sit side by side when both are set up", async ({ as, problems }) => {
+  const page = await as(null);
+  // The test server has neither provider configured, so answer as production does.
+  await page.route("**/api/auth/providers", (r) =>
+    r.fulfill({ json: { google: true, apple: true, dev: false, email: true } }),
+  );
+  await page.goto("/");
+  const sso = page.locator(".gate-sso");
+  await expect(sso).toHaveCount(2);
+  await expect(sso.nth(0)).toHaveText("Continue with Google");
+  await expect(sso.nth(1)).toHaveText("Continue with Apple");
+  await expect(sso.nth(1)).toHaveAttribute("href", /^\/api\/auth\/apple/);
+  // Equal prominence: the same height and width.
+  const [g, a] = [await sso.nth(0).boundingBox(), await sso.nth(1).boundingBox()];
+  expect(a?.height).toBe(g?.height);
+  expect(a?.width).toBe(g?.width);
+  expect(a!.height).toBeGreaterThanOrEqual(44);
+  noProblems(problems);
+});
+
 test("leaving an email lands on the list and is remembered", async ({ as, api, problems }) => {
   const page = await as(null);
   await page.goto("/");
