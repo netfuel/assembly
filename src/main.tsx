@@ -11,7 +11,7 @@ import { captureInstallPrompt } from "./lib/install";
 import { revealToGate, skipSplash } from "./lib/splash";
 import { mountFor } from "./gate/gateState";
 import type { ServerConfig } from "../shared/types";
-import { apiCredentials, apiUrl, installNativeShare, interceptAppLinks, isNativeApp, listenForUniversalLinks, pointFontsAtServer } from "./lib/native";
+import { apiCredentials, apiUrl, installNativeShare, interceptAppLinks, isNativeApp, listenForUniversalLinks, pointFontsAtServer, setStatusBarTheme } from "./lib/native";
 import { startNativePush } from "./lib/nativePush";
 import { interceptSignInLinks, loadAppSession, sessionHeaders } from "./lib/nativeAuth";
 
@@ -27,6 +27,7 @@ interceptSignInLinks();
 interceptAppLinks();
 installNativeShare();
 void listenForUniversalLinks();
+setStatusBarTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
 void startNativePush();
 
 // The launch gate (src/gate) loads only when it's needed, with everything it brings (Pass 3: Three.js).
