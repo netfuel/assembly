@@ -122,7 +122,8 @@
 .gate-or { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-2xs); color: var(--gate-faint); text-transform: uppercase; letter-spacing: var(--tracking-label); }
 .gate-rule { flex: 1; height: 1px; background: var(--gate-line); }
 
-.gate-google {
+/* Google and Apple sign-in: the same size and weight, as Apple requires of its button beside others. */
+.gate-sso {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,8 +137,8 @@
   font-weight: 500;
   text-decoration: none;
 }
-.gate-google:hover { filter: brightness(1.08); }
-.gate-google svg { flex: none; }
+.gate-sso:hover { filter: brightness(1.08); }
+.gate-sso svg { flex: none; }
 .gate-note { margin: calc(-1 * var(--space-3)) 0 0; font-size: var(--text-2xs); line-height: 1.5; color: var(--gate-faint); }
 
 .gate-dev { display: flex; gap: var(--space-2); }
