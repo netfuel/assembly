@@ -15,5 +15,5 @@
     "isolatedModules": true,
     "types": ["vite/client", "vite-plugin-pwa/client", "geojson"]
   },
-  "include": ["src", "shared", "tests/filters.test.ts", "tests/native.test.ts"]
+  "include": ["src", "shared", "tests/filters.test.ts", "tests/native.test.ts", "tests/nativeAuth.test.ts"]
 }

@@ -36,6 +36,7 @@ import type {
   Reactions,
 } from "../../shared/types";
 import { apiCredentials, apiUrl, withServerUrls } from "./native";
+import { clearAppSession, saveAppSession, sessionHeaders } from "./nativeAuth";
 
 const PAGE_PATH: Record<PageKind, string> = { artist: "artists", venue: "venues", organizer: "organizers" };
 const pagePath = (kind: PageKind, slug: string) => `/api/pages/${PAGE_PATH[kind]}/${encodeURIComponent(slug)}`;
@@ -60,6 +61,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: {
         Accept: "application/json",
         ...(typeof init?.body === "string" ? { "Content-Type": "application/json" } : {}),
+        ...sessionHeaders(),
         ...init?.headers,
       },
     });
@@ -120,15 +122,25 @@ export const api = {
     request<{ user: MeProfile }>("/api/me/avatar", { method: "POST", body: blob, headers: { "Content-Type": blob.type } }).then((r) => r.user),
   removeAvatar: () => request<{ user: MeProfile }>("/api/me/avatar", { method: "DELETE" }).then((r) => r.user),
   deleteAccount: (confirm: string) =>
-    request<{ ok: true; eventsDeleted: number }>("/api/me", { method: "DELETE", body: JSON.stringify({ confirm }) }),
+    request<{ ok: true; eventsDeleted: number }>("/api/me", { method: "DELETE", body: JSON.stringify({ confirm }) }).then(async (r) => {
+      await clearAppSession();
+      return r;
+    }),
   providers: () => request<AuthProviders>("/api/auth/providers"),
   config: () => request<ServerConfig>("/api/config"),
   /** Launch gate: leave an address to hear when the site opens. Always ok, even for a repeat address. */
   interest: (email: string, source: string) => request<{ ok: true }>("/api/interest", { method: "POST", body: JSON.stringify({ email, source }) }),
   emailStart: (email: string) => request<{ ok: true; devCode?: string }>("/api/auth/email/start", { method: "POST", body: JSON.stringify({ email }) }),
   emailVerify: (email: string, code: string) =>
-    request<{ ok: true; newUser: boolean }>("/api/auth/email/verify", { method: "POST", body: JSON.stringify({ email, code }) }),
-  logout: () => request<{ ok: true }>("/api/auth/logout", { method: "POST" }),
+    // In the iOS app the server answers with the session token itself (src/lib/nativeAuth.ts).
+    request<{ ok: true; newUser: boolean; token?: string }>("/api/auth/email/verify", { method: "POST", body: JSON.stringify({ email, code }) }).then(
+      async ({ token, ...r }) => {
+        if (token) await saveAppSession(token);
+        return r;
+      },
+    ),
+  logout: () =>
+    request<{ ok: true }>("/api/auth/logout", { method: "POST" }).finally(() => clearAppSession()),
   rsvp: (id: string, status: RsvpStatus | null) =>
     status
       ? request<{ status: RsvpStatus }>(`/api/events/${enc(id)}/rsvp`, { method: "PUT", body: JSON.stringify({ status }) })

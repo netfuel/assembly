@@ -12,13 +12,16 @@ import { revealToGate, skipSplash } from "./lib/splash";
 import { mountFor } from "./gate/gateState";
 import type { ServerConfig } from "../shared/types";
 import { apiCredentials, apiUrl, isNativeApp, pointFontsAtServer } from "./lib/native";
+import { interceptSignInLinks, loadAppSession, sessionHeaders } from "./lib/nativeAuth";
 
 // Uncaught errors outside React rendering (event handlers, promises) go to the Worker log too.
 window.addEventListener("error", (e) => reportError(e.error ?? e.message));
 window.addEventListener("unhandledrejection", (e) => reportError(e.reason));
 
-// In the iOS app the fonts come from the server, like the API (src/lib/native.ts).
+// In the iOS app the fonts come from the server, like the API (src/lib/native.ts), and Google and Apple
+// sign-in run in the system sheet (src/lib/nativeAuth.ts).
 pointFontsAtServer();
+interceptSignInLinks();
 
 // The launch gate (src/gate) loads only when it's needed, with everything it brings (Pass 3: Three.js).
 const Gate = lazy(() => import("./gate/Gate").then((m) => ({ default: m.Gate })));
@@ -66,7 +69,9 @@ function start(config: ServerConfig | null) {
 // app: the API gates itself, and someone with a session in an installed PWA shouldn't be walled off by a flaky network.
 if (/^\/(terms|privacy|guidelines)\/?$/.test(location.pathname)) start(null);
 else {
-  fetch(apiUrl("/api/config"), { credentials: apiCredentials })
+  // In the app, the keychain is read first so the first request already carries the session.
+  loadAppSession()
+    .then(() => fetch(apiUrl("/api/config"), { credentials: apiCredentials, headers: sessionHeaders() }))
     .then((r) => (r.ok ? (r.json() as Promise<ServerConfig>) : null))
     .catch(() => null)
     .then(start);

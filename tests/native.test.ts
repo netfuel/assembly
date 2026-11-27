@@ -20,10 +20,10 @@ describe("native helpers on the web", () => {
 });
 
 describe("native helpers in the bundled app", () => {
-  it("send API calls to the server with cookies", async () => {
+  it("send API calls to the server, without cookies (the app uses a Bearer token)", async () => {
     const n = await load("capacitor:");
     expect(n.apiOrigin).toBe("https://assembly.rsvp");
-    expect(n.apiCredentials).toBe("include");
+    expect(n.apiCredentials).toBe("omit");
     expect(n.apiUrl("/api/config")).toBe("https://assembly.rsvp/api/config");
     expect(n.apiUrl("https://tiles.openfreemap.org/x")).toBe("https://tiles.openfreemap.org/x");
   });

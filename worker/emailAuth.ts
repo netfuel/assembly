@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
 import { upsertUser } from "./auth";
 import { rateLimit } from "./posting";
-import { startSession } from "./session";
+import { createSession, startSession } from "./session";
+import { isAppOrigin } from "./appOrigin";
 
 const CODE_TTL_SECONDS = 10 * 60;
 const MAX_ATTEMPTS = 5;
@@ -168,6 +169,8 @@ emailAuth.post("/verify", async (c) => {
   // One use only.
   await kv.delete(key);
   const { userId, isNew } = await upsertUser(c.env.DB, "email", email, email, null, null, true);
+  // The iOS app can't hold the site's cookie: it gets the token itself and keeps it in the keychain.
+  if (isAppOrigin(c.req.header("Origin"))) return c.json({ ok: true, newUser: isNew, token: await createSession(c, userId) });
   await startSession(c, userId);
   return c.json({ ok: true, newUser: isNew });
 });

@@ -43,6 +43,7 @@
     "@jsquash/webp": "^1.5.0",
     "@resvg/resvg-wasm": "^2.6.2",
     "arctic": "^3.7.0",
+    "assembly-auth": "file:native/assembly-auth",
     "gsap": "^3.15.0",
     "hono": "^4.13.13",
     "maplibre-gl": "^6.15.0",

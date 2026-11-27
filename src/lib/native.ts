@@ -15,8 +15,8 @@ export const apiOrigin: string =
     ? ((import.meta.env.VITE_API_ORIGIN as string | undefined) ?? "https://assembly.rsvp").replace(/\/$/, "")
     : "";
 
-/** Cookies go along: same-origin on the web, and to the API origin from the app. */
-export const apiCredentials: RequestCredentials = apiOrigin ? "include" : "same-origin";
+/** The site's cookie goes along on the web. The app sends a Bearer token instead (src/lib/nativeAuth.ts). */
+export const apiCredentials: RequestCredentials = apiOrigin ? "omit" : "same-origin";
 
 /** A server path (/api/...) as a URL this page can fetch. Absolute URLs pass through. */
 export function apiUrl(path: string): string {

@@ -117,6 +117,26 @@ test.describe("Sign-in", () => {
     expect((await anon.post("/api/auth/email/verify", { data: { email: "e2e-wrong@dev.localhost", code: devCode } })).status()).toBeGreaterThanOrEqual(400);
   });
 
+  test("the iOS app signs in by email code and is known by its Bearer token", async ({ api }) => {
+    // The app runs at capacitor://localhost and can't hold the cookie (worker/appOrigin.ts, worker/appAuth.ts).
+    const app = await api(null);
+    const email = "e2e-ios-app@dev.localhost";
+    const headers = { Origin: "capacitor://localhost" };
+    const { devCode } = await (await app.post("/api/auth/email/start", { data: { email }, headers })).json();
+    const verified = await app.post("/api/auth/email/verify", { data: { email, code: devCode }, headers });
+    expect(verified.status()).toBe(200);
+    expect(verified.headers()["access-control-allow-origin"]).toBe("capacitor://localhost");
+    expect(verified.headers()["set-cookie"] ?? "").not.toContain("asm_session");
+    const { token } = await verified.json();
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    const bearer = { ...headers, Authorization: `Bearer ${token}` };
+    const fresh = await api(null); // no cookie at all: only the token says who this is
+    expect((await (await fresh.get("/api/me", { headers: bearer })).json()).user?.id).toBeTruthy();
+    expect((await fresh.post("/api/auth/logout", { headers: bearer })).status()).toBe(200);
+    expect((await (await fresh.get("/api/me", { headers: bearer })).json()).user).toBeFalsy();
+  });
+
   test("sign out ends the session", async ({ api }) => {
     const t = await api("fanC");
     expect((await (await t.get("/api/me")).json()).user).toBeTruthy();
