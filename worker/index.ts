@@ -4,6 +4,7 @@ import { readSession } from "./session";
 import { profile } from "./profile";
 import { moderation } from "./moderation";
 import { push, pushConfigured } from "./push";
+import { apnsConfigured } from "./apns";
 import { startingSoon } from "./notify";
 import { auth } from "./auth";
 import { appAuth } from "./appAuth";
@@ -96,6 +97,7 @@ app.get("/config", async (c) => {
     streamCustomerCode: c.env.STREAM_CUSTOMER_CODE ?? null,
     push: pushConfigured(c.env),
     vapidPublicKey: pushConfigured(c.env) ? c.env.VAPID_PUBLIC_KEY : null,
+    apns: apnsConfigured(c.env),
     features: features(c.env),
     gate: gateFor(c.env, await gatePasses(c.env, c.get("userId"))),
   });

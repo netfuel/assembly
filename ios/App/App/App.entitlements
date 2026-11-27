@@ -9,5 +9,9 @@
 		<string>webcredentials:assembly.rsvp</string>
 		<string>applinks:assembly.rsvp</string>
 	</array>
+	<!-- Push notifications (worker/apns.ts). Xcode builds use the sandbox; archiving for TestFlight or the App Store
+	     switches this to production when the build is signed for distribution. -->
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>

@@ -35,8 +35,9 @@ import type {
   EventComment,
   Reactions,
 } from "../../shared/types";
-import { apiCredentials, apiUrl, withServerUrls } from "./native";
+import { apiCredentials, apiUrl, isNativeApp, withServerUrls } from "./native";
 import { clearAppSession, saveAppSession, sessionHeaders } from "./nativeAuth";
+import { clearDeviceToken, forgetThisDevice } from "./nativePush";
 import type {
   AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
@@ -140,6 +141,7 @@ export const api = {
   removeAvatar: () => request<{ user: MeProfile }>("/api/me/avatar", { method: "DELETE" }).then((r) => r.user),
   deleteAccount: (confirm: string) =>
     request<{ ok: true; eventsDeleted: number }>("/api/me", { method: "DELETE", body: JSON.stringify({ confirm }) }).then(async (r) => {
+      clearDeviceToken();
       await clearAppSession();
       return r;
     }),
@@ -166,8 +168,11 @@ export const api = {
   passkeyAdd: (response: RegistrationResponseJSON) =>
     request<{ passkeys: Passkey[] }>("/api/me/passkeys", { method: "POST", body: JSON.stringify({ response }) }).then((r) => r.passkeys),
   passkeyRemove: (id: string) => request<{ passkeys: Passkey[] }>(`/api/me/passkeys/${enc(id)}`, { method: "DELETE" }).then((r) => r.passkeys),
-  logout: () =>
-    request<{ ok: true }>("/api/auth/logout", { method: "POST" }).finally(() => clearAppSession()),
+  logout: async () => {
+    // Before the session ends, so the server can drop this phone's notifications for the account.
+    if (isNativeApp) await forgetThisDevice();
+    return request<{ ok: true }>("/api/auth/logout", { method: "POST" }).finally(() => clearAppSession());
+  },
   rsvp: (id: string, status: RsvpStatus | null) =>
     status
       ? request<{ status: RsvpStatus }>(`/api/events/${enc(id)}/rsvp`, { method: "PUT", body: JSON.stringify({ status }) })

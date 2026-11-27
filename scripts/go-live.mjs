@@ -1,7 +1,7 @@
 // Gets the live site (assembly.rsvp) ready for real people. Safe to run again: it skips what's done.
 // 1. Signs you in to Cloudflare if needed.
 // 2. Applies database changes (D1 migrations) to the live database.
-// 3. Sets the secrets the app needs: notification keys, moderators, email sender, Google and Apple sign-in, Stream.
+// 3. Sets the secrets the app needs: notification keys (web and iPhone), moderators, email sender, Google and Apple sign-in, Stream.
 // 4. Checks that the site answers, and lists the dashboard steps that can't be scripted.
 // Secrets go straight to Cloudflare through wrangler; nothing is written to disk.
 import { execSync, spawnSync } from "node:child_process";
@@ -152,7 +152,28 @@ try {
     await putSecret("APPLE_PRIVATE_KEY", readFileSync(path.replace(/^~/, process.env.HOME), "utf8").trim());
   } else todo.push("Apple sign-in (optional): see README, Set up sign-in.");
 
-  step(8, "Promo video (optional, Cloudflare Stream)");
+  step(8, "iPhone notifications (APNs key, for the iOS app)");
+  if (has("APNS_PRIVATE_KEY")) ok("APNs is set");
+  else if (await yes("Set up iPhone notifications now?")) {
+    console.log("   Uses the APNs key from Certificates, Identifiers & Profiles, then Keys (docs/ios.md, Push notifications).");
+    if (!has("APPLE_TEAM_ID")) await putSecret("APPLE_TEAM_ID", await ask("Team ID:"));
+    await putSecret("APNS_KEY_ID", await ask("APNs Key ID:", "MUDH3P745C"));
+    const { readFileSync } = await import("node:fs");
+    let key = "";
+    while (!key) {
+      const path = (await ask("Path to the APNs .p8 file (drag it in here):")).replace(/^['"]|['"]$/g, "").replace(/\\ /g, " ");
+      try {
+        key = readFileSync(path.replace(/^~/, process.env.HOME), "utf8").trim();
+        if (!key.includes("BEGIN PRIVATE KEY")) throw new Error("not a .p8 key");
+      } catch (err) {
+        console.log(`   That didn't work (${err.message}). Try again.`);
+        key = "";
+      }
+    }
+    await putSecret("APNS_PRIVATE_KEY", key);
+  } else todo.push("iPhone notifications: create the APNs key (docs/ios.md), then run this again.");
+
+  step(9, "Promo video (optional, Cloudflare Stream)");
   if (has("STREAM_API_TOKEN")) ok("Stream is set");
   else if (await yes("Set up Stream now? (Stream must be enabled on the account)")) {
     await putSecret("CLOUDFLARE_ACCOUNT_ID", await ask("Account ID (dashboard sidebar, or wrangler whoami):"));
@@ -161,7 +182,7 @@ try {
     if (code) await putSecret("STREAM_CUSTOMER_CODE", code);
   } else todo.push("Promo video (optional): enable Stream, then run this again.");
 
-  step(9, "Launch gate");
+  step(10, "Launch gate");
   // GATE lives as a secret, not a wrangler.jsonc var: deploys overwrite vars, and the gate has to survive
   // every push until launch day. "on" shows the sign-up screen; anything else (or unset) opens the site.
   console.log(`   ${has("GATE") ? "GATE is set (the site is gated unless its value is off)." : "GATE is not set: the site is open to everyone."}`);
@@ -170,7 +191,7 @@ try {
   else if (/^off$/i.test(gateChoice)) await putSecret("GATE", "off");
   else ok("Leaving the gate as it is");
 
-  step(10, "Checking the live site");
+  step(11, "Checking the live site");
   for (const url of ["https://assembly.rsvp/api/health", "https://www.assembly.rsvp/api/health", "https://assembly.netfuel.workers.dev/api/health"]) {
     try {
       const res = await fetch(url, { redirect: "manual" });

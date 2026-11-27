@@ -1,21 +1,21 @@
 import { useState } from "react";
 import { Button } from "./ui";
-import { disablePush, dismissPrompt, enablePush, promptDismissed, PUSH_COPY, usePushState } from "../lib/push";
+import { disablePush, dismissPrompt, enablePush, promptDismissed, pushAvailable, pushCopy, PUSH_COPY, usePushState } from "../lib/push";
 import type { ServerConfig } from "../../shared/types";
 
 /** Notifications on/off for this device. Hidden when the server has no push keys. */
 export function PushControl({ config, toast }: { config: ServerConfig; toast: (m: string) => void }) {
-  const [state, setState] = usePushState(!!config.push);
+  const [state, setState] = usePushState(pushAvailable(config));
   const [busy, setBusy] = useState(false);
-  if (!config.push || !config.vapidPublicKey || !state) return null;
+  if (!pushAvailable(config) || !state) return null;
 
   async function toggle() {
     setBusy(true);
     try {
-      const next = state === "on" ? await disablePush() : await enablePush(config.vapidPublicKey!);
+      const next = state === "on" ? await disablePush() : await enablePush(config.vapidPublicKey);
       setState(next);
       if (next === "on") toast("Notifications are on for this device.");
-      else if (next === "blocked") toast("Notifications are blocked. Allow them in site settings.");
+      else if (next === "blocked") toast(pushCopy("blocked"));
     } catch (err) {
       toast(err instanceof Error ? err.message : "Couldn't change notifications.");
     } finally {
@@ -25,7 +25,7 @@ export function PushControl({ config, toast }: { config: ServerConfig; toast: (m
 
   return (
     <div className="push-control">
-      <p className="note">{PUSH_COPY[state]}</p>
+      <p className="note">{pushCopy(state)}</p>
       {(state === "on" || state === "off") && (
         <Button size="sm" onClick={toggle} disabled={busy} aria-pressed={state === "on"}>
           {state === "on" ? "Turn off" : "Turn on notifications"}
@@ -37,10 +37,10 @@ export function PushControl({ config, toast }: { config: ServerConfig; toast: (m
 
 /** One-time nudge after an RSVP. Shows only when notifications are off and it hasn't been dismissed. */
 export function PushPrompt({ config, toast }: { config: ServerConfig; toast: (m: string) => void }) {
-  const [state, setState] = usePushState(!!config.push);
+  const [state, setState] = usePushState(pushAvailable(config));
   const [hidden, setHidden] = useState(promptDismissed());
   const [busy, setBusy] = useState(false);
-  if (!config.push || !config.vapidPublicKey || hidden || (state !== "off" && state !== "needs-install")) return null;
+  if (!pushAvailable(config) || hidden || (state !== "off" && state !== "needs-install")) return null;
   return (
     <div className="push-prompt" role="note">
       <p>{state === "needs-install" ? PUSH_COPY["needs-install"] : "Want a heads-up if this changes, and an hour before doors?"}</p>
@@ -53,7 +53,7 @@ export function PushPrompt({ config, toast }: { config: ServerConfig; toast: (m:
             onClick={async () => {
               setBusy(true);
               try {
-                const next = await enablePush(config.vapidPublicKey!);
+                const next = await enablePush(config.vapidPublicKey);
                 setState(next);
                 if (next === "on") toast("Notifications are on.");
               } catch (err) {
