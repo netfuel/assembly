@@ -7,6 +7,7 @@ import { SCENES, type BlockedPerson, type FriendsState, type Inbox, type InboxIt
 import { PushControl } from "../components/PushControl";
 import { VarsityMark } from "./EventSheet";
 import { Achievements } from "./Achievements";
+import { PasskeysSection } from "./PasskeysSection";
 import "./announce.css";
 
 const LINKS: { key: string; label: string; placeholder: string }[] = [
@@ -221,6 +222,7 @@ export function ProfileSheet({
 
       {config.features?.achievements !== false && <Achievements tz={tz} toast={toast} />}
 
+      <PasskeysSection toast={toast} />
       <MutedList toast={toast} />
 
       <p className="note policy-links" data-reveal>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyLists/1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Ties the app to assembly.rsvp (served at /.well-known/apple-app-site-association, worker/passkeys.ts).
+	     webcredentials: the site's passkeys work in the app. applinks (universal links) comes with that feature. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>webcredentials:assembly.rsvp</string>
+	</array>
+</dict>
+</plist>

@@ -37,6 +37,23 @@ import type {
 } from "../../shared/types";
 import { apiCredentials, apiUrl, withServerUrls } from "./native";
 import { clearAppSession, saveAppSession, sessionHeaders } from "./nativeAuth";
+import type {
+  AuthenticationResponseJSON,
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
+} from "@simplewebauthn/browser";
+
+/** One of your passkeys, as Profile lists it. */
+export interface Passkey {
+  id: string;
+  /** What keeps it: "iCloud Keychain", "Google Password Manager", ... or just "Passkey". */
+  label: string;
+  /** Synced across devices rather than tied to one. */
+  synced: boolean;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
 
 const PAGE_PATH: Record<PageKind, string> = { artist: "artists", venue: "venues", organizer: "organizers" };
 const pagePath = (kind: PageKind, slug: string) => `/api/pages/${PAGE_PATH[kind]}/${encodeURIComponent(slug)}`;
@@ -139,6 +156,16 @@ export const api = {
         return r;
       },
     ),
+  /** Passkeys (src/lib/passkeys.ts, worker/passkeys.ts). */
+  passkeyOptions: () =>
+    request<{ options: PublicKeyCredentialRequestOptionsJSON; flow: string }>("/api/auth/passkey/options", { method: "POST" }),
+  passkeyVerify: (flow: string, response: AuthenticationResponseJSON) =>
+    request<{ result: "ok" | "waitlist"; token?: string }>("/api/auth/passkey/verify", { method: "POST", body: JSON.stringify({ flow, response }) }),
+  passkeys: () => request<{ passkeys: Passkey[] }>("/api/me/passkeys").then((r) => r.passkeys),
+  passkeyAddOptions: () => request<{ options: PublicKeyCredentialCreationOptionsJSON }>("/api/me/passkeys/options", { method: "POST" }),
+  passkeyAdd: (response: RegistrationResponseJSON) =>
+    request<{ passkeys: Passkey[] }>("/api/me/passkeys", { method: "POST", body: JSON.stringify({ response }) }).then((r) => r.passkeys),
+  passkeyRemove: (id: string) => request<{ passkeys: Passkey[] }>(`/api/me/passkeys/${enc(id)}`, { method: "DELETE" }).then((r) => r.passkeys),
   logout: () =>
     request<{ ok: true }>("/api/auth/logout", { method: "POST" }).finally(() => clearAppSession()),
   rsvp: (id: string, status: RsvpStatus | null) =>
