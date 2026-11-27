@@ -10,6 +10,7 @@ Assembly's iPhone app is the same React build as the web app, packaged inside a 
 | Xcode project | `ios/App/App.xcodeproj` (Swift Package Manager, no CocoaPods) |
 | Native helpers in the web app | `src/lib/native.ts` |
 | Worker side (CORS, write check, fonts) | `worker/appOrigin.ts` |
+| Sign-in in the app | `src/lib/nativeAuth.ts`, `worker/appAuth.ts`, plugin in `native/assembly-auth` |
 | Icon and launch image | `npm run ios:assets` (from `public/icons/favicon.svg`) |
 
 Settings: iPhone only, portrait, iOS 16 and later, marked as using only exempt encryption (HTTPS), so TestFlight
@@ -26,6 +27,26 @@ Inside the app the page runs at `capacitor://localhost`, so nothing is same-orig
 - No service worker and no install prompt in the app.
 
 On the web every helper is a no-op. Point a build at another server with `VITE_API_ORIGIN=https://... npm run ios:sync`.
+
+## Signing in
+
+The site's session cookie can't cross from `capacitor://localhost` to `https://assembly.rsvp`, so the app holds
+the session token itself: in the keychain (this device only), sent as `Authorization: Bearer`. The server accepts
+either the cookie or the Bearer token.
+
+- **Email code:** `/api/auth/email/verify` answers the app's origin with `{ token }` instead of a cookie.
+- **Google and Apple:** the app makes a PKCE verifier and opens `/api/auth/{google,apple}?app=<challenge>` in
+  the system sign-in sheet (`ASWebAuthenticationSession`; Google refuses app web views). The usual round-trip
+  runs; at the end the server stores a two-minute, one-use code tied to the challenge and sends the sheet to
+  `rsvp.assembly.app://auth?signin=ok&code=…`. The app posts the code and verifier to `/api/auth/app/exchange`
+  and gets the token. Waitlist and failure come back the same way, with no code.
+- Every Google and Apple button is a plain link to `/api/auth/{provider}`, so `interceptSignInLinks()` catches
+  them in one place; the gate and the sign-in sheet don't know they're in an app.
+- Sign out and account deletion clear the keychain.
+
+The native half is a small local plugin, `native/assembly-auth` (installed as `assembly-auth` from `file:`),
+shaped like the official ones so `cap sync` adds it to the Swift package list. It has four calls:
+`authenticate`, `getToken`, `setToken`, `clearToken`.
 
 ## One-time setup on the Mac
 
@@ -64,10 +85,10 @@ Before a TestFlight or App Store build, run a plain `npm run ios:sync` so the ap
 
 | Works now (bundled build) | Comes later |
 | --- | --- |
-| App opens offline to the splash, then the launch gate or map | Sign-in from the bundled build (Phase 1: the session cookie can't cross from `capacitor://` to `https://`, so the app gets a bearer token kept in the keychain) |
-| Map, events, flyers and fonts load from assembly.rsvp | Google sign-in (Phase 1: Google blocks sign-in inside app web views, so it moves to the system browser) |
-| Interest form on the gate | Sign in with Apple native sheet, universal links, native share (Phase 1) |
-| Everything, in dev mode | Push via APNs, camera uploads, offline saved events (Phase 2) |
+| App opens offline to the splash, then the launch gate or map | Universal links, native share sheet, keyboard and status bar polish (rest of Phase 1) |
+| Map, events, flyers and fonts load from assembly.rsvp | Sign in with Apple's native sheet (Apple sign-in works now through the system sheet) |
+| Sign-in: Google, Apple and email code, kept in the keychain | Push via APNs, camera uploads, offline saved events (Phase 2) |
+| Interest form on the gate; everything, in dev mode | |
 
 ## Apple Developer setup (Matt)
 

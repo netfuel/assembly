@@ -1,0 +1,16 @@
+{
+  "name": "assembly-auth",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Assembly's own Capacitor plugin: the system sign-in sheet (ASWebAuthenticationSession) and the session token in the keychain. JS side: src/lib/native.ts.",
+  "main": "index.js",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "files": ["index.js", "ios/Sources", "Package.swift"],
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}

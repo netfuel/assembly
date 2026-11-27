@@ -25,8 +25,11 @@ function isSecure(c: Context<AppContext>) {
   return new URL(c.req.url).protocol === "https:";
 }
 
-/** Creates a session for a user and sets the cookie. Only the token's hash is stored. */
-export async function startSession(c: Context<AppContext>, userId: string) {
+/**
+ * Creates a session for a user and returns its token. Only the token's hash is stored. The site carries the
+ * token in a cookie (startSession); the iOS app keeps it in the keychain and sends it as a Bearer token.
+ */
+export async function createSession(c: Context<AppContext>, userId: string): Promise<string> {
   // Signing in is agreeing to the Terms and Privacy policy ("By continuing you agree…"): record which version.
   await c.env.DB.prepare("UPDATE users SET terms_version = ?, terms_accepted_at = ? WHERE id = ? AND (terms_version IS NULL OR terms_version <> ?)")
     .bind(TERMS_VERSION, new Date().toISOString(), userId, TERMS_VERSION)
@@ -43,6 +46,12 @@ export async function startSession(c: Context<AppContext>, userId: string) {
   const indexKey = `user-sessions:${userId}`;
   const prior = JSON.parse((await c.env.SESSIONS.get(indexKey)) ?? "[]") as string[];
   await c.env.SESSIONS.put(indexKey, JSON.stringify([hash, ...prior].slice(0, 25)), { expirationTtl: SESSION_TTL_SECONDS });
+  return token;
+}
+
+/** Creates a session for a user and sets the cookie. */
+export async function startSession(c: Context<AppContext>, userId: string) {
+  const token = await createSession(c, userId);
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
     secure: isSecure(c),
@@ -52,8 +61,16 @@ export async function startSession(c: Context<AppContext>, userId: string) {
   });
 }
 
+/** The session token on this request: the site's cookie, or the iOS app's Bearer token. */
+function sessionToken(c: Context<AppContext>): string | null {
+  const cookie = getCookie(c, SESSION_COOKIE);
+  if (cookie) return cookie;
+  const bearer = /^Bearer ([A-Za-z0-9_-]{20,100})$/.exec(c.req.header("Authorization") ?? "");
+  return bearer ? bearer[1] : null;
+}
+
 export async function readSession(c: Context<AppContext>): Promise<string | null> {
-  const token = getCookie(c, SESSION_COOKIE);
+  const token = sessionToken(c);
   if (!token) return null;
   const raw = await c.env.SESSIONS.get(`session:${await hashToken(token)}`);
   if (!raw) return null;
@@ -65,7 +82,7 @@ export async function readSession(c: Context<AppContext>): Promise<string | null
 }
 
 export async function endSession(c: Context<AppContext>) {
-  const token = getCookie(c, SESSION_COOKIE);
+  const token = sessionToken(c);
   if (token) await c.env.SESSIONS.delete(`session:${await hashToken(token)}`);
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
 }

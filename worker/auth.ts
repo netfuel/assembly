@@ -6,6 +6,7 @@ import { endSession, siteOrigin, startSession } from "./session";
 import type { AuthProviders } from "../shared/types";
 import { addInterest, markConverted } from "./interest";
 import { gatePasses } from "./gate";
+import { APP_CHALLENGE_COOKIE, appChallenge, appRedirectUrl, issueHandoff } from "./appAuth";
 
 const STATE_TTL = 60 * 10;
 
@@ -41,6 +42,40 @@ function safeReturnTo(value: string | undefined | null): string {
 /** Adds ?signin=ok, failed or waitlist to a return path that may already have a query. */
 function withResult(path: string, result: "ok" | "failed" | "waitlist"): string {
   return `${path}${path.includes("?") ? "&" : "?"}signin=${result}`;
+}
+
+/**
+ * Remembers (or forgets) that this sign-in started in the iOS app (worker/appAuth.ts). Forgetting matters too:
+ * the system sign-in sheet shares Safari's cookies, so an abandoned app sign-in mustn't steer a later web one.
+ */
+function rememberAppSignIn(c: Context<AppContext>, cookiePath: string, cookieOpts: Parameters<typeof setCookie>[3]) {
+  const challenge = appChallenge(c.req.query("app"));
+  if (challenge) setCookie(c, APP_CHALLENGE_COOKIE, challenge, cookieOpts);
+  else deleteCookie(c, APP_CHALLENGE_COOKIE, { path: cookiePath });
+}
+
+/** Reads and clears the app sign-in marker at the end of a round-trip. */
+function takeAppSignIn(c: Context<AppContext>, cookiePath: string): string | null {
+  const challenge = appChallenge(getCookie(c, APP_CHALLENGE_COOKIE));
+  deleteCookie(c, APP_CHALLENGE_COOKIE, { path: cookiePath });
+  return challenge;
+}
+
+/**
+ * Ends a Google or Apple sign-in. On the site: a session cookie and back to the page. From the iOS app: a
+ * one-time code and back into the app, which trades it for a token. "failed" and "waitlist" make no session.
+ */
+async function finishSignIn(
+  c: Context<AppContext>,
+  opts: { result: "ok" | "failed" | "waitlist"; returnTo: string; challenge: string | null; userId?: string; status: 302 | 303 },
+) {
+  const { result, returnTo, challenge, userId, status } = opts;
+  if (challenge) {
+    const code = result === "ok" && userId ? await issueHandoff(c, userId, challenge) : undefined;
+    return c.redirect(appRedirectUrl(result, code, returnTo), status);
+  }
+  if (result === "ok" && userId) await startSession(c, userId);
+  return c.redirect(withResult(result === "waitlist" ? "/" : returnTo, result), status);
 }
 
 /**
@@ -149,6 +184,7 @@ auth.get("/google", (c) => {
   setCookie(c, "asm_oauth_state", state, opts);
   setCookie(c, "asm_oauth_verifier", verifier, opts);
   setCookie(c, "asm_return_to", safeReturnTo(c.req.query("return_to")), opts);
+  rememberAppSignIn(c, "/", opts);
   return c.redirect(url.toString());
 });
 
@@ -160,19 +196,21 @@ auth.get("/google/callback", async (c) => {
   const verifier = getCookie(c, "asm_oauth_verifier");
   const returnTo = safeReturnTo(getCookie(c, "asm_return_to"));
   for (const name of ["asm_oauth_state", "asm_oauth_verifier", "asm_return_to"]) deleteCookie(c, name, { path: "/" });
-  if (!client || !code || !state || !verifier || state !== storedState) {
-    return c.redirect(withResult(returnTo, "failed"));
-  }
+  const challenge = takeAppSignIn(c, "/");
+  const end = (result: "ok" | "failed" | "waitlist", userId?: string) => finishSignIn(c, { result, returnTo, challenge, userId, status: 302 });
+  if (!client || !code || !state || !verifier || state !== storedState) return end("failed");
   try {
     const tokens = await client.validateAuthorizationCode(code, verifier);
     const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string; email_verified?: boolean; name?: string; picture?: string };
     const { userId } = await upsertUser(c.env.DB, "google", claims.sub, claims.email ?? null, claims.name ?? null, claims.picture ?? null, claims.email_verified === true);
-    if (!(await gatePasses(c.env, userId))) return c.redirect(withResult(await waitlist(c, claims.email, "google"), "waitlist"));
-    await startSession(c, userId);
-    return c.redirect(withResult(returnTo, "ok"));
+    if (!(await gatePasses(c.env, userId))) {
+      await waitlist(c, claims.email, "google");
+      return end("waitlist");
+    }
+    return end("ok", userId);
   } catch (err) {
     console.error("google callback failed", err);
-    return c.redirect(withResult(returnTo, "failed"));
+    return end("failed");
   }
 });
 
@@ -187,6 +225,7 @@ auth.get("/apple", (c) => {
   const opts = { httpOnly: true, secure: true, sameSite: "None" as const, path: "/api/auth/apple", maxAge: STATE_TTL };
   setCookie(c, "asm_oauth_state", state, opts);
   setCookie(c, "asm_return_to", safeReturnTo(c.req.query("return_to")), opts);
+  rememberAppSignIn(c, "/api/auth/apple", opts);
   return c.redirect(url.toString());
 });
 
@@ -198,9 +237,9 @@ auth.post("/apple/callback", async (c) => {
   const storedState = getCookie(c, "asm_oauth_state");
   const returnTo = safeReturnTo(getCookie(c, "asm_return_to"));
   for (const name of ["asm_oauth_state", "asm_return_to"]) deleteCookie(c, name, { path: "/api/auth/apple" });
-  if (!client || !code || !state || state !== storedState) {
-    return c.redirect(withResult(returnTo, "failed"), 303);
-  }
+  const challenge = takeAppSignIn(c, "/api/auth/apple");
+  const end = (result: "ok" | "failed" | "waitlist", userId?: string) => finishSignIn(c, { result, returnTo, challenge, userId, status: 303 });
+  if (!client || !code || !state || state !== storedState) return end("failed");
   try {
     const tokens = await client.validateAuthorizationCode(code);
     const claims = decodeIdToken(tokens.idToken()) as { sub: string; email?: string; email_verified?: boolean | string };
@@ -217,12 +256,14 @@ auth.post("/apple/callback", async (c) => {
     // Apple sends email_verified as a boolean or the string "true".
     const verified = claims.email_verified === true || claims.email_verified === "true";
     const { userId } = await upsertUser(c.env.DB, "apple", claims.sub, claims.email ?? null, name, null, verified);
-    if (!(await gatePasses(c.env, userId))) return c.redirect(withResult(await waitlist(c, claims.email, "apple"), "waitlist"), 303);
-    await startSession(c, userId);
-    return c.redirect(withResult(returnTo, "ok"), 303);
+    if (!(await gatePasses(c.env, userId))) {
+      await waitlist(c, claims.email, "apple");
+      return end("waitlist");
+    }
+    return end("ok", userId);
   } catch (err) {
     console.error("apple callback failed", err);
-    return c.redirect(withResult(returnTo, "failed"), 303);
+    return end("failed");
   }
 });
 
