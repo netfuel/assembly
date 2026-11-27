@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { isNativeApp } from "./native";
 
 // Saved events work offline: fetching them once while online lets the service worker keep a copy
 // (see the event-details and media caches in vite.config.ts).
@@ -10,7 +11,8 @@ const USER_CACHES = ["event-details", "api-me"];
  * when offline. Writes the caches directly, so it works on the first visit before the worker takes control.
  */
 export async function saveForOffline(events: { id: string }[]) {
-  if (!("caches" in window) || !navigator.onLine) return;
+  // The iOS app has no service worker to read these caches; its offline copy comes in Phase 2 (docs/ios.md).
+  if (isNativeApp || !("caches" in window) || !navigator.onLine) return;
   try {
     const details = await caches.open("event-details");
     const media = await caches.open("media");
@@ -39,7 +41,7 @@ export async function saveForOffline(events: { id: string }[]) {
 
 /** Keep your profile and Going list on the device, so the app still knows who you are offline. */
 export async function saveProfileForOffline() {
-  if (!("caches" in window) || !navigator.onLine) return;
+  if (isNativeApp || !("caches" in window) || !navigator.onLine) return;
   try {
     const cache = await caches.open("api-me");
     for (const path of ["/api/me", "/api/me/events"]) {

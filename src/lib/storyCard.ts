@@ -30,6 +30,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.decoding = "async";
+    // In the iOS app flyers come from the server's origin; ask for CORS so drawing one doesn't taint the canvas.
+    if (/^https?:/.test(src)) img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("image"));
     img.src = src;

@@ -1,5 +1,6 @@
 // Turning push notifications on and off in this browser.
 import { useEffect, useState } from "react";
+import { apiCredentials, apiUrl } from "./native";
 
 export type PushState = "unsupported" | "needs-install" | "blocked" | "off" | "on";
 
@@ -39,9 +40,9 @@ export async function enablePush(vapidPublicKey: string): Promise<PushState> {
   let sub = await reg.pushManager.getSubscription();
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(vapidPublicKey) });
   const json = sub.toJSON();
-  const res = await fetch("/api/push/subscribe", {
+  const res = await fetch(apiUrl("/api/push/subscribe"), {
     method: "POST",
-    credentials: "same-origin",
+    credentials: apiCredentials,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
   });
@@ -57,9 +58,9 @@ export async function disablePush(): Promise<PushState> {
   const reg = await navigator.serviceWorker.getRegistration();
   const sub = await reg?.pushManager.getSubscription();
   if (sub) {
-    await fetch("/api/push/unsubscribe", {
+    await fetch(apiUrl("/api/push/unsubscribe"), {
       method: "POST",
-      credentials: "same-origin",
+      credentials: apiCredentials,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint: sub.endpoint }),
     }).catch(() => undefined);

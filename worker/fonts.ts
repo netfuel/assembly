@@ -1,16 +1,20 @@
 import { Hono } from "hono";
 import type { Env } from "./env";
+import { isAppOrigin } from "./appOrigin";
 
 /**
  * Serves the Timeless fonts from the private R2 bucket (key prefix fonts/timeless/).
  * The license allows embedding fonts in a website but not offering them for download on their own,
- * so this only answers requests made by Assembly's own pages, and only for the three known files.
+ * so this only answers requests made by Assembly's own pages (on the site, or in Assembly's iOS app), and only for
+ * the three known files.
  * If a file isn't in R2 (local dev before upload), it falls through to the static assets,
  * which serve public/fonts/timeless/ from the developer's machine.
  */
 const FILES = new Set(["TimelessSansVF.woff2", "TimelessSerifVF.woff2", "TimelessSerifItalicVF.woff2"]);
 
 function fromOwnSite(req: Request): boolean {
+  // Assembly's iOS app runs the same pages from capacitor://localhost (worker/appOrigin.ts).
+  if (isAppOrigin(req.headers.get("Origin"))) return true;
   const site = req.headers.get("Sec-Fetch-Site");
   if (site) return site === "same-origin";
   // Older browsers without Fetch Metadata: fall back to the Referer.

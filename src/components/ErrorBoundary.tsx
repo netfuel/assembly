@@ -1,12 +1,14 @@
 import { Component, type ReactNode } from "react";
+import { apiOrigin, apiUrl } from "../lib/native";
 
 /** Sends a browser error to the Worker log. Paths only, never page content or personal data. */
 export function reportError(err: unknown) {
   try {
     const e = err instanceof Error ? err : new Error(String(err));
     const body = JSON.stringify({ message: e.message, stack: e.stack, path: location.pathname });
-    if (navigator.sendBeacon) navigator.sendBeacon("/api/log", new Blob([body], { type: "application/json" }));
-    else void fetch("/api/log", { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true });
+    // A beacon can't carry JSON across origins, so the app (src/lib/native.ts) always uses fetch.
+    if (navigator.sendBeacon && !apiOrigin) navigator.sendBeacon(apiUrl("/api/log"), new Blob([body], { type: "application/json" }));
+    else void fetch(apiUrl("/api/log"), { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true });
   } catch {
     // Reporting must never cause its own error.
   }

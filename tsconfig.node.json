@@ -10,7 +10,7 @@
     "noEmit": true,
     "types": ["node", "@cloudflare/workers-types"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "tests"],
+  "include": ["vite.config.ts", "vitest.config.ts", "capacitor.config.ts", "tests"],
   // Tests of browser code type-check with the app (DOM types), see tsconfig.app.json.
-  "exclude": ["tests/filters.test.ts"]
+  "exclude": ["tests/filters.test.ts", "tests/native.test.ts"]
 }

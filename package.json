@@ -29,9 +29,16 @@
     "test:e2e:gate": "node scripts/e2e-reset.mjs && E2E_GATE=on playwright test e2e/gate.spec.ts",
     "test:e2e:demo": "E2E_DEMO=1 node scripts/e2e-reset.mjs && E2E_DEMO=1 playwright test e2e/demo.spec.ts --project=phone",
     "test:e2e:built": "node scripts/e2e-reset.mjs && E2E_BUILT=1 playwright test e2e/pwa.spec.ts --project=phone",
-    "test:smoke": "node scripts/check-tags.mjs https://assembly.rsvp"
+    "test:smoke": "node scripts/check-tags.mjs https://assembly.rsvp",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "ios:assets": "node scripts/make-ios-assets.mjs"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.3",
+    "@capacitor/ios": "^8.6.3",
+    "@capacitor/status-bar": "^8.0.4",
     "@gsap/react": "^2.1.2",
     "@jsquash/webp": "^1.5.0",
     "@resvg/resvg-wasm": "^2.6.2",
@@ -47,6 +54,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@capacitor/cli": "^8.6.3",
     "@cloudflare/vite-plugin": "^1.65.0",
     "@cloudflare/workers-types": "^5.20261023.1",
     "@playwright/test": "^1.63.0",

@@ -11,6 +11,7 @@ A map-first PWA for underground music: DIY shows, warehouse raves, queer dance n
 | API | Hono on a Cloudflare Worker (`worker/`), served from the same deploy as the app |
 | Data | D1 (SQLite) for events, venues, users, RSVPs; KV for sessions; R2 for flyers |
 | Auth | Google and Apple OAuth via `arctic`, HTTP-only session cookie |
+| iOS | Capacitor 8 shell around the same build (`ios/`, `capacitor.config.ts`); see [docs/ios.md](docs/ios.md) |
 
 The app and API ship as one Cloudflare Worker with static assets: `/api/*` runs the Worker, everything else is the React app (with single-page fallback so `/e/<id>` links work).
 
