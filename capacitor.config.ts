@@ -26,6 +26,8 @@ const config: CapacitorConfig = {
   },
   plugins: {
     StatusBar: { style: "DARK", overlaysWebView: true },
+    // Show notifications as banners while the app is open too (src/lib/push.ts).
+    PushNotifications: { presentationOptions: ["banner", "list", "sound"] },
   },
 };
 

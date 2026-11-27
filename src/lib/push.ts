@@ -1,6 +1,8 @@
 // Turning push notifications on and off in this browser.
 import { useEffect, useState } from "react";
-import { apiCredentials, apiUrl } from "./native";
+import { apiCredentials, apiUrl, isNativeApp } from "./native";
+import { disableNativePush, enableNativePush, getNativePushState } from "./nativePush";
+import type { ServerConfig } from "../../shared/types";
 
 export type PushState = "unsupported" | "needs-install" | "blocked" | "off" | "on";
 
@@ -21,7 +23,13 @@ function keyBytes(b64url: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+/** Whether this device can get notifications from this server: APNs in the iOS app, web push elsewhere. */
+export function pushAvailable(config: ServerConfig) {
+  return isNativeApp ? !!config.apns : !!(config.push && config.vapidPublicKey);
+}
+
 export async function getPushState(): Promise<PushState> {
+  if (isNativeApp) return getNativePushState();
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
     // iOS only offers web push to apps added to the Home Screen.
     return isIos() && !isStandalone() ? "needs-install" : "unsupported";
@@ -33,7 +41,9 @@ export async function getPushState(): Promise<PushState> {
 }
 
 /** Asks for permission (must run from a tap), subscribes, and registers with the server. */
-export async function enablePush(vapidPublicKey: string): Promise<PushState> {
+export async function enablePush(vapidPublicKey?: string | null): Promise<PushState> {
+  if (isNativeApp) return enableNativePush();
+  if (!vapidPublicKey) throw new Error("Notifications aren't set up on this server yet.");
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return permission === "denied" ? "blocked" : "off";
   const reg = await navigator.serviceWorker.ready;
@@ -55,6 +65,7 @@ export async function enablePush(vapidPublicKey: string): Promise<PushState> {
 }
 
 export async function disablePush(): Promise<PushState> {
+  if (isNativeApp) return disableNativePush();
   const reg = await navigator.serviceWorker.getRegistration();
   const sub = await reg?.pushManager.getSubscription();
   if (sub) {
@@ -91,6 +102,12 @@ export function dismissPrompt() {
   } catch {
     // Fine: the prompt just shows again next time.
   }
+}
+
+/** What the notifications row says; the app points at iOS Settings instead of browser site settings. */
+export function pushCopy(state: PushState) {
+  if (isNativeApp && state === "blocked") return "Notifications are off for Assembly. Turn them on in Settings, then Apps, then Assembly, then Notifications.";
+  return PUSH_COPY[state];
 }
 
 export const PUSH_COPY: Record<PushState, string> = {

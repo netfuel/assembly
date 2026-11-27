@@ -38,6 +38,11 @@ export interface Env {
   VAPID_PRIVATE_KEY?: string;
   /** Contact for push services, e.g. mailto:hello@assembly.rsvp */
   VAPID_SUBJECT?: string;
+  /** iOS push (APNs, worker/apns.ts). Key ID and .p8 contents of an APNs key; the team is APPLE_TEAM_ID. */
+  APNS_KEY_ID?: string;
+  APNS_PRIVATE_KEY?: string;
+  /** The app's bundle ID. Defaults to rsvp.assembly.app. */
+  APNS_TOPIC?: string;
 }
 
 export type AppContext = { Bindings: Env; Variables: { userId: string | null } };

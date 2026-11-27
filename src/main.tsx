@@ -12,6 +12,7 @@ import { revealToGate, skipSplash } from "./lib/splash";
 import { mountFor } from "./gate/gateState";
 import type { ServerConfig } from "../shared/types";
 import { apiCredentials, apiUrl, installNativeShare, interceptAppLinks, isNativeApp, listenForUniversalLinks, pointFontsAtServer, setStatusBarTheme } from "./lib/native";
+import { startNativePush } from "./lib/nativePush";
 import { interceptSignInLinks, loadAppSession, sessionHeaders } from "./lib/nativeAuth";
 
 // Uncaught errors outside React rendering (event handlers, promises) go to the Worker log too.
@@ -27,6 +28,7 @@ interceptAppLinks();
 installNativeShare();
 void listenForUniversalLinks();
 setStatusBarTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
+void startNativePush();
 
 // The launch gate (src/gate) loads only when it's needed, with everything it brings (Pass 3: Three.js).
 const Gate = lazy(() => import("./gate/Gate").then((m) => ({ default: m.Gate })));

@@ -5,6 +5,7 @@ import { MediaError, prepareAvatar } from "../lib/media";
 import { clock, dayLabel } from "../lib/time";
 import { SCENES, type BlockedPerson, type FriendsState, type Inbox, type InboxItem, type MeProfile, type MyEvent, type ServerConfig } from "../../shared/types";
 import { PushControl } from "../components/PushControl";
+import { pushAvailable } from "../lib/push";
 import { VarsityMark } from "./EventSheet";
 import { Achievements } from "./Achievements";
 import { PasskeysSection } from "./PasskeysSection";
@@ -169,7 +170,7 @@ export function ProfileSheet({
       {tab === "inbox" && (
         <>
           <InboxList inbox={inbox} tz={tz} onOpenEvent={onOpenEvent} onFriends={onFriends} onOpenPage={onOpenPage} />
-      {config.push && (
+      {pushAvailable(config) && (
         <section className="stack" aria-label="Notifications">
           <Label glyph="◉">Notifications</Label>
           <PushControl config={config} toast={toast} />

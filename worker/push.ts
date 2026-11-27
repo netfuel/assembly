@@ -3,6 +3,7 @@
 // - Sender identification: VAPID, RFC 8292 (ES256 JWT).
 import { Hono } from "hono";
 import type { AppContext, Env } from "./env";
+import { apnsConfigured, isDeviceToken, sendApns, type ApnsDevice } from "./apns";
 
 const enc = new TextEncoder();
 
@@ -126,6 +127,11 @@ export function pushConfigured(env: Env) {
   return !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
 }
 
+/** Either kind of push can go out: web push (VAPID) or iOS (APNs). */
+export function anyPushConfigured(env: Env) {
+  return pushConfigured(env) || apnsConfigured(env);
+}
+
 export interface PushMessage {
   title: string;
   body: string;
@@ -137,6 +143,11 @@ export interface PushMessage {
 
 const MAX_DEVICES = 10;
 const subsKey = (userId: string) => `push:${userId}`;
+const devicesKey = (userId: string) => `apns:${userId}`;
+
+async function loadDevices(env: Env, userId: string): Promise<ApnsDevice[]> {
+  return JSON.parse((await env.SESSIONS.get(devicesKey(userId))) ?? "[]") as ApnsDevice[];
+}
 
 async function loadSubs(env: Env, userId: string): Promise<PushSubscriptionKeys[]> {
   return JSON.parse((await env.SESSIONS.get(subsKey(userId))) ?? "[]") as PushSubscriptionKeys[];
@@ -166,11 +177,35 @@ async function sendOne(env: Env, sub: PushSubscriptionKeys, msg: PushMessage, tt
   return true;
 }
 
-/** Sends a message to every device of each user. Drops subscriptions the push service has expired. */
+/** Sends to each of a user's iPhones. Drops tokens Apple has expired and remembers which environment worked. */
+async function notifyDevices(env: Env, userId: string, msg: PushMessage, ttl: number) {
+  const devices = await loadDevices(env, userId);
+  if (!devices.length) return 0;
+  let sent = 0;
+  const keep: ApnsDevice[] = [];
+  for (const device of devices) {
+    try {
+      const r = await sendApns(env, device, msg, ttl);
+      if (r.keep) keep.push(r.keep);
+      if (r.sent) sent++;
+    } catch (err) {
+      console.error("apns error", err);
+      keep.push(device);
+    }
+  }
+  if (JSON.stringify(keep) !== JSON.stringify(devices)) await env.SESSIONS.put(devicesKey(userId), JSON.stringify(keep));
+  return sent;
+}
+
+/** Sends a message to every device of each user, web and iPhone. Drops subscriptions the push service has expired. */
 export async function notifyUsers(env: Env, userIds: string[], msg: PushMessage, ttl = 6 * 3600) {
-  if (!pushConfigured(env)) return 0;
+  const web = pushConfigured(env);
+  const ios = apnsConfigured(env);
+  if (!web && !ios) return 0;
   let sent = 0;
   for (const userId of new Set(userIds)) {
+    if (ios) sent += await notifyDevices(env, userId, msg, ttl);
+    if (!web) continue;
     const subs = await loadSubs(env, userId);
     if (!subs.length) continue;
     const alive: PushSubscriptionKeys[] = [];
@@ -231,6 +266,31 @@ push.post("/unsubscribe", async (c) => {
   return c.json({ ok: true });
 });
 
+/** The iOS app registers its APNs device token (src/lib/push.ts). */
+push.post("/apns", async (c) => {
+  const userId = c.get("userId");
+  if (!userId) return c.json({ error: "Sign in to turn on notifications." }, 401);
+  if (!apnsConfigured(c.env)) return c.json({ error: "Notifications aren't set up on this server yet." }, 503);
+  const { token } = (await c.req.json().catch(() => ({}))) as { token?: unknown };
+  if (!isDeviceToken(token)) return c.json({ error: "That device token doesn't look right." }, 400);
+  const t = token.toLowerCase();
+  const devices = await loadDevices(c.env, userId);
+  const known = devices.find((d) => d.token === t);
+  const rest = devices.filter((d) => d.token !== t);
+  await c.env.SESSIONS.put(devicesKey(userId), JSON.stringify([known ?? { token: t, env: "production" }, ...rest].slice(0, MAX_DEVICES)));
+  return c.json({ ok: true });
+});
+
+push.post("/apns/remove", async (c) => {
+  const userId = c.get("userId");
+  if (!userId) return c.json({ ok: true });
+  const { token } = (await c.req.json().catch(() => ({}))) as { token?: unknown };
+  if (!isDeviceToken(token)) return c.json({ ok: true });
+  const devices = (await loadDevices(c.env, userId)).filter((d) => d.token !== token.toLowerCase());
+  await c.env.SESSIONS.put(devicesKey(userId), JSON.stringify(devices));
+  return c.json({ ok: true });
+});
+
 /** Sends a test notification to your own devices. */
 push.post("/test", async (c) => {
   const userId = c.get("userId");
@@ -242,4 +302,5 @@ push.post("/test", async (c) => {
 /** Removes all of a user's subscriptions (account deletion). */
 export async function forgetPush(env: Env, userId: string) {
   await env.SESSIONS.delete(subsKey(userId));
+  await env.SESSIONS.delete(devicesKey(userId));
 }

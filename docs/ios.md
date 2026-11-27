@@ -111,14 +111,37 @@ CAP_SERVER_URL=http://$(ipconfig getifaddr en0):5173 npx cap sync ios   # in ano
 
 Before a TestFlight or App Store build, run a plain `npm run ios:sync` so the app ships the bundle, not a URL.
 
+## Push notifications
+
+The app gets the same notifications as web push: an event you saved changes or is cancelled, an hour before doors,
+invites, friends checking in, and moderation news. They go through Apple (APNs) instead of the browser.
+
+- **Server** (`worker/apns.ts`, `worker/push.ts`): `notifyUsers` sends to each person's web subscriptions and iPhones.
+  The provider token is an ES256 JWT signed with the APNs key (`APPLE_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY`,
+  set by go-live step 8). Phones are stored per person in KV (`apns:<user id>`, up to 10).
+- **Sandbox or production:** apps run from Xcode get sandbox tokens; TestFlight and App Store builds get production
+  ones. The server tries the phone's last known environment, switches when Apple answers `BadDeviceToken`, and
+  remembers. Tokens Apple retires (410) are dropped.
+- **App** (`src/lib/nativePush.ts`, `@capacitor/push-notifications`): the Notifications toggle in your profile and the
+  prompt after an RSVP ask iOS for permission, register the phone (`POST /api/push/apns`), and keep the token. Each
+  launch re-registers a phone that has notifications on, so a new token reaches the server. Tapping a notification
+  opens its event. Signing out removes the phone from the account (`POST /api/push/apns/remove`).
+- **Xcode:** `App.entitlements` has `aps-environment` (development); archiving for distribution switches it to
+  production. With automatic signing, Xcode adds Push Notifications to the App ID the first time it builds.
+
+Check it: build to the simulator (Apple silicon) or a phone, sign in, RSVP to an event, and tap Turn on notifications.
+Then, from the organizer's account on the web, change the event's start time: the "Updated" notification should land
+within seconds, even with the phone locked. Tap it and the event opens.
+
 ## What works in Phase 0, and what's next
 
 | Works now (bundled build) | Comes later |
 | --- | --- |
 | App opens offline to the splash, then the launch gate or map | Keyboard, status bar and safe-area polish (rest of Phase 1, tuned on the simulator) |
 | Map, events, flyers and fonts load from assembly.rsvp | Sign in with Apple's native sheet (Apple sign-in works now through the system sheet) |
-| Sign-in: Google, Apple, email code and passkeys (Face ID), kept in the keychain | Push via APNs, camera uploads (Phase 2) |
+| Sign-in: Google, Apple, email code and passkeys (Face ID), kept in the keychain | Camera uploads (Phase 2) |
 | Universal links; links stay in the app; iOS share sheet | |
+| Push notifications through APNs (same messages as web push) | |
 | Interest form on the gate; everything, in dev mode | |
 | Offline: your profile, Going list, city feed, and saved events with flyers | |
 
@@ -145,7 +168,8 @@ These need your Apple account; none can be done from the repo.
    keep it for the web Services ID and make this one for the app. Group them under the same primary App ID when
    asked, so one Apple account is one Assembly account on both.
 3. **APNs key.** Keys > new key with Apple Push Notifications service. Download the `.p8` once (Apple won't show it
-   again) and note the Key ID. Keep it out of the repo (`*.p8` is gitignored); it becomes a Worker secret in Phase 2.
+   again) and note the Key ID. Keep it out of the repo (`*.p8` is gitignored); go-live step 8 makes it a Worker secret.
+   Done Nov 27, 2026: "Assembly Push", Key ID `MUDH3P745C`, Sandbox & Production, team scoped.
 4. **Team ID.** Membership details. It goes in the universal-links file in Phase 1.
 5. **Xcode signing.** Xcode > Settings > Accounts: add your Apple ID. In the App target > Signing & Capabilities,
    pick your team and leave "Automatically manage signing" on.

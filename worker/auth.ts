@@ -19,7 +19,7 @@ function google(env: Env, origin: string) {
   return new Google(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, redirectUri(origin, "google"));
 }
 
-function pemToPkcs8(pem: string): Uint8Array {
+export function pemToPkcs8(pem: string): Uint8Array {
   const body = pem
     .replace(/\\n/g, "\n")
     .replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----/g, "")

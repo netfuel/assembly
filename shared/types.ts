@@ -150,6 +150,8 @@ export interface ServerConfig {
   /** Web push is configured (VAPID keys set). */
   push?: boolean;
   vapidPublicKey?: string | null;
+  /** iOS push is configured (APNs key set); the app registers its device token. */
+  apns?: boolean;
 }
 
 export interface MyEvent {

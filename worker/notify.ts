@@ -1,6 +1,6 @@
 // What notifications say, and the starting-soon reminder run by the cron trigger.
 import type { Env } from "./env";
-import { notifyUsers, pushConfigured } from "./push";
+import { anyPushConfigured, notifyUsers } from "./push";
 
 function when(iso: string, tz: string) {
   const d = new Date(iso);
@@ -42,7 +42,7 @@ const REMINDER_LEAD_MIN = 60;
  * A KV marker makes sure each event is announced once, even if runs overlap.
  */
 export async function startingSoon(env: Env, now = Date.now()) {
-  if (!pushConfigured(env)) return 0;
+  if (!anyPushConfigured(env)) return 0;
   const from = new Date(now).toISOString();
   const to = new Date(now + REMINDER_LEAD_MIN * 60e3).toISOString();
   const { results: events } = await env.DB.prepare(
