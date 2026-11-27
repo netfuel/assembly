@@ -3,10 +3,11 @@
 <plist version="1.0">
 <dict>
 	<!-- Ties the app to assembly.rsvp (served at /.well-known/apple-app-site-association, worker/passkeys.ts).
-	     webcredentials: the site's passkeys work in the app. applinks (universal links) comes with that feature. -->
+	     webcredentials: the site's passkeys work in the app. applinks: event, page and invite links open the app. -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>webcredentials:assembly.rsvp</string>
+		<string>applinks:assembly.rsvp</string>
 	</array>
 </dict>
 </plist>

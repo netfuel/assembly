@@ -11,7 +11,7 @@ import { captureInstallPrompt } from "./lib/install";
 import { revealToGate, skipSplash } from "./lib/splash";
 import { mountFor } from "./gate/gate";
 import type { ServerConfig } from "../shared/types";
-import { apiCredentials, apiUrl, isNativeApp, pointFontsAtServer } from "./lib/native";
+import { apiCredentials, apiUrl, installNativeShare, interceptAppLinks, isNativeApp, listenForUniversalLinks, pointFontsAtServer } from "./lib/native";
 import { interceptSignInLinks, loadAppSession, sessionHeaders } from "./lib/nativeAuth";
 
 // Uncaught errors outside React rendering (event handlers, promises) go to the Worker log too.
@@ -22,6 +22,10 @@ window.addEventListener("unhandledrejection", (e) => reportError(e.reason));
 // sign-in run in the system sheet (src/lib/nativeAuth.ts).
 pointFontsAtServer();
 interceptSignInLinks();
+// Links stay in the app (and assembly.rsvp links tapped elsewhere open it), and Share uses iOS's sheet.
+interceptAppLinks();
+installNativeShare();
+void listenForUniversalLinks();
 
 // The launch gate (src/gate) loads only when it's needed, with everything it brings (Pass 3: Three.js).
 const Gate = lazy(() => import("./gate/Gate").then((m) => ({ default: m.Gate })));

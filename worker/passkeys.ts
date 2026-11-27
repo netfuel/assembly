@@ -234,11 +234,17 @@ passkeyMe.delete("/:id", async (c) => {
 });
 
 // ---------------------------------------------------------------------------------------------------------
-// Apple's domain-association file. webcredentials lets the iOS app use the site's passkeys; universal links
-// (applinks) come with that feature.
+// Apple's domain-association file. webcredentials lets the iOS app use the site's passkeys; applinks makes
+// event, page, city and invite links open the app when it's installed (universal links).
 
 export const APPLE_APP_ID = "8F569K6WBX.rsvp.assembly.app";
 
+/** The pages the app opens itself when an assembly.rsvp link is tapped (src/lib/native.ts APP_PATH). */
+const APP_LINK_PATHS = ["/e/*", "/a/*", "/v/*", "/o/*", "/f/*", "/c/*", "/feed"];
+
 export function appleAppSiteAssociation() {
-  return { webcredentials: { apps: [APPLE_APP_ID] } };
+  return {
+    applinks: { details: [{ appIDs: [APPLE_APP_ID], components: APP_LINK_PATHS.map((p) => ({ "/": p })) }] },
+    webcredentials: { apps: [APPLE_APP_ID] },
+  };
 }
