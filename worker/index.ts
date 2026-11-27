@@ -7,6 +7,7 @@ import { push, pushConfigured } from "./push";
 import { startingSoon } from "./notify";
 import { auth } from "./auth";
 import { appAuth } from "./appAuth";
+import { appleAppSiteAssociation, passkeyAuth, passkeyMe } from "./passkeys";
 import { emailAuth } from "./emailAuth";
 import { events } from "./events";
 import { fonts } from "./fonts";
@@ -116,10 +117,12 @@ app.get("/media/:key{.+}", async (c) => {
 app.route("/interest", interest);
 app.route("/auth/email", emailAuth);
 app.route("/auth/app", appAuth);
+app.route("/auth/passkey", passkeyAuth);
 app.route("/auth", auth);
 app.route("/me/inbox", inbox);
 app.route("/me/blocks", blocks);
 app.route("/me/achievements", achievements);
+app.route("/me/passkeys", passkeyMe);
 app.route("/me", profile);
 app.route("/uploads", uploads);
 app.route("/", posting);
@@ -178,6 +181,10 @@ root.route("/e", og);
 root.route("/", ogPages);
 root.route("/feeds", feeds);
 root.get("/sitemap.xml", sitemap);
+// Ties the iOS app to the domain (worker/passkeys.ts). Apple fetches it through its CDN: JSON, no redirect.
+root.get("/.well-known/apple-app-site-association", (c) =>
+  c.json(appleAppSiteAssociation(), 200, { "Cache-Control": "public, max-age=3600" }),
+);
 // The demo asks crawlers to stay out entirely; the real site serves public/robots.txt.
 root.get("/robots.txt", async (c) =>
   demoOn(c.env) ? c.text("User-agent: *\nDisallow: /\n", 200, { "Cache-Control": "public, max-age=3600" }) : await c.env.ASSETS.fetch(c.req.raw),

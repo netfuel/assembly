@@ -44,9 +44,25 @@ either the cookie or the Bearer token.
   them in one place; the gate and the sign-in sheet don't know they're in an app.
 - Sign out and account deletion clear the keychain.
 
+### Passkeys (Face ID)
+
+Once signed in, Profile → Passkeys adds a passkey; next time "Sign in with a passkey" (sign-in sheet, and a
+quiet link on the launch gate) signs in with Face ID or Touch ID. It's an addition to Google, Apple and email
+code, and the gate still applies.
+
+- The relying party is the site's host, `assembly.rsvp`, so one passkey works on the site and in the app. iCloud
+  Keychain (or another password manager) syncs it to the person's other devices.
+- On the web the browser's own prompt runs (`@simplewebauthn/browser`, loaded only when used). In the bundled app,
+  Apple's passkey sheet runs through the plugin (`passkeyRegister`, `passkeySignIn`), WebAuthn JSON in and out,
+  so the server checks both the same way (`worker/passkeys.ts`, `@simplewebauthn/server`).
+- The app may use the site's passkeys because of the `webcredentials:assembly.rsvp` entitlement
+  (`ios/App/App/App.entitlements`) and the site's `/.well-known/apple-app-site-association`, which lists
+  `8F569K6WBX.rsvp.assembly.app`. Apple fetches that file through its CDN, which can take a while to pick up a change.
+- Table `passkeys` (migration 0017); rows go with the account. Challenges are one-use, five minutes, in KV.
+
 The native half is a small local plugin, `native/assembly-auth` (installed as `assembly-auth` from `file:`),
 shaped like the official ones so `cap sync` adds it to the Swift package list. It has four calls:
-`authenticate`, `getToken`, `setToken`, `clearToken`.
+`authenticate`, `getToken`, `setToken`, `clearToken`, `passkeyRegister`, `passkeySignIn`.
 
 ## One-time setup on the Mac
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { api, ApiError, signInUrl, devSignInUrl } from "../lib/api";
+import { passkeysAvailable, signInWithPasskey } from "../lib/passkeys";
 import {
   playLogo,
   reducedMotion,
@@ -37,6 +38,11 @@ export function Gate() {
   const [done, setDone] = useState(() => rememberedInterest() !== null || result === "waitlist");
   const [error, setError] = useState<string | null>(() => (result === "failed" ? "Sign-in didn't go through. Try again." : null));
   const [devName, setDevName] = useState("Test Organizer");
+  const [passkeyOk, setPasskeyOk] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
+  useEffect(() => {
+    void passkeysAvailable().then(setPasskeyOk);
+  }, []);
   const online = useOnline();
   const root = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
@@ -279,6 +285,28 @@ export function Gate() {
               <AppleMark />
               Continue with Apple
             </a>
+          )}
+          {online && passkeyOk && (
+            <button
+              type="button"
+              className="gate-passkey"
+              data-rise
+              onClick={async () => {
+                setPasskeyError(null);
+                try {
+                  await signInWithPasskey(returnTo);
+                } catch (err) {
+                  setPasskeyError(err instanceof ApiError ? err.message : "That passkey didn't work. Try Google or Apple.");
+                }
+              }}
+            >
+              Sign in with a passkey
+            </button>
+          )}
+          {passkeyError && (
+            <p className="gate-note" role="alert">
+              {passkeyError}
+            </p>
           )}
           {online && providers?.dev && (
             <form

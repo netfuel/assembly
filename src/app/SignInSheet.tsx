@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Label, LinkButton, Tag } from "../components/ui";
 import { api, ApiError, devSignInUrl, signInUrl } from "../lib/api";
+import { passkeysAvailable, signInWithPasskey } from "../lib/passkeys";
 import type { AuthProviders, MeProfile } from "../../shared/types";
 
 type Step = { kind: "start" } | { kind: "code"; email: string; devCode?: string } | { kind: "name"; me: MeProfile };
@@ -29,6 +30,11 @@ export function SignInSheet({
   const [busy, setBusy] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const [devName, setDevName] = useState("Test Organizer");
+  const [passkeyOk, setPasskeyOk] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
+  useEffect(() => {
+    void passkeysAvailable().then(setPasskeyOk);
+  }, []);
   const codeInput = useRef<HTMLInputElement>(null);
   const sso = providers.google || providers.apple;
 
@@ -204,6 +210,25 @@ export function SignInSheet({
               Continue with Apple
             </LinkButton>
           )}
+        </div>
+      )}
+      {passkeyOk && (
+        <div className="sso" data-reveal>
+          <Button
+            size="lg"
+            variant="ghost"
+            onClick={async () => {
+              setPasskeyError(null);
+              try {
+                await signInWithPasskey(returnTo);
+              } catch (err) {
+                setPasskeyError(err instanceof ApiError ? err.message : "That passkey didn't work. Try another way.");
+              }
+            }}
+          >
+            Sign in with a passkey
+          </Button>
+          {passkeyError && <p className="field-error">{passkeyError}</p>}
         </div>
       )}
       {providers.email && (
