@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { isNativeApp } from "./native";
+import { api } from "./api";
+import { appCacheOn, clearOffline, keepFlyer, putOffline } from "./appCache";
 
 // Saved events work offline: fetching them once while online lets the service worker keep a copy
 // (see the event-details and media caches in vite.config.ts).
@@ -11,7 +13,7 @@ const USER_CACHES = ["event-details", "api-me"];
  * when offline. Writes the caches directly, so it works on the first visit before the worker takes control.
  */
 export async function saveForOffline(events: { id: string }[]) {
-  // The iOS app has no service worker to read these caches; its offline copy comes in Phase 2 (docs/ios.md).
+  if (appCacheOn) return saveForOfflineInApp(events);
   if (isNativeApp || !("caches" in window) || !navigator.onLine) return;
   try {
     const details = await caches.open("event-details");
@@ -39,8 +41,26 @@ export async function saveForOffline(events: { id: string }[]) {
   }
 }
 
+/**
+ * The iOS app's copy (src/lib/appCache.ts): each event's details, with the flyer stored on the device and the
+ * copy pointing at it, so the address, set times and flyer all open with no signal.
+ */
+async function saveForOfflineInApp(events: { id: string }[]) {
+  if (!navigator.onLine) return;
+  for (const { id } of events.slice(0, 40)) {
+    try {
+      const detail = await api.event(id);
+      const flyer = detail.flyerUrl ? await keepFlyer(detail.flyerUrl) : null;
+      await putOffline(`/api/events/${encodeURIComponent(id)}`, flyer ? { ...detail, flyerUrl: flyer } : detail);
+    } catch {
+      // Flaky connection: try again next time.
+    }
+  }
+}
+
 /** Keep your profile and Going list on the device, so the app still knows who you are offline. */
 export async function saveProfileForOffline() {
+  // In the iOS app the API client keeps these whenever they load (src/lib/api.ts, appCache.ts).
   if (isNativeApp || !("caches" in window) || !navigator.onLine) return;
   try {
     const cache = await caches.open("api-me");
@@ -56,6 +76,7 @@ export async function saveProfileForOffline() {
 
 /** On sign-out or account deletion, drop cached personal data (RSVP state, profile) from this device. */
 export async function clearUserCaches() {
+  await clearOffline();
   if (!("caches" in window)) return;
   await Promise.all(USER_CACHES.map((name) => caches.delete(name).catch(() => false)));
 }
