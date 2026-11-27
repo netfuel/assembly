@@ -9,7 +9,7 @@ import { LegalPage } from "./legal/LegalPage";
 import { ErrorBoundary, reportError } from "./components/ErrorBoundary";
 import { captureInstallPrompt } from "./lib/install";
 import { revealToGate, skipSplash } from "./lib/splash";
-import { mountFor } from "./gate/gate";
+import { mountFor } from "./gate/gateState";
 import type { ServerConfig } from "../shared/types";
 import { apiCredentials, apiUrl, isNativeApp, pointFontsAtServer } from "./lib/native";
 import { interceptSignInLinks, loadAppSession, sessionHeaders } from "./lib/nativeAuth";
