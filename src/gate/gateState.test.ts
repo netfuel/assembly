@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gateReturnTo, looksLikeEmail, mountFor, signInResult } from "./gate";
+import { gateReturnTo, looksLikeEmail, mountFor, signInResult } from "./gateState";
 
 describe("what the page mounts", () => {
   it("shows the gate only when the server says so", () => {

@@ -17,7 +17,7 @@ import {
   rememberInterest,
   rememberedInterest,
   signInResult,
-} from "./gate";
+} from "./gateState";
 import type { SceneHandle } from "./scene";
 import gsap from "gsap";
 import "./gate.css";
