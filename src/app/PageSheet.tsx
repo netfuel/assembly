@@ -11,13 +11,14 @@ import type { MapTheme } from "../map/mapStyle";
 import { FeedCard } from "./FeedView";
 import { LINK_LABELS, ReportBox } from "./EventSheet";
 import { POLICY_TAGS, SCENES, VENUE_TYPES, type ArtistLinks, type FriendAt, type Me, type PageEvent, type PageKind, type PageProfile, type RsvpStatus, type ServerConfig } from "../../shared/types";
+import { siteOrigin } from "../lib/native";
 
 export type PageRef = { kind: PageKind; slug: string };
 
 const PREFIX: Record<PageKind, "a" | "v" | "o"> = { artist: "a", venue: "v", organizer: "o" };
 const NOUN: Record<PageKind, string> = { artist: "Artist", venue: "Venue", organizer: "Organizer" };
 
-export const pageUrl = (p: PageRef) => `${location.origin}/${PREFIX[p.kind]}/${encodeURIComponent(p.slug)}`;
+export const pageUrl = (p: PageRef) => `${siteOrigin}/${PREFIX[p.kind]}/${encodeURIComponent(p.slug)}`;
 export const pagePath = (p: PageRef) => `/${PREFIX[p.kind]}/${encodeURIComponent(p.slug)}`;
 
 /** /a/<slug>, /v/<slug>, /o/<slug> */
@@ -104,7 +105,7 @@ export function PageSheet({
       : [p.city, scenes.join(", ")].filter(Boolean).join(" · ")
     : "";
   const links = p ? (Object.entries(p.links).filter(([, v]) => v) as [string, string][]) : [];
-  const feedUrl = p ? `${location.origin}/feeds/${PREFIX[p.kind]}/${encodeURIComponent(p.slug)}.xml` : "";
+  const feedUrl = p ? `${siteOrigin}/feeds/${PREFIX[p.kind]}/${encodeURIComponent(p.slug)}.xml` : "";
 
   return (
     <>
@@ -369,7 +370,7 @@ function PageFeed({
       )}
       {sharing && (
         <ShareSheet
-          target={{ title: sharing.title, text: `${sharing.title}: ${clock(sharing.startsAt, tz)}, ${timeRange(sharing.startsAt, sharing.endsAt, tz)}`, url: `${location.origin}/e/${encodeURIComponent(sharing.id)}` }}
+          target={{ title: sharing.title, text: `${sharing.title}: ${clock(sharing.startsAt, tz)}, ${timeRange(sharing.startsAt, sharing.endsAt, tz)}`, url: `${siteOrigin}/e/${encodeURIComponent(sharing.id)}` }}
           open
           onClose={() => setSharing(null)}
           toast={toast}

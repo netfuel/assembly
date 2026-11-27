@@ -28,6 +28,20 @@ Inside the app the page runs at `capacitor://localhost`, so nothing is same-orig
 
 On the web every helper is a no-op. Point a build at another server with `VITE_API_ORIGIN=https://... npm run ios:sync`.
 
+## Links and sharing
+
+- **Universal links.** `/.well-known/apple-app-site-association` lists event, artist, venue, organizer, city,
+  invite and feed paths (`/e/*`, `/a/*`, `/v/*`, `/o/*`, `/c/*`, `/f/*`, `/feed`) under `applinks`, and the app has
+  the `applinks:assembly.rsvp` entitlement, so tapping an assembly.rsvp link anywhere on the phone opens the app on
+  it (`listenForUniversalLinks`, which also handles a cold launch).
+- **Links inside the app** (`interceptAppLinks`): app pages route inside the app (through its history when it
+  can); server files (`.ics`, feeds, downloads) open in Safari at assembly.rsvp. No other host loads in the app's
+  web view.
+- **Share** (`installNativeShare`): `navigator.share` / `canShare` go to iOS's share sheet (`@capacitor/share`),
+  files written to the cache first (`@capacitor/filesystem`), so every Share button (links, story cards, flyers)
+  works unchanged. Closing the sheet reads as `AbortError`, as on the web.
+- Shared and subscribed URLs use `siteOrigin` (`https://assembly.rsvp`), never the app's `capacitor://localhost`.
+
 ## Signing in
 
 The site's session cookie can't cross from `capacitor://localhost` to `https://assembly.rsvp`, so the app holds
@@ -101,9 +115,10 @@ Before a TestFlight or App Store build, run a plain `npm run ios:sync` so the ap
 
 | Works now (bundled build) | Comes later |
 | --- | --- |
-| App opens offline to the splash, then the launch gate or map | Universal links, native share sheet, keyboard and status bar polish (rest of Phase 1) |
+| App opens offline to the splash, then the launch gate or map | Keyboard, status bar and safe-area polish (rest of Phase 1, tuned on the simulator) |
 | Map, events, flyers and fonts load from assembly.rsvp | Sign in with Apple's native sheet (Apple sign-in works now through the system sheet) |
-| Sign-in: Google, Apple and email code, kept in the keychain | Push via APNs, camera uploads, offline saved events (Phase 2) |
+| Sign-in: Google, Apple, email code and passkeys (Face ID), kept in the keychain | Push via APNs, camera uploads, offline saved events (Phase 2) |
+| Universal links; links stay in the app; iOS share sheet | |
 | Interest form on the gate; everything, in dev mode | |
 
 ## Apple Developer setup (Matt)

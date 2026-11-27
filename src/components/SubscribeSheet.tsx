@@ -1,5 +1,6 @@
 import { Button, Label, LinkButton, Sheet } from "./ui";
 import { SCENES, type SceneId } from "../../shared/types";
+import { siteOrigin } from "../lib/native";
 
 /** Follow a city (or one scene) in a calendar app or a feed reader. No account needed. */
 export function SubscribeSheet({
@@ -17,7 +18,7 @@ export function SubscribeSheet({
   scene: SceneId | null;
   toast: (msg: string) => void;
 }) {
-  const base = `${location.origin}/feeds/${scene ? `${citySlug}/${scene}` : citySlug}`;
+  const base = `${siteOrigin}/feeds/${scene ? `${citySlug}/${scene}` : citySlug}`;
   const label = scene ? `${SCENES.find((s) => s.id === scene)?.label} in ${cityName}` : cityName;
   const webcal = `${base}.ics`.replace(/^https?:/, "webcal:");
   const copy = async (url: string, what: string) => {

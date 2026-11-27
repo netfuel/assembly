@@ -64,6 +64,9 @@ test.describe("Passkeys", () => {
     const res = await anon.get("/.well-known/apple-app-site-association", { maxRedirects: 0 });
     expect(res.status()).toBe(200);
     expect(res.headers()["content-type"]).toContain("application/json");
-    expect((await res.json()).webcredentials.apps).toEqual(["8F569K6WBX.rsvp.assembly.app"]);
+    const aasa = await res.json();
+    expect(aasa.webcredentials.apps).toEqual(["8F569K6WBX.rsvp.assembly.app"]);
+    expect(aasa.applinks.details[0].appIDs).toEqual(["8F569K6WBX.rsvp.assembly.app"]);
+    expect(aasa.applinks.details[0].components).toContainEqual({ "/": "/e/*" });
   });
 });

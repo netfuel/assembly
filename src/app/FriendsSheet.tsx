@@ -4,8 +4,9 @@ import { QrCode, smsHref } from "../components/ShareSheet";
 import { api, ApiError } from "../lib/api";
 import { dayLabel } from "../lib/time";
 import type { FriendPerson, FriendsState, UserRelation } from "../../shared/types";
+import { siteOrigin } from "../lib/native";
 
-export const inviteUrl = (token: string) => `${location.origin}/f/${token}`;
+export const inviteUrl = (token: string) => `${siteOrigin}/f/${token}`;
 
 function Avatar({ p, size = 36 }: { p: { displayName: string; avatarUrl: string | null }; size?: number }) {
   return (

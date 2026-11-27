@@ -20,6 +20,7 @@ import { dayLabel, isLive, LIVE_GRACE_MS, timeRange } from "../lib/time";
 import { directionsLinks, downloadIcs } from "../lib/calendar";
 import { countTo, flipIn, hasFlipOrigin, reducedMotion, revealChildren, stamp, useGSAP } from "../lib/motion";
 import { POLICY_TAGS, SCENES, type EventDetail, type EventSummary, type FriendAt, type FriendPerson, type HerePerson, type PresenceVisibility, type HostSummary, type Me, type MeProfile, type Presence, type RsvpStatus, type ServerConfig } from "../../shared/types";
+import { siteOrigin } from "../lib/native";
 
 
 export const LINK_LABELS: Record<string, string> = {
@@ -33,7 +34,7 @@ export const LINK_LABELS: Record<string, string> = {
 };
 
 export function eventUrl(id: string) {
-  return `${location.origin}/e/${encodeURIComponent(id)}`;
+  return `${siteOrigin}/e/${encodeURIComponent(id)}`;
 }
 
 /** "Live now · until 2 am" with the time left once it's under an hour: the door is still open, here's for how long. */

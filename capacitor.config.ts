@@ -20,8 +20,8 @@ const config: CapacitorConfig = {
     // Page scrolling stays on: the policy pages scroll the document. The app shell sets overflow: hidden itself.
   },
   server: {
-    // Links to these hosts stay in the app's web view; everything else opens in Safari.
-    allowNavigation: ["assembly.rsvp"],
+    // No other host loads in the app's web view: links to assembly.rsvp pages are routed inside the app
+    // (src/lib/native.ts interceptAppLinks), and everything else, server files included, opens in Safari.
     ...(devServer ? { url: devServer, cleartext: devServer.startsWith("http://") } : {}),
   },
   plugins: {
