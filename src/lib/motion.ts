@@ -3,6 +3,7 @@
 // ring is the one exception, noted there), every tween interruptible. Components import from here, never from gsap.
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
+import { landHaptic } from "./native";
 
 gsap.registerPlugin(useGSAP);
 
@@ -53,6 +54,7 @@ export function revealCards(root: Element | null) {
  * 0.6 s ring on one button, and a pseudo-element ring would need markup in every place a stamp is used.
  */
 export function stamp(el: Element | null) {
+  landHaptic();
   if (!el || reduce) return;
   return gsap
     .timeline()
@@ -67,6 +69,7 @@ export function stamp(el: Element | null) {
 
 /** The check-in mark lands like a rubber stamp: drops in large and tilted, settles slightly askew. */
 export function stampIn(el: Element | null) {
+  landHaptic();
   if (!el || reduce) return;
   return gsap.fromTo(el, { scale: 1.6, rotate: -8, opacity: 0 }, { scale: 1, rotate: -3, opacity: 1, duration: 0.32, ease: EASE.out, clearProps: "opacity" });
 }
