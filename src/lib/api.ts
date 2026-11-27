@@ -38,6 +38,7 @@ import type {
 import { apiCredentials, apiUrl, isNativeApp, withServerUrls } from "./native";
 import { clearAppSession, saveAppSession, sessionHeaders } from "./nativeAuth";
 import { clearDeviceToken, forgetThisDevice } from "./nativePush";
+import { getOffline, keptOnLoad, putOffline, readableOffline } from "./appCache";
 import type {
   AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
@@ -84,10 +85,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
+    // In the iOS app, answer from the copy kept on the device (src/lib/appCache.ts); the web's service worker
+    // does the same job before this fetch ever fails.
+    const reading = !init?.method || init.method === "GET";
+    const kept = reading && readableOffline(path) ? await getOffline<T>(path) : null;
+    if (kept) return withServerUrls(kept);
     throw new ApiError("You're offline. Showing what we saved last time.", 0);
   }
   const body = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string> } & T;
   if (!res.ok) throw new ApiError(body.error ?? `Request failed (${res.status}).`, res.status, body.fields ?? {});
+  if ((!init?.method || init.method === "GET") && keptOnLoad(path)) void putOffline(path, body);
   return withServerUrls(body);
 }
 

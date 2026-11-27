@@ -139,10 +139,22 @@ within seconds, even with the phone locked. Tap it and the event opens.
 | --- | --- |
 | App opens offline to the splash, then the launch gate or map | Keyboard, status bar and safe-area polish (rest of Phase 1, tuned on the simulator) |
 | Map, events, flyers and fonts load from assembly.rsvp | Sign in with Apple's native sheet (Apple sign-in works now through the system sheet) |
-| Sign-in: Google, Apple, email code and passkeys (Face ID), kept in the keychain | Camera uploads, offline saved events (Phase 2) |
+| Sign-in: Google, Apple, email code and passkeys (Face ID), kept in the keychain | Camera uploads (Phase 2) |
 | Universal links; links stay in the app; iOS share sheet | |
 | Push notifications through APNs (same messages as web push) | |
 | Interest form on the gate; everything, in dev mode | |
+| Offline: your profile, Going list, city feed, and saved events with flyers | |
+
+## Offline
+
+The app has no service worker, so it keeps its own copy in the app's private storage (`src/lib/appCache.ts`, Capacitor Filesystem, `Directory.Data`):
+
+- As they load, `request()` in `src/lib/api.ts` keeps `/api/me`, `/api/me/events`, `/api/events` lists and `/api/cities/:slug`.
+- Events you're going to or save get their details at `/api/events/:id`, with the flyer downloaded to `offline-media/` and the copy pointing at the local file (`saveForOffline` in `src/lib/offline.ts`, up to 40).
+- When a GET fails for lack of signal, `request()` answers from the copy. Writes (RSVP, posting) never do; they fail as on the web.
+- Events you only looked at aren't kept. Sign-out and account deletion wipe everything (`clearUserCaches`).
+
+Check it on the simulator: open a Going event, then turn on airplane mode on the Mac (or Network Link Conditioner's 100% Loss) and relaunch.
 
 ## Apple Developer setup (Matt)
 
