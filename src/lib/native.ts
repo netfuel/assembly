@@ -185,3 +185,22 @@ export function installNativeShare() {
   Object.defineProperty(navigator, "share", { value: share, configurable: true });
   Object.defineProperty(navigator, "canShare", { value: () => true, configurable: true });
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// Small native touches.
+
+/** The status bar's text follows the app's theme: light text on dark, dark text on light. */
+export function setStatusBarTheme(theme: "light" | "dark") {
+  if (!isNativeApp) return;
+  void import("@capacitor/status-bar")
+    .then(({ StatusBar, Style }) => StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light }))
+    .catch(() => undefined);
+}
+
+/** A short tap when a stamp lands (RSVP, check-in). Haptics aren't motion, so reduced motion keeps them. */
+export function landHaptic() {
+  if (!isNativeApp) return;
+  void import("@capacitor/haptics")
+    .then(({ Haptics, ImpactStyle }) => Haptics.impact({ style: ImpactStyle.Medium }))
+    .catch(() => undefined);
+}
