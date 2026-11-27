@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { setStatusBarTheme } from "./native";
 
 export type Theme = "light" | "dark";
 
@@ -19,6 +20,7 @@ export function readTheme(): Theme {
 export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[theme]);
+  setStatusBarTheme(theme);
 }
 
 export function useTheme(): [Theme, (t: Theme) => void] {

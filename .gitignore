@@ -26,3 +26,9 @@ db/import/artwork/
 e2e-results/
 e2e/.auth/
 .wrangler/e2e/
+
+# Xcode and Swift Package Manager scratch (Package.resolved under xcshareddata/swiftpm is committed)
+ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/
+native/assembly-auth/.swiftpm/
+xcuserdata/
+test-results/
