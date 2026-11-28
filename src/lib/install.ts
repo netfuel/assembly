@@ -1,5 +1,7 @@
 // Add to Home Screen. Chrome/Edge/Android fire `beforeinstallprompt`, which we hold until a good moment
 // (after someone's first "Going"). iPhone Safari has no prompt, so we show the Share > Add to Home Screen steps.
+import { isNativeApp } from "./native";
+
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 
 let deferred: BIPEvent | null = null;
@@ -62,7 +64,8 @@ export function welcomeMode(): "prompt" | "ios" | null {
 
 /** Which kind of prompt to show right now, or null. */
 export function installMode(): "prompt" | "ios" | null {
-  if (isStandalone() || dismissed()) return null;
+  // The iOS app is already on the home screen.
+  if (isNativeApp || isStandalone() || dismissed()) return null;
   if (deferred) return "prompt";
   if (isIOS()) return "ios";
   return null;
