@@ -68,7 +68,8 @@ test.describe("Feed and filters", () => {
     await page.goto("/");
     await page.locator(".hs-filters").click();
     await page.getByRole("button", { name: "Queer tonight" }).click();
-    await page.getByRole("button", { name: /^Show \d+ events?$/ }).click();
+    // Late in the evening the seeded queer night has passed, and the button reads "No events match" instead.
+    await page.getByRole("button", { name: /^(Show \d+ events?|No events match)$/ }).click();
     await expect(page.locator(".date-pill")).toContainText("Tonight");
     noProblems(problems);
   });
